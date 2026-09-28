@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>COURT CLASH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Rubik:wght@500;700;900&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --court1: #c9803f;
+  --court2: #a8642b;
+  --paint: #9c4a26;
+  --line: #f4e6c8;
+  --ink: #1a0f06;
+  --navy: #0e1a34;
+  --navy2: #1c3260;
+  --navy3: #0a1226;
+  --orange: #e8622c;
+  --orange-d: #b8451a;
+  --gold: #f4b93c;
+  --gold-d: #c98f18;
+  --paper: #fff3d8;
+  padding-top: env(safe-area-inset-top,0px);
+  padding-bottom: env(safe-area-inset-bottom,0px);
+}
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-padding-top: env(safe-area-inset-top,0px);
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+  overflow: hidden;
+  color: var(--ink);
+  font-family: 'Rubik',Arial,sans-serif;
+  background: var(--navy3);
+}
+/* ---- court floor ---- */
+.floor {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+  repeating-linear-gradient(90deg,rgba(0,0,0,.06) 0 2px,transparent 2px 94px),
+  radial-gradient(circle at 50% 100%,#00000000 0,#00000055 100%),
+  linear-gradient(180deg,var(--court1) 0 58%,var(--court2) 58%);
+}
+.floor .halfline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 58%;
+  height: 3px;
+  background: var(--line);
+  opacity: .6;
+}
+.floor .circle {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  transform: translate(-50%,-50%);
+  width: min(260px,34vw);
+  height: min(260px,34vw);
+  border: 4px solid var(--line);
+  border-radius: 50%;
+  opacity: .6;
+}
+.floor .paint {
+  position: absolute;
+  left: 50%;
+  bottom: -2px;
+  transform: translateX(-50%);
+  width: min(230px,42vw);
+  height: 120px;
+  border: 4px solid var(--line);
+  border-bottom: 0;
+  background: var(--paint);
+  opacity: .85;
+}
+.floor .arc {
+  position: absolute;
+  left: 50%;
+  bottom: -2px;
+  transform: translateX(-50%);
+  width: min(560px,78vw);
+  height: 280px;
+  border: 4px solid var(--line);
+  border-bottom: 0;
+  border-radius: 50% 50% 0 0;
+  opacity: .55;
+}
+/* ---- scoreboard header ---- */
+.top {
+  position: relative;
+  z-index: 2;
+  height: 80px;
+  padding: 10px clamp(14px,4vw,60px);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(180deg,var(--navy) 0,var(--navy3) 100%);
+  border-bottom: 4px solid var(--orange);
+  box-shadow: 0 6px 14px #0007;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--orange);
+  position: relative;
+  box-shadow: inset -6px -6px 0 var(--orange-d),0 0 0 3px var(--paper);
+}
+.logo:before,.logo:after {
+  content: '';
+  position: absolute;
+  background: var(--ink);
+}
+.logo:before {
+  left: 0;
+  right: 0;
+  top: 19px;
+  height: 2px;
+}
+.logo:after {
+  top: 0;
+  bottom: 0;
+  left: 19px;
+  width: 2px;
+}
+.brand-text {
+  font-family: 'Anton',sans-serif;
+  color: var(--paper);
+  font-size: clamp(20px,3vw,32px);
+  letter-spacing: .5px;
+  line-height: 1;
+  font-style: italic;
+  text-shadow: 2px 2px 0 var(--orange-d);
+}
+.brand-text small {
+  display: block;
+  font-family: 'Oswald',sans-serif;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: 3px;
+  color: var(--gold);
+}
+.scoretile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--navy3);
+  border: 2px solid var(--gold-d);
+  border-radius: 8px;
+  padding: 8px 14px;
+  box-shadow: inset 0 0 8px #000;
+}
+.scoretile b {
+  font-family: 'Oswald',monospace;
+  font-size: 20px;
+  color: var(--gold);
+  letter-spacing: 2px;
+  text-shadow: 0 0 6px #f4b93c66;
+}
+.scoretile span {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #8ea0c8;
+}
+main {
+  position: relative;
+  z-index: 2;
+  width: min(1080px,94vw);
+  margin: 14px auto 0;
+  min-height: calc(100vh - 232px);
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  align-items: center;
+  gap: clamp(20px,7vw,90px);
+}
+/* ---- trading card ---- */
+.fighter {
+  text-align: center;
+}
+.card {
+  width: 230px;
+  margin: auto;
+  position: relative;
+  border-radius: 16px;
+  padding: 4px;
+  background: linear-gradient(155deg,var(--gold) 0%,var(--orange) 35%,var(--navy2) 60%,var(--gold) 100%);
+  box-shadow: 0 10px 0 #00000055,0 14px 24px #0007;
+}
+.card-in {
+  background: linear-gradient(160deg,var(--navy2),var(--navy3));
+  border-radius: 13px;
+  padding: 12px 12px 14px;
+  position: relative;
+  overflow: hidden;
+}
+.card-in:before {
+  content: '';
+  position: absolute;
+  top: -60%;
+  left: -20%;
+  width: 60%;
+  height: 220%;
+  background: linear-gradient(120deg,transparent,#ffffff33,transparent);
+  transform: rotate(20deg);
+}
+.rank {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: var(--navy3);
+  color: var(--gold);
+  font-family: 'Anton',sans-serif;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--gold-d);
+  letter-spacing: 1px;
+}
+.portrait {
+  width: 112px;
+  height: 112px;
+  margin: 22px auto 8px;
+  position: relative;
+}
+.ball {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%,#ff9a63,var(--orange) 55%,var(--orange-d));
+  box-shadow: 0 6px 10px #0006;
+}
+.ball:before,.ball:after {
+  content: '';
+  position: absolute;
+  background: var(--ink);
+  opacity: .85;
+}
+.ball:before {
+  left: 0;
+  right: 0;
+  top: 54px;
+  height: 3px;
+}
+.ball:after {
+  top: 0;
+  bottom: 0;
+  left: 54px;
+  width: 3px;
+}
+.jersey {
+  width: 130px;
+  height: 78px;
+  margin: auto;
+  background: var(--orange);
+  border: 3px solid var(--paper);
+  border-radius: 18px 18px 6px 6px;
+  color: var(--paper);
+  font-family: 'Anton',sans-serif;
+  font-size: 40px;
+  text-align: center;
+  padding-top: 12px;
+  box-shadow: 0 4px 0 var(--orange-d);
+}
+.fighter h2 {
+  color: var(--paper);
+  font-family: 'Anton',sans-serif;
+  letter-spacing: 1px;
+  margin: 12px 0 6px;
+  font-size: 22px;
+}
+.stats {
+  display: grid;
+  gap: 5px;
+  padding: 0 8px 4px;
+}
+.stat {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  align-items: center;
+  gap: 6px;
+}
+.stat span {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 1px;
+  text-align: left;
+}
+.stat i {
+  display: block;
+  height: 7px;
+  border-radius: 4px;
+  background: #00000055;
+  overflow: hidden;
+}
+.stat i em {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg,var(--gold),var(--orange));
+  border-radius: 4px;
+}
+/* ---- lobby ---- */
+.lobby {
+  background: var(--paper);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 10px 0 var(--navy2),0 16px 26px #0006;
+  position: relative;
+}
+.lobby h1 {
+  font-family: 'Anton',sans-serif;
+  font-size: 21px;
+  margin: 0 0 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  color: var(--navy3);
+}
+.lobby h1 span {
+  font-family: 'Oswald',sans-serif;
+  font-size: 12px;
+  color: var(--orange-d);
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.party {
+  display: grid;
+  grid-template-columns: repeat(2,1fr);
+  gap: 9px;
+}
+.slot {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: #fde9c0;
+  border: 2px solid var(--orange);
+  position: relative;
+}
+.slot.empty {
+  background: transparent;
+  border: 2px dashed #c9a877;
+}
+.num {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--navy2);
+  color: var(--gold);
+  font-family: 'Anton',sans-serif;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--paper);
+}
+.slot-info b {
+  display: block;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--navy3);
+}
+.slot-info small {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--orange-d);
+  letter-spacing: 1px;
+}
+.plus {
+  font-size: 22px;
+  line-height: 34px;
+  text-align: center;
+  color: #c9a877;
+  background: transparent;
+}
+.empty-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #9c8459;
+}
+.code {
+  display: flex;
+  gap: 8px;
+  margin-top: 15px;
+}
+.code label {
+  position: absolute;
+  transform: translateY(-26px);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--orange-d);
+}
+.code input {
+  min-width: 0;
+  flex: 1;
+  border: 2px solid var(--orange);
+  border-radius: 8px;
+  padding: 10px;
+  color: var(--navy);
+  font: 900 17px 'Oswald',monospace;
+  letter-spacing: 3px;
+  text-align: center;
+  text-transform: uppercase;
+  background: #fff;
+}
+.btn {
+  border: 0;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.small {
+  background: var(--navy2);
+  padding: 0 14px;
+  font-weight: 700;
+  font-size: 12px;
+  box-shadow: 0 3px 0 var(--navy3);
+}
+/* ---- mode select ---- */
+.modes {
+  position: fixed;
+  z-index: 3;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px max(16px,5vw) calc(14px + env(safe-area-inset-bottom,0px));
+  background: linear-gradient(180deg,var(--navy) 0,var(--navy3) 100%);
+  border-top: 4px solid var(--orange);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.list {
+  display: flex;
+  gap: 10px;
+  flex: 1;
+  overflow: auto;
+}
+.mode {
+  min-width: 158px;
+  padding: 9px 12px 9px 40px;
+  border: 2px solid var(--navy2);
+  border-radius: 10px;
+  background: var(--navy2);
+  color: #cfe0ff;
+  cursor: pointer;
+  text-align: left;
+  font: 11px 'Rubik',sans-serif;
+  font-weight: 700;
+  position: relative;
+}
+.mode:before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--orange);
+}
+.mode[data-mode="duo"]:before {
+  background: #5b6a8c;
+}
+.mode b {
+  display: block;
+  font-family: 'Anton',sans-serif;
+  font-size: 14px;
+  color: #fff;
+  letter-spacing: .5px;
+}
+.mode.selected {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--navy3);
+}
+.mode.selected:before {
+  background: var(--navy3);
+}
+.mode.selected b {
+  color: var(--navy3);
+}
+.mode.locked {
+  opacity: .5;
+  cursor: not-allowed;
+}
+.play {
+  background: linear-gradient(180deg,var(--orange),var(--orange-d));
+  font-family: 'Anton',sans-serif;
+  letter-spacing: 1px;
+  font-size: 17px;
+  padding: 14px 26px;
+  white-space: nowrap;
+  box-shadow: 0 4px 0 #7c2e10;
+}
+.play:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #7c2e10;
+}
+@media(max-width:650px) {
+  main {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    align-content: center;
+    min-height: calc(100vh - 210px);
+  }
+  .fighter {
+    display: none;
+  }
+  .lobby {
+    max-width: 440px;
+    width: 100%;
+    margin: auto;
+  }
+  .modes {
+    padding: 9px max(12px,4vw);
+  }
+  .mode {
+    min-width: 130px;
+  }
+  .play {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+  .top {
+    height: 66px;
+  }
+}
+</style></head><body>
+<div class="floor" aria-hidden="true"><div class="halfline"></div><div class="circle"></div><div class="arc"></div><div class="paint"></div></div>
+
+<header class="top">
+  <div class="brand"><div class="logo"></div><div class="brand-text">COURT CLASH<small>SEASON 01 · PLAY TO WIN</small></div></div>
+  <div class="scoretile"><b>0000</b><span>COINS</span></div>
+</header>
+
+<main>
+  <section class="fighter">
+    <div class="card"><div class="card-in">
+      <div class="rank">★ ROOKIE</div>
+      <div class="portrait"><div class="ball"></div></div>
+      <div class="jersey">7</div>
+      <h2>ROOKIE</h2>
+      <div class="stats">
+        <div class="stat"><span>SPEED</span><i><em style="width:55%"></em></i></div>
+        <div class="stat"><span>POWER</span><i><em style="width:40%"></em></i></div>
+        <div class="stat"><span>AIM</span><i><em style="width:65%"></em></i></div>
+      </div>
+    </div></div>
+  </section>
+
+  <section class="lobby">
+    <h1>YOUR PARTY <span>1 / 4</span></h1>
+    <div class="party">
+      <div class="slot"><div class="num">7</div><div class="slot-info"><b>YOU</b><small>ROOKIE · LV 1</small></div></div>
+      <div class="slot empty"><div class="num plus">+</div><span class="empty-label">INVITE FRIEND</span></div>
+      <div class="slot empty"><div class="num plus">+</div><span class="empty-label">OPEN SLOT</span></div>
+      <div class="slot empty"><div class="num plus">+</div><span class="empty-label">OPEN SLOT</span></div>
+    </div>
+    <div style="position:relative"><label class="code">PARTY CODE</label>
+      <div class="code"><input id="code" value="COURT7" maxlength="6" aria-label="Party code"><button class="btn small" id="copy">COPY</button></div>
+    </div>
+  </section>
+</main>
+
+<nav class="modes">
+  <div class="list">
+    <button class="mode selected" data-mode="hunt"><b>HUNT</b>Solo survival</button>
+    <button class="mode" data-mode="showdown"><b>1V1 SHOWDOWN</b>Best of 3</button>
+    <button class="mode locked" data-mode="duo"><b>2V2 SHOWDOWN</b>Coming soon</button>
+  </div>
+  <button class="btn play" id="play">PLAY</button>
+</nav>
+
+<script>
+let mode = 'hunt';
+const code = document.querySelector('#code');
+document.querySelectorAll('.mode').forEach(b => b.onclick = () => {
+    if (b.dataset.mode === 'duo')
+        return;
+    document.querySelector('.selected').classList.remove('selected');
+    b.classList.add('selected');
+    mode = b.dataset.mode;
+});
+document.querySelector('#copy').onclick = async () => {
+    try {
+        await navigator.clipboard.writeText(code.value);
+    }
+    catch { }
+    const b = document.querySelector('#copy');
+    b.textContent = 'COPIED!';
+    setTimeout(() => b.textContent = 'COPY', 1200);
+};
+document.querySelector('#play').onclick = () => location.href = mode === 'hunt' ? 'game.html' : 'showdown.html';
+</script>
+</body></html>

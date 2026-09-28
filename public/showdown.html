@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>COURT CLASH — 1V1 SHOWDOWN</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a1226; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; font-family: monospace; }
+  canvas { display: block; cursor: none; }
+  #overlay {
+    position: fixed; inset: 0; color: #f4b93c;
+    background: radial-gradient(ellipse at center, #14213d 0%, #0a1226 75%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 20; text-align: center;
+    animation: overlayFadeIn 0.35s ease-out;
+  }
+  @keyframes overlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  #overlay h2 {
+    font-size: 34px; letter-spacing: 3px; margin-bottom: 16px;
+    text-shadow: 0 0 10px rgba(244,185,60,0.5);
+    animation: titlePulse 2.6s ease-in-out infinite;
+  }
+  @keyframes titlePulse {
+    0%, 100% { text-shadow: 0 0 10px rgba(244,185,60,0.4); }
+    50% { text-shadow: 0 0 22px rgba(244,185,60,0.75); }
+  }
+  #overlay p { color: #e8622c; font-size: 14px; letter-spacing: 1px; margin-bottom: 24px; }
+  #overlay button {
+    background: #0e1a34; border: 2px solid #c98f18; color: #f4b93c;
+    font-family: monospace; font-size: 16px; letter-spacing: 2px;
+    padding: 14px 28px; cursor: pointer; border-radius: 3px;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease,
+                transform 0.15s ease, box-shadow 0.2s ease;
+  }
+  #overlay button:hover {
+    background: #1c3260; border-color: #f4b93c; color: #f4b93c;
+    transform: translateY(-2px); box-shadow: 0 4px 16px rgba(244,185,60,0.25);
+  }
+  #overlay button:active { transform: translateY(0); }
+  .spinner {
+    width: 30px; height: 30px; border: 3px solid rgba(244,185,60,0.15);
+    border-top-color: #f4b93c; border-right-color: rgba(244,185,60,0.5);
+    border-radius: 50%; animation: spin 0.7s cubic-bezier(0.5,0.1,0.5,0.9) infinite;
+    margin-bottom: 20px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #hidden-link {
+    color: #8a6a2e; font-size: 11px; margin-top: 30px; cursor: pointer;
+    letter-spacing: 1px; transition: color 0.2s ease;
+  }
+  #hidden-link:hover { color: #f4b93c; }
+</style>
+</head>
+
+<body>
+<canvas id="c"></canvas>
+
+<div id="overlay">
+  <h2>1V1 SHOWDOWN</h2>
+  <p>ONLINE — BEST OF 3 — FIRST TO 2 WINS TAKES IT</p>
+  <button id="find-match-btn">FIND MATCH</button>
+  <div id="hidden-link" style="display:none;">&lt; BACK TO HOME</div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+let W = canvas.width, H = canvas.height;
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    W = canvas.width;
+    H = canvas.height;
+});
+const BASE_TILE = 40;
+// ── ARENA MAP (compact, symmetric — built for 1v1, not survival) ─────────────
+const RAW_MAP = [
+    "##################################",
+    "#................................#",
+    "#................................#",
+    "#................................#",
+    "#...###........####........###...#",
+    "#...###........####........###...#",
+    "#...###........####........###...#",
+    "#................................#",
+    "#..............####..............#",
+    "#..............#..#..............#",
+    "#..............#..#..............#",
+    "#..............####..............#",
+    "#................................#",
+    "#...###........####........###...#",
+    "#...###........####........###...#",
+    "#...###........####........###...#",
+    "#................................#",
+    "#................................#",
+    "#................................#",
+    "##################################",
+];
+const MAP_W = RAW_MAP[0].length, MAP_H = RAW_MAP.length;
+// Grow tiles when necessary so the complete arena covers the viewport. The
+// network protocol uses tile units, keeping matches aligned across displays.
+const TILE = Math.max(BASE_TILE, Math.ceil(Math.max(W / MAP_W, H / MAP_H)));
+const WORLD_SCALE = TILE / BASE_TILE;
+function isWall(tx, ty) {
+    const mx = Math.floor(tx), my = Math.floor(ty);
+    if (mx < 0 || mx >= MAP_W || my < 0 || my >= MAP_H)
+        return true;
+    return RAW_MAP[my][mx] === '#';
+}
+function isWallPx(px, py) { return isWall(px / TILE, py / TILE); }
+// ── PRE-RENDER MAP ────────────────────────────────────────────────────────────
+const mapCanvas = document.createElement('canvas');
+mapCanvas.width = MAP_W * TILE;
+mapCanvas.height = MAP_H * TILE;
+const mctx = mapCanvas.getContext('2d');
+(function buildMap() {
+    mctx.fillStyle = '#0a1226';
+    mctx.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
+    for (let row = 0; row < MAP_H; row++)
+        for (let col = 0; col < MAP_W; col++) {
+            const x = col * TILE, y = row * TILE;
+            if (RAW_MAP[row][col] === '#') {
+                mctx.fillStyle = '#1c3260';
+                mctx.fillRect(x, y, TILE, TILE);
+                if ((row + col) % 2 === 0) {
+                    mctx.fillStyle = '#14213d';
+                    mctx.fillRect(x + 4, y + 4, TILE - 8, TILE - 8);
+                }
+                mctx.strokeStyle = '#0a1226';
+                mctx.lineWidth = 2;
+                mctx.beginPath();
+                mctx.moveTo(x, y);
+                mctx.lineTo(x + TILE, y);
+                mctx.stroke();
+                mctx.beginPath();
+                mctx.moveTo(x, y);
+                mctx.lineTo(x, y + TILE);
+                mctx.stroke();
+            }
+            else {
+                mctx.fillStyle = (row + col) % 2 === 0 ? '#c9803f' : '#a8642c';
+                mctx.fillRect(x, y, TILE, TILE);
+                mctx.strokeStyle = '#8a5a2e';
+                mctx.lineWidth = 1;
+                mctx.beginPath();
+                mctx.moveTo(x, y);
+                mctx.lineTo(x + TILE, y);
+                mctx.stroke();
+                mctx.beginPath();
+                mctx.moveTo(x, y);
+                mctx.lineTo(x, y + TILE);
+                mctx.stroke();
+            }
+        }
+})();
+// ── PARTICLES ─────────────────────────────────────────────────────────────────
+const particles = [];
+function spawnParticles(x, y, color, count, sMin, sMax, life, size = 3) {
+    for (let i = 0; i < count; i++) {
+        const a = Math.random() * Math.PI * 2, spd = sMin + Math.random() * (sMax - sMin);
+        particles.push({ x, y, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, color, life, maxLife: life, size: size + Math.random() * 2 });
+    }
+}
+// ── BULLETS ───────────────────────────────────────────────────────────────────
+function makeBullet(x, y, angle, speed = 15 * WORLD_SCALE) {
+    return { x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, alive: true, dist: 0 };
+}
+function updateBullet(b) {
+    for (let s = 0; s < 3; s++) {
+        const nx = b.x + b.vx / 3, ny = b.y + b.vy / 3;
+        if (isWallPx(nx, ny)) {
+            b.alive = false;
+            spawnParticles(b.x, b.y, '#dcc850', 4, 1, 3, 8, 1);
+            return;
+        }
+        b.x = nx;
+        b.y = ny;
+    }
+    b.dist += Math.hypot(b.vx, b.vy);
+    if (b.dist > TILE * 20)
+        b.alive = false;
+}
+// ── PLAYER (local, fully simulated) ───────────────────────────────────────────
+function makePlayer(spawn) {
+    return { x: spawn.x, y: spawn.y, angle: 0, speed: 3 * WORLD_SCALE, health: 100, displayHealth: 100, ammo: 30,
+        hurtTimer: 0, shootTimer: 0, reloadTimer: 0, reloadCd: 6, rollTimer: 0,
+        bullets: [], bob: 0, moving: false };
+}
+function updatePlayer(player, keys, mouseX, mouseY, camX, camY) {
+    const M = 10 * WORLD_SCALE;
+    let spd = player.speed;
+    if (player.rollTimer > 0) {
+        spd *= 2.4;
+        player.rollTimer--;
+    }
+    let moved = false;
+    if (keys['w'] || keys['arrowup']) {
+        const ny = player.y - spd;
+        if (!isWallPx(player.x, ny - M))
+            player.y = ny;
+        moved = true;
+    }
+    if (keys['s'] || keys['arrowdown']) {
+        const ny = player.y + spd;
+        if (!isWallPx(player.x, ny + M))
+            player.y = ny;
+        moved = true;
+    }
+    if (keys['a'] || keys['arrowleft']) {
+        const nx = player.x - spd;
+        if (!isWallPx(nx - M, player.y))
+            player.x = nx;
+        moved = true;
+    }
+    if (keys['d'] || keys['arrowright']) {
+        const nx = player.x + spd;
+        if (!isWallPx(nx + M, player.y))
+            player.x = nx;
+        moved = true;
+    }
+    player.moving = moved;
+    player.bob = moved ? (player.bob + 0.15) % (Math.PI * 2) : player.bob * 0.85;
+    if (player.hurtTimer > 0)
+        player.hurtTimer--;
+    if (player.shootTimer > 0)
+        player.shootTimer--;
+    if (player.reloadTimer > 0)
+        player.reloadTimer--;
+    player.angle = Math.atan2((camY + mouseY) - player.y, (camX + mouseX) - player.x);
+    for (let i = player.bullets.length - 1; i >= 0; i--) {
+        const b = player.bullets[i];
+        updateBullet(b);
+        if (!b.alive) {
+            player.bullets.splice(i, 1);
+            continue;
+        }
+        // Hit test against the last known opponent position relayed from the server.
+        if (Math.hypot(b.x - opponent.x, b.y - opponent.y) < 16 * WORLD_SCALE) {
+            b.alive = false;
+            player.bullets.splice(i, 1);
+            spawnParticles(opponent.x, opponent.y, '#8c0a0a', 10, 1.5, 4, 20, 2);
+            sendMsg({ type: 'iHit', damage: 20 });
+        }
+    }
+}
+function playerShoot(player) {
+    if (player.ammo <= 0 || player.reloadTimer > 0 || matchState !== 'playing')
+        return;
+    player.ammo--;
+    player.shootTimer = 8;
+    player.reloadTimer = player.reloadCd;
+    player.bullets.push(makeBullet(player.x, player.y, player.angle));
+    spawnParticles(player.x + Math.cos(player.angle) * 18, player.y + Math.sin(player.angle) * 18, '#ffa020', 5, 1, 4, 10, 2);
+    sendMsg({ type: 'shoot', x: player.x / TILE, y: player.y / TILE, angle: player.angle });
+}
+function drawFighter(p, camX, camY, color, label, number) {
+    const sx = p.x - camX, sy = p.y - camY, r = 12 * WORLD_SCALE;
+    ctx.save();
+    const glow = ctx.createRadialGradient(sx, sy, r * 0.5, sx, sy, r * 2.6);
+    glow.addColorStop(0, color.mid + '33');
+    glow.addColorStop(1, color.mid + '00');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r * 2.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(sx, sy + 12, 14, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = color.dark;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r + 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = color.mid;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = color.light;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r - 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff3d8';
+    ctx.font = 'bold 9px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(number, sx, sy + 1);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    const hx = sx + Math.cos(p.angle) * 3, hy = sy + Math.sin(p.angle) * 3;
+    ctx.fillStyle = '#b49164';
+    ctx.beginPath();
+    ctx.arc(hx, hy - 2, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#3c3723';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(hx, hy - 2, 5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = '#f4b93c';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(hx, hy - 2, 5.2, -Math.PI * 0.85, -Math.PI * 0.15);
+    ctx.stroke();
+    const bhx = sx + Math.cos(p.angle) * (r + 6), bhy = sy + Math.sin(p.angle) * (r + 6);
+    ctx.fillStyle = '#e8622c';
+    ctx.beginPath();
+    ctx.arc(bhx, bhy, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#3c1e0f';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(bhx, bhy, 5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(bhx - 5, bhy);
+    ctx.lineTo(bhx + 5, bhy);
+    ctx.moveTo(bhx, bhy - 5);
+    ctx.lineTo(bhx, bhy + 5);
+    ctx.stroke();
+    if (p.shootTimer > 4) {
+        const fx = sx + Math.cos(p.angle) * (r + 12), fy = sy + Math.sin(p.angle) * (r + 12);
+        const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, 10);
+        g.addColorStop(0, 'rgba(255,255,180,0.9)');
+        g.addColorStop(1, 'rgba(255,180,0,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(fx, fy, 10, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.fillStyle = color.mid;
+    ctx.font = 'bold 11px monospace';
+    ctx.fillText(label, sx - ctx.measureText(label).width / 2, sy - r - 14);
+    for (const b of p.bullets) {
+        ctx.fillStyle = '#ffe650';
+        ctx.beginPath();
+        ctx.arc(b.x - camX, b.y - camY, 3, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.restore();
+}
+// ── NETWORKING ────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// EDIT THIS when you deploy: put your Render server's URL here (no protocol,
+// no trailing slash) — e.g. "mercenary-showdown-server.onrender.com".
+// While it's still the placeholder below, the game auto-falls-back to
+// localhost:8080 so local testing keeps working without any edits.
+// ═══════════════════════════════════════════════════════════════════════════
+const DEPLOYED_SERVER_HOST = "PUT-YOUR-RENDER-SERVER-URL-HERE";
+const WS_URL = (() => {
+    const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    const protocol = location.protocol === 'https:' ? 'wss://' : 'ws://';
+    if (isLocal)
+        return `ws://localhost:8080`;
+    if (DEPLOYED_SERVER_HOST === "PUT-YOUR-RENDER-SERVER-URL-HERE") {
+        console.error('Set DEPLOYED_SERVER_HOST in showdown.html before deploying.');
+    }
+    return `${protocol}${DEPLOYED_SERVER_HOST}`;
+})();
+let socket = null;
+let myPlayerNum = null;
+let matchState = 'idle'; // idle | queued | playing | roundover | matchover
+let scores = [0, 0];
+let round = 1;
+function sendMsg(msg) {
+    if (socket && socket.readyState === WebSocket.OPEN)
+        socket.send(JSON.stringify(msg));
+}
+function connect() {
+    socket = new WebSocket(WS_URL);
+    socket.addEventListener('open', () => {
+        sendMsg({ type: 'findMatch' });
+        setStatus('spinner', 'SEARCHING FOR OPPONENT...');
+    });
+    socket.addEventListener('message', (ev) => {
+        const msg = JSON.parse(ev.data);
+        handleServerMessage(msg);
+    });
+    socket.addEventListener('close', () => {
+        if (matchState !== 'matchover') {
+            setStatus('text', 'CONNECTION LOST', 'The match server disconnected.', true);
+        }
+    });
+    socket.addEventListener('error', () => {
+        setStatus('text', 'CONNECTION FAILED', 'Could not reach the match server — is it running?', true);
+    });
+}
+function handleServerMessage(msg) {
+    switch (msg.type) {
+        case 'queued':
+            setStatus('spinner', 'SEARCHING FOR OPPONENT...');
+            break;
+        case 'matchFound':
+            myPlayerNum = msg.playerNum;
+            break;
+        case 'roundStart':
+            round = msg.round;
+            scores = msg.scores;
+            player = makePlayer({ x: msg.yourSpawn.x * TILE, y: msg.yourSpawn.y * TILE });
+            opponent = makePlayer({ x: msg.oppSpawn.x * TILE, y: msg.oppSpawn.y * TILE });
+            opponent.targetX = opponent.x;
+            opponent.targetY = opponent.y;
+            opponent.targetAngle = opponent.angle;
+            matchState = 'playing';
+            hideOverlay();
+            break;
+        case 'opponentState':
+            // Don't snap straight to the new position — set it as an interpolation
+            // target and glide there over the next few frames (see the loop()).
+            opponent.targetX = msg.x * TILE;
+            opponent.targetY = msg.y * TILE;
+            opponent.targetAngle = msg.angle;
+            opponent.moving = msg.moving;
+            break;
+        case 'opponentShoot':
+            opponent.bullets.push(makeBullet(msg.x * TILE, msg.y * TILE, msg.angle));
+            spawnParticles(msg.x * TILE + Math.cos(msg.angle) * 18, msg.y * TILE + Math.sin(msg.angle) * 18, '#ffa020', 5, 1, 4, 10, 2);
+            break;
+        case 'healthUpdate':
+            player.health = msg.health[myPlayerNum];
+            opponent.health = msg.health[1 - myPlayerNum];
+            if (player.health < prevMyHealth)
+                player.hurtTimer = 30;
+            prevMyHealth = player.health;
+            break;
+        case 'roundOver':
+            scores = msg.scores;
+            matchState = 'roundover';
+            setStatus('text', msg.youWon ? 'ROUND WON' : 'ROUND LOST', `SCORE  ${scores[myPlayerNum]} — ${scores[1 - myPlayerNum]}   //   NEXT ROUND STARTING...`);
+            break;
+        case 'matchOver':
+            scores = msg.scores;
+            matchState = 'matchover';
+            setStatus('text', msg.youWon ? 'VICTORY' : 'DEFEAT', `FINAL SCORE  ${scores[myPlayerNum]} — ${scores[1 - myPlayerNum]}`, true, true);
+            break;
+        case 'opponentDisconnected':
+            matchState = 'matchover';
+            setStatus('text', 'OPPONENT DISCONNECTED', 'You win by forfeit.', true, true);
+            break;
+    }
+}
+// ── OVERLAY / STATUS UI ────────────────────────────────────────────────────────
+const overlay = document.getElementById('overlay');
+const findBtn = document.getElementById('find-match-btn');
+const backLink = document.getElementById('hidden-link');
+function setStatus(kind, title, sub, showBack, showRematch) {
+    overlay.style.display = 'flex';
+    overlay.innerHTML = '';
+    if (kind === 'spinner') {
+        const spin = document.createElement('div');
+        spin.className = 'spinner';
+        overlay.appendChild(spin);
+    }
+    const h2 = document.createElement('h2');
+    h2.textContent = title;
+    overlay.appendChild(h2);
+    if (sub) {
+        const p = document.createElement('p');
+        p.textContent = sub;
+        overlay.appendChild(p);
+    }
+    if (showRematch) {
+        const btn = document.createElement('button');
+        btn.textContent = 'FIND NEW MATCH';
+        btn.onclick = () => { matchState = 'idle'; connect(); };
+        overlay.appendChild(btn);
+    }
+    if (showBack) {
+        const back = document.createElement('div');
+        back.id = 'hidden-link';
+        back.style.display = 'block';
+        back.textContent = '< BACK TO HOME';
+        back.onclick = () => window.location.href = 'index.html';
+        overlay.appendChild(back);
+    }
+}
+function hideOverlay() { overlay.style.display = 'none'; }
+findBtn.addEventListener('click', () => {
+    overlay.querySelector('p') && (overlay.querySelector('p').textContent = '');
+    connect();
+});
+// ── INPUT ─────────────────────────────────────────────────────────────────────
+const keys = {};
+let mouseX = W / 2, mouseY = H / 2, mouseDown = false;
+// Use physical key codes for movement. `event.key` changes with the user's
+// keyboard layout, which made the WASD controls appear unresponsive on some
+// layouts. Keep arrow keys as an equivalent set of controls.
+function movementKey(event) {
+    return {
+        KeyW: 'w', ArrowUp: 'arrowup',
+        KeyA: 'a', ArrowLeft: 'arrowleft',
+        KeyS: 's', ArrowDown: 'arrowdown',
+        KeyD: 'd', ArrowRight: 'arrowright',
+    }[event.code];
+}
+function clearMovementKeys() {
+    for (const key of Object.keys(keys))
+        keys[key] = false;
+}
+document.addEventListener('keydown', e => {
+    const moveKey = movementKey(e);
+    if (moveKey) {
+        e.preventDefault();
+        keys[moveKey] = true;
+    }
+    if (e.code === 'Space') {
+        e.preventDefault();
+        if (player && player.rollTimer <= 0)
+            player.rollTimer = 15;
+    }
+});
+document.addEventListener('keyup', e => {
+    const moveKey = movementKey(e);
+    if (moveKey) {
+        e.preventDefault();
+        keys[moveKey] = false;
+    }
+});
+window.addEventListener('blur', clearMovementKeys);
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden)
+        clearMovementKeys();
+});
+canvas.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+});
+canvas.addEventListener('mousedown', e => { if (e.button === 0)
+    mouseDown = true; });
+canvas.addEventListener('mouseup', e => { if (e.button === 0)
+    mouseDown = false; });
+// ── GAME STATE ────────────────────────────────────────────────────────────────
+let player = makePlayer({ x: 2.5 * TILE, y: 2.5 * TILE });
+let opponent = makePlayer({ x: 31.5 * TILE, y: 17.5 * TILE });
+let prevMyHealth = 100;
+let lastStateSend = 0;
+// ── HUD ───────────────────────────────────────────────────────────────────────
+function drawHUD() {
+    if (player.hurtTimer > 0) {
+        ctx.fillStyle = `rgba(200,0,0,${player.hurtTimer / 40 * 0.4})`;
+        ctx.fillRect(0, 0, W, H);
+    }
+    // Ease the displayed health toward the real value instead of snapping,
+    // so damage reads as a smooth drain rather than an instant jump.
+    player.displayHealth += (player.health - player.displayHealth) * 0.15;
+    opponent.displayHealth += (opponent.health - opponent.displayHealth) * 0.15;
+    // Bottom bar — soft gradient panel instead of a flat fill
+    const barGrad = ctx.createLinearGradient(0, H - 64, 0, H);
+    barGrad.addColorStop(0, 'rgba(10,18,38,0.8)');
+    barGrad.addColorStop(1, 'rgba(8,14,28,0.95)');
+    ctx.fillStyle = barGrad;
+    ctx.fillRect(0, H - 64, W, 64);
+    ctx.strokeStyle = 'rgba(244,185,60,0.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, H - 64);
+    ctx.lineTo(W, H - 64);
+    ctx.stroke();
+    function healthBar(x, label, pct, color, alignRight) {
+        const bw = 200, bh = 16, bx = alignRight ? x - bw : x;
+        ctx.fillStyle = 'rgba(14,26,52,0.9)';
+        ctx.beginPath();
+        ctx.roundRect(bx, H - 46, bw, bh, 4);
+        ctx.fill();
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.roundRect(bx, H - 46, Math.max(2, bw * pct), bh, 4);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(180,130,50,0.8)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(bx, H - 46, bw, bh, 4);
+        ctx.stroke();
+        ctx.fillStyle = '#c9803f';
+        ctx.font = '11px monospace';
+        ctx.fillText(label, bx, H - 50);
+    }
+    const hp = Math.max(0, player.displayHealth / 100);
+    const hcol = player.health > 50 ? '#50c83c' : player.health > 25 ? '#e68c1e' : '#dc2828';
+    healthBar(20, 'YOU', hp, hcol, false);
+    const ohp = Math.max(0, opponent.displayHealth / 100);
+    const ohcol = opponent.health > 50 ? '#50c83c' : opponent.health > 25 ? '#e68c1e' : '#dc2828';
+    healthBar(W - 20, 'OPPONENT', ohp, ohcol, true);
+    // Score / round
+    ctx.fillStyle = '#f4b93c';
+    ctx.font = 'bold 16px monospace';
+    ctx.shadowColor = 'rgba(244,185,60,0.5)';
+    ctx.shadowBlur = 6;
+    const sc = myPlayerNum !== null ? `${scores[myPlayerNum]} — ${scores[1 - myPlayerNum]}` : '0 — 0';
+    ctx.fillText(sc, W / 2 - ctx.measureText(sc).width / 2, H - 42);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#c9803f';
+    ctx.font = '11px monospace';
+    const rv = `ROUND ${round}`;
+    ctx.fillText(rv, W / 2 - ctx.measureText(rv).width / 2, H - 24);
+    // Ammo
+    ctx.fillStyle = '#c9803f';
+    ctx.font = '11px monospace';
+    ctx.fillText('SHOTS', 260, H - 54);
+    for (let i = 0; i < 30; i++) {
+        ctx.fillStyle = i < player.ammo ? '#50c83c' : '#14213d';
+        ctx.beginPath();
+        ctx.roundRect(260 + (i % 10) * 13, H - 50 + Math.floor(i / 10) * 7, 10, 5, 1);
+        ctx.fill();
+    }
+    if (player.ammo === 0) {
+        ctx.fillStyle = '#dc5020';
+        ctx.font = 'bold 20px monospace';
+        ctx.shadowColor = 'rgba(220,80,32,0.6)';
+        ctx.shadowBlur = 8;
+        const rw = '>> RELOAD [R] <<';
+        ctx.fillText(rw, W / 2 - ctx.measureText(rw).width / 2, H / 2 - 70);
+        ctx.shadowBlur = 0;
+    }
+    ctx.fillStyle = '#6a4a20';
+    ctx.font = '11px monospace';
+    ctx.fillText('WASD:MOVE  MOUSE:AIM  LMB:FIRE  SPACE:ROLL  R:RELOAD', 8, 20);
+    // Crosshair — soft outer glow ring + crisp inner lines
+    const ccolor = player.ammo > 0 ? '#00eaff' : '#0a5a66';
+    ctx.save();
+    ctx.strokeStyle = ccolor;
+    ctx.globalAlpha = 0.25;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(mouseX, mouseY, 11, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(mouseX - 22, mouseY);
+    ctx.lineTo(mouseX - 8, mouseY);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(mouseX + 8, mouseY);
+    ctx.lineTo(mouseX + 22, mouseY);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(mouseX, mouseY - 22);
+    ctx.lineTo(mouseX, mouseY - 8);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(mouseX, mouseY + 8);
+    ctx.lineTo(mouseX, mouseY + 22);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(mouseX, mouseY, 6, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+}
+document.addEventListener('keydown', e => {
+    if (e.key === 'r' || e.key === 'R')
+        player.ammo = 30; // local-only reload for now
+});
+// ── GAME LOOP ─────────────────────────────────────────────────────────────────
+const ME_COLOR = { dark: '#7a2e0f', mid: '#e8622c', light: '#b8451a' };
+const OPP_COLOR = { dark: '#2a0a12', mid: '#c8281e', light: '#7a1626' };
+function clampCam(worldSize, viewSize, focus) {
+    if (worldSize <= viewSize)
+        return (worldSize - viewSize) / 2; // center the map in the extra space
+    return Math.max(0, Math.min(worldSize - viewSize, focus - viewSize / 2));
+}
+function lerpAngle(a, b, t) {
+    let diff = ((b - a + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+    return a + diff * t;
+}
+function loop(ts) {
+    requestAnimationFrame(loop);
+    let camX = clampCam(MAP_W * TILE, W, player.x);
+    let camY = clampCam(MAP_H * TILE, H, player.y);
+    if (matchState === 'playing') {
+        canvas.style.cursor = 'none';
+        updatePlayer(player, keys, mouseX, mouseY, camX, camY);
+        if (mouseDown)
+            playerShoot(player);
+        for (let i = opponent.bullets.length - 1; i >= 0; i--) {
+            updateBullet(opponent.bullets[i]);
+            if (!opponent.bullets[i].alive)
+                opponent.bullets.splice(i, 1);
+        }
+        // Glide toward the opponent's last known position/angle rather than
+        // snapping — hides the gap between network updates.
+        if (opponent.targetX !== undefined) {
+            opponent.x += (opponent.targetX - opponent.x) * 0.25;
+            opponent.y += (opponent.targetY - opponent.y) * 0.25;
+            opponent.angle = lerpAngle(opponent.angle, opponent.targetAngle, 0.3);
+        }
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vx *= 0.92;
+            p.vy *= 0.92;
+            p.life--;
+            if (p.life <= 0)
+                particles.splice(i, 1);
+        }
+        // Send our state a few times a second, not every frame.
+        if (ts - lastStateSend > 50) {
+            lastStateSend = ts;
+            sendMsg({ type: 'state', x: player.x / TILE, y: player.y / TILE, angle: player.angle, moving: player.moving });
+        }
+        camX = clampCam(MAP_W * TILE, W, player.x);
+        camY = clampCam(MAP_H * TILE, H, player.y);
+    }
+    else {
+        canvas.style.cursor = 'default';
+    }
+    ctx.drawImage(mapCanvas, -camX, -camY);
+    const vignette = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.75);
+    vignette.addColorStop(0, 'rgba(0,0,0,0)');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.35)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, W, H);
+    for (const p of particles) {
+        const alpha = p.life / p.maxLife;
+        ctx.globalAlpha = alpha * 0.85;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x - camX, p.y - camY, Math.max(0.5, p.size * alpha), 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if (matchState === 'playing' || matchState === 'roundover') {
+        drawFighter(opponent, camX, camY, OPP_COLOR, 'OPPONENT', '23');
+        drawFighter(player, camX, camY, ME_COLOR, 'YOU', '7');
+        drawHUD();
+    }
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

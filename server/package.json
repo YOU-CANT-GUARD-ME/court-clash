@@ -1,0 +1,12 @@
+{
+  "name": "mercenary-showdown-server",
+  "version": "1.0.0",
+  "description": "Matchmaking + round server for MERCENARY 1v1 Showdown",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
