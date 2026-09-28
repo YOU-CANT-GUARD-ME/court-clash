@@ -348,7 +348,7 @@ function drawFighter(p, camX, camY, color, label, number) {
 // While it's still the placeholder below, the game auto-falls-back to
 // localhost:8080 so local testing keeps working without any edits.
 // ═══════════════════════════════════════════════════════════════════════════
-const DEPLOYED_SERVER_HOST = "PUT-YOUR-RENDER-SERVER-URL-HERE";
+const DEPLOYED_SERVER_HOST = "court-clash.onrender.com";
 const WS_URL = (() => {
     const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
     const protocol = location.protocol === 'https:' ? 'wss://' : 'ws://';
