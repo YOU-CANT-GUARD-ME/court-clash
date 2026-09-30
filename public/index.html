@@ -182,243 +182,225 @@ main {
   margin: 14px auto 0;
   min-height: calc(100vh - 232px);
   display: grid;
-  grid-template-columns: 1fr 1.2fr;
-  align-items: center;
-  gap: clamp(20px,7vw,90px);
-}
-/* ---- trading card ---- */
-.fighter {
-  text-align: center;
-}
-.card {
-  width: 230px;
-  margin: auto;
-  position: relative;
-  border-radius: 16px;
-  padding: 4px;
-  background: linear-gradient(155deg,var(--gold) 0%,var(--orange) 35%,var(--navy2) 60%,var(--gold) 100%);
-  box-shadow: 0 10px 0 #00000055,0 14px 24px #0007;
-}
-.card-in {
-  background: linear-gradient(160deg,var(--navy2),var(--navy3));
-  border-radius: 13px;
-  padding: 12px 12px 14px;
-  position: relative;
-  overflow: hidden;
-}
-.card-in:before {
-  content: '';
-  position: absolute;
-  top: -60%;
-  left: -20%;
-  width: 60%;
-  height: 220%;
-  background: linear-gradient(120deg,transparent,#ffffff33,transparent);
-  transform: rotate(20deg);
-}
-.rank {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  background: var(--navy3);
-  color: var(--gold);
-  font-family: 'Anton',sans-serif;
-  font-size: 11px;
-  padding: 3px 8px;
-  border-radius: 6px;
-  border: 1px solid var(--gold-d);
-  letter-spacing: 1px;
-}
-.portrait {
-  width: 112px;
-  height: 112px;
-  margin: 22px auto 8px;
-  position: relative;
-}
-.ball {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%,#ff9a63,var(--orange) 55%,var(--orange-d));
-  box-shadow: 0 6px 10px #0006;
-}
-.ball:before,.ball:after {
-  content: '';
-  position: absolute;
-  background: var(--ink);
-  opacity: .85;
-}
-.ball:before {
-  left: 0;
-  right: 0;
-  top: 54px;
-  height: 3px;
-}
-.ball:after {
-  top: 0;
-  bottom: 0;
-  left: 54px;
-  width: 3px;
-}
-.jersey {
-  width: 130px;
-  height: 78px;
-  margin: auto;
-  background: var(--orange);
-  border: 3px solid var(--paper);
-  border-radius: 18px 18px 6px 6px;
-  color: var(--paper);
-  font-family: 'Anton',sans-serif;
-  font-size: 40px;
-  text-align: center;
-  padding-top: 12px;
-  box-shadow: 0 4px 0 var(--orange-d);
-}
-.fighter h2 {
-  color: var(--paper);
-  font-family: 'Anton',sans-serif;
-  letter-spacing: 1px;
-  margin: 12px 0 6px;
-  font-size: 22px;
-}
-.stats {
-  display: grid;
-  gap: 5px;
-  padding: 0 8px 4px;
-}
-.stat {
-  display: grid;
-  grid-template-columns: 44px 1fr;
-  align-items: center;
-  gap: 6px;
-}
-.stat span {
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--gold);
-  letter-spacing: 1px;
-  text-align: left;
-}
-.stat i {
-  display: block;
-  height: 7px;
-  border-radius: 4px;
-  background: #00000055;
-  overflow: hidden;
-}
-.stat i em {
-  display: block;
-  height: 100%;
-  background: linear-gradient(90deg,var(--gold),var(--orange));
-  border-radius: 4px;
+  place-items: center;
 }
 /* ---- lobby ---- */
 .lobby {
+  width: min(560px,100%);
   background: var(--paper);
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 10px 0 var(--navy2),0 16px 26px #0006;
+  border-radius: 18px;
+  box-shadow: 0 10px 0 var(--navy2),0 16px 30px #0007;
   position: relative;
+  overflow: hidden;
+  animation: rise .45s cubic-bezier(.2,.9,.3,1.2) both;
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(18px) scale(.98); }
+}
+.lobby-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  background: linear-gradient(180deg,var(--navy2),var(--navy));
+  border-bottom: 4px solid var(--orange);
 }
 .lobby h1 {
   font-family: 'Anton',sans-serif;
-  font-size: 21px;
-  margin: 0 0 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  color: var(--navy3);
+  font-size: 24px;
+  font-style: italic;
+  letter-spacing: .5px;
+  margin: 0;
+  line-height: 1;
+  color: var(--paper);
+  text-shadow: 2px 2px 0 var(--orange-d);
 }
-.lobby h1 span {
-  font-family: 'Oswald',sans-serif;
-  font-size: 12px;
-  color: var(--orange-d);
-  font-weight: 700;
+.lobby h1 small {
+  display: block;
+  margin-top: 5px;
+  font: 600 9px 'Oswald',sans-serif;
+  letter-spacing: 3px;
+  color: var(--gold);
+  text-shadow: none;
+}
+.count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--navy3);
+  border: 2px solid var(--gold-d);
+  box-shadow: inset 0 0 8px #000;
+}
+.count b {
+  font: 700 16px 'Oswald',monospace;
+  color: var(--gold);
   letter-spacing: 1px;
+  text-shadow: 0 0 6px #f4b93c66;
+}
+.pips {
+  display: flex;
+  gap: 4px;
+}
+.pips i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2a3a5e;
+}
+.pips i.on {
+  background: var(--gold);
+  box-shadow: 0 0 6px var(--gold);
+}
+.lobby-body {
+  padding: 18px 20px 20px;
 }
 .party {
   display: grid;
   grid-template-columns: repeat(2,1fr);
-  gap: 9px;
+  gap: 10px;
 }
 .slot {
-  height: 64px;
+  height: 68px;
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 7px 10px;
-  border-radius: 10px;
-  background: #fde9c0;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: linear-gradient(160deg,#fff4dc,#fbdca6);
   border: 2px solid var(--orange);
+  box-shadow: 0 3px 0 var(--orange-d);
   position: relative;
+  text-align: left;
+  font: inherit;
 }
 .slot.empty {
-  background: transparent;
+  background: #0000000a;
   border: 2px dashed #c9a877;
+  box-shadow: none;
+}
+.slot.away {
+  opacity: .55;
 }
 .num {
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   flex: none;
-  border-radius: 50%;
-  background: var(--navy2);
-  color: var(--gold);
+  border-radius: 12px 12px 8px 8px;
+  background: var(--orange);
+  color: var(--paper);
   font-family: 'Anton',sans-serif;
-  font-size: 16px;
+  font-size: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 2px solid var(--paper);
+  box-shadow: 0 3px 0 var(--orange-d),0 0 0 2px var(--orange-d);
+}
+.slot-info {
+  min-width: 0;
 }
 .slot-info b {
-  display: block;
-  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
   font-weight: 900;
   color: var(--navy3);
 }
 .slot-info small {
+  display: block;
   font-size: 9px;
   font-weight: 700;
   color: var(--orange-d);
   letter-spacing: 1px;
 }
+.host {
+  color: var(--gold-d);
+  font-size: 12px;
+}
+.tag {
+  position: absolute;
+  top: -8px;
+  right: 8px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: var(--navy2);
+  color: var(--gold);
+  font: 700 8px 'Rubik',sans-serif;
+  letter-spacing: 1px;
+  box-shadow: 0 2px 0 var(--navy3);
+}
+.slot-info .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .plus {
-  font-size: 22px;
-  line-height: 34px;
-  text-align: center;
-  color: #c9a877;
   background: transparent;
+  border: 2px dashed #c9a877;
+  box-shadow: none;
+  color: #c9a877;
+  font-family: 'Rubik',sans-serif;
+  font-size: 24px;
+  font-weight: 500;
 }
 .empty-label {
   font-size: 11px;
   font-weight: 700;
+  letter-spacing: .5px;
   color: #9c8459;
 }
-.code {
-  display: flex;
-  gap: 8px;
-  margin-top: 15px;
+.empty-label small {
+  display: block;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: #b39a6e;
 }
-.code label {
-  position: absolute;
-  transform: translateY(-26px);
+.code-wrap {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 2px dashed #e2c898;
+}
+.code-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 7px;
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 2px;
   color: var(--orange-d);
 }
+.code-label span {
+  color: #9c8459;
+  letter-spacing: 1px;
+}
+.code {
+  display: flex;
+  gap: 8px;
+}
 .code input {
   min-width: 0;
   flex: 1;
-  border: 2px solid var(--orange);
-  border-radius: 8px;
-  padding: 10px;
-  color: var(--navy);
-  font: 900 17px 'Oswald',monospace;
-  letter-spacing: 3px;
+  border: 2px solid var(--navy2);
+  border-radius: 10px;
+  padding: 11px 10px;
+  color: var(--gold);
+  font: 700 22px 'Oswald',monospace;
+  letter-spacing: 8px;
+  text-indent: 8px;
   text-align: center;
   text-transform: uppercase;
-  background: #fff;
+  background: var(--navy3);
+  box-shadow: inset 0 0 10px #000;
+  text-shadow: 0 0 8px #f4b93c66;
+}
+.code input:focus {
+  outline: none;
+  border-color: var(--gold);
 }
 .btn {
   border: 0;
@@ -427,12 +409,101 @@ main {
   cursor: pointer;
   border-radius: 8px;
 }
+.btn:focus-visible,.mode:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
 .small {
-  background: var(--navy2);
-  padding: 0 14px;
-  font-weight: 700;
+  background: var(--orange);
+  padding: 0 16px;
+  min-width: 92px;
+  font-weight: 900;
   font-size: 12px;
-  box-shadow: 0 3px 0 var(--navy3);
+  letter-spacing: 1px;
+  border-radius: 10px;
+  box-shadow: 0 4px 0 var(--orange-d);
+  transition: background .15s;
+}
+.small:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 var(--orange-d);
+}
+.small.done {
+  background: #2f9e55;
+  box-shadow: 0 4px 0 #1d6b38;
+}
+.picked {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #9c8459;
+}
+.picked b {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--navy2);
+  color: var(--gold);
+  font-family: 'Anton',sans-serif;
+  font-weight: 400;
+  font-size: 12px;
+}
+.picked .who {
+  margin-left: auto;
+  color: #b39a6e;
+}
+.notice {
+  min-height: 14px;
+  margin-top: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: #c0392b;
+}
+.leave {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: 700 9px 'Rubik',sans-serif;
+  letter-spacing: 1px;
+  color: var(--orange-d);
+  cursor: pointer;
+  text-decoration: underline;
+}
+/* ---- username prompt ---- */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: #0a1226cc;
+  backdrop-filter: blur(3px);
+}
+.modal[hidden] {
+  display: none;
+}
+.modal .lobby {
+  width: min(400px,100%);
+}
+.modal p {
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b5a3c;
+}
+.modal .code input {
+  font-size: 18px;
+  letter-spacing: 2px;
+  text-indent: 0;
+  text-transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lobby { animation: none; }
 }
 /* ---- mode select ---- */
 .modes {
@@ -499,6 +570,9 @@ main {
 .mode.selected b {
   color: var(--navy3);
 }
+.mode.nolead {
+  cursor: not-allowed;
+}
 .mode.locked {
   opacity: .5;
   cursor: not-allowed;
@@ -518,18 +592,10 @@ main {
 }
 @media(max-width:650px) {
   main {
-    grid-template-columns: 1fr;
-    gap: 10px;
-    align-content: center;
     min-height: calc(100vh - 210px);
-  }
-  .fighter {
-    display: none;
   }
   .lobby {
     max-width: 440px;
-    width: 100%;
-    margin: auto;
   }
   .modes {
     padding: 9px max(12px,4vw);
@@ -554,30 +620,19 @@ main {
 </header>
 
 <main>
-  <section class="fighter">
-    <div class="card"><div class="card-in">
-      <div class="rank">★ ROOKIE</div>
-      <div class="portrait"><div class="ball"></div></div>
-      <div class="jersey">7</div>
-      <h2>ROOKIE</h2>
-      <div class="stats">
-        <div class="stat"><span>SPEED</span><i><em style="width:55%"></em></i></div>
-        <div class="stat"><span>POWER</span><i><em style="width:40%"></em></i></div>
-        <div class="stat"><span>AIM</span><i><em style="width:65%"></em></i></div>
-      </div>
-    </div></div>
-  </section>
-
-  <section class="lobby">
-    <h1>YOUR PARTY <span>1 / 4</span></h1>
-    <div class="party">
-      <div class="slot"><div class="num">7</div><div class="slot-info"><b>YOU</b><small>ROOKIE · LV 1</small></div></div>
-      <div class="slot empty"><div class="num plus">+</div><span class="empty-label">INVITE FRIEND</span></div>
-      <div class="slot empty"><div class="num plus">+</div><span class="empty-label">OPEN SLOT</span></div>
-      <div class="slot empty"><div class="num plus">+</div><span class="empty-label">OPEN SLOT</span></div>
+  <section class="lobby" aria-labelledby="lobby-title">
+    <div class="lobby-head">
+      <h1 id="lobby-title">YOUR PARTY<small id="status">CONNECTING…</small></h1>
+      <div class="count" id="count"><div class="pips"><i></i><i></i><i></i><i></i></div><b>0/4</b></div>
     </div>
-    <div style="position:relative"><label class="code">PARTY CODE</label>
-      <div class="code"><input id="code" value="COURT7" maxlength="6" aria-label="Party code"><button class="btn small" id="copy">COPY</button></div>
+    <div class="lobby-body">
+      <div class="party" id="party"></div>
+      <div class="code-wrap">
+        <label class="code-label" for="code">PARTY CODE <span>SHARE YOURS, OR ENTER A FRIEND'S</span></label>
+        <div class="code"><input id="code" maxlength="6" autocomplete="off" spellcheck="false" placeholder="······"><button class="btn small" id="copy">COPY</button></div>
+        <div class="notice" id="notice" role="status"></div>
+      </div>
+      <div class="picked">MODE <b id="picked">HUNT</b><span id="picked-sub">Solo survival</span><span class="who" id="who"></span></div>
     </div>
   </section>
 </main>
@@ -591,25 +646,216 @@ main {
   <button class="btn play" id="play">PLAY</button>
 </nav>
 
+<div class="modal" id="signup" hidden>
+  <form class="lobby" id="signup-form">
+    <div class="lobby-head"><h1>WELCOME, ROOKIE<small>PICK YOUR USERNAME</small></h1></div>
+    <div class="lobby-body">
+      <p>This is how your party will see you. 3–16 letters, numbers or _.</p>
+      <div class="code"><input id="username" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Username" aria-label="Username"><button class="btn small">GO</button></div>
+      <div class="notice" id="signup-notice" role="status"></div>
+    </div>
+  </form>
+</div>
+
 <script>
+// Keep in sync with DEPLOYED_SERVER_HOST in showdown.html.
+const DEPLOYED_SERVER_HOST = "court-clash.onrender.com";
+const WS_URL = (() => {
+    const isLocal = ['localhost', '127.0.0.1', ''].includes(location.hostname);
+    if (isLocal)
+        return 'ws://localhost:8080';
+    return (location.protocol === 'https:' ? 'wss://' : 'ws://') + DEPLOYED_SERVER_HOST;
+})();
+const USER_KEY = 'courtclash.userId';
+const PARTY_SIZE = 4;
+const $ = sel => document.querySelector(sel);
+const code = $('#code');
+const copyBtn = $('#copy');
+const modeButtons = document.querySelectorAll('.mode');
 let mode = 'hunt';
-const code = document.querySelector('#code');
-document.querySelectorAll('.mode').forEach(b => b.onclick = () => {
+let party = null; // latest party state from the server
+let socket = null;
+let retries = 0;
+let replaced = false;
+let noticeTimer = null;
+
+function getUserId() {
+    try { return localStorage.getItem(USER_KEY); } catch { return null; }
+}
+function setUserId(id) {
+    try { localStorage.setItem(USER_KEY, id); } catch { }
+}
+function sendMsg(msg) {
+    if (socket && socket.readyState === WebSocket.OPEN)
+        socket.send(JSON.stringify(msg));
+}
+function notify(text, el = $('#notice')) {
+    el.textContent = text;
+    clearTimeout(noticeTimer);
+    noticeTimer = setTimeout(() => el.textContent = '', 3500);
+}
+
+// ---- connection ----
+function connect() {
+    $('#status').textContent = 'CONNECTING…';
+    socket = new WebSocket(WS_URL);
+    socket.onopen = () => {
+        retries = 0;
+        sendMsg({ type: 'hello', userId: getUserId() });
+    };
+    socket.onmessage = e => {
+        let msg;
+        try { msg = JSON.parse(e.data); } catch { return; }
+        onMessage(msg);
+    };
+    socket.onclose = () => {
+        if (replaced)
+            return;
+        $('#status').textContent = 'OFFLINE · RECONNECTING…';
+        setTimeout(connect, Math.min(1000 * 2 ** retries++, 10000));
+    };
+}
+
+function onMessage(msg) {
+    switch (msg.type) {
+        case 'needUsername':
+            $('#signup').hidden = false;
+            $('#username').focus();
+            break;
+        case 'welcome':
+            setUserId(msg.userId);
+            $('#signup').hidden = true;
+            $('#status').textContent = 'SIGNED IN AS ' + msg.username.toUpperCase();
+            break;
+        case 'party':
+            party = msg;
+            render();
+            break;
+        case 'lobbyError':
+            notify(msg.message, $('#signup').hidden ? $('#notice') : $('#signup-notice'));
+            break;
+        case 'replaced':
+            replaced = true;
+            $('#status').textContent = 'OPENED IN ANOTHER TAB';
+            break;
+    }
+}
+
+// ---- rendering ----
+function slotEl(member) {
+    const slot = document.createElement('div');
+    if (!member) {
+        slot.className = 'slot empty';
+        slot.innerHTML = '<div class="num plus">+</div><span class="empty-label">OPEN SLOT<small>Waiting for player</small></span>';
+        return slot;
+    }
+    slot.className = 'slot' + (member.online ? '' : ' away');
+    slot.innerHTML = '<div class="num"></div><div class="slot-info"><b><span class="name"></span></b><small></small></div>';
+    slot.querySelector('.num').textContent = member.username[0].toUpperCase();
+    slot.querySelector('.name').textContent = member.username;
+    if (member.leader)
+        slot.querySelector('b').insertAdjacentHTML('beforeend', '<span class="host" title="Party leader">♛</span>');
+    slot.querySelector('small').textContent = !member.online ? 'RECONNECTING…' : member.leader ? 'PARTY LEADER' : 'MEMBER';
+    if (member.you)
+        slot.insertAdjacentHTML('afterbegin', '<span class="tag">YOU</span>');
+    return slot;
+}
+
+function render() {
+    const members = party.members;
+    const list = $('#party');
+    list.replaceChildren(...Array.from({ length: PARTY_SIZE }, (_, i) => slotEl(members[i])));
+    document.querySelectorAll('.pips i').forEach((pip, i) => pip.classList.toggle('on', i < members.length));
+    $('#count b').textContent = `${members.length}/${PARTY_SIZE}`;
+    $('#count').setAttribute('aria-label', `${members.length} of ${PARTY_SIZE} players`);
+    if (document.activeElement !== code)
+        code.value = party.code;
+    updateCodeButton();
+    showMode(party.mode);
+    const leaderName = members.find(m => m.leader).username;
+    const who = $('#who');
+    who.replaceChildren();
+    if (party.youAreLeader) {
+        who.textContent = 'YOU PICK THE MODE';
+    } else {
+        who.textContent = leaderName.toUpperCase() + ' PICKS · ';
+    }
+    if (members.length > 1) {
+        const leave = document.createElement('button');
+        leave.className = 'leave';
+        leave.textContent = 'LEAVE PARTY';
+        leave.onclick = () => sendMsg({ type: 'leaveParty' });
+        if (party.youAreLeader)
+            who.append(' · ');
+        who.append(leave);
+    }
+    modeButtons.forEach(b => b.classList.toggle('nolead', !party.youAreLeader && !b.classList.contains('locked')));
+}
+
+function showMode(next) {
+    mode = next;
+    modeButtons.forEach(b => {
+        const on = b.dataset.mode === next;
+        b.classList.toggle('selected', on);
+        if (on) {
+            $('#picked').textContent = b.querySelector('b').textContent;
+            $('#picked-sub').textContent = b.lastChild.textContent;
+        }
+    });
+}
+
+// ---- controls ----
+modeButtons.forEach(b => b.onclick = () => {
     if (b.dataset.mode === 'duo')
         return;
-    document.querySelector('.selected').classList.remove('selected');
-    b.classList.add('selected');
-    mode = b.dataset.mode;
+    if (!party)
+        return showMode(b.dataset.mode); // offline: pick locally
+    if (!party.youAreLeader)
+        return notify('Only the party leader can change the mode');
+    sendMsg({ type: 'setMode', mode: b.dataset.mode });
 });
-document.querySelector('#copy').onclick = async () => {
+
+// The code box shows your party code. Type a different code to join that party instead.
+function wantsJoin() {
+    const typed = code.value.trim().toUpperCase();
+    return party && typed.length === 6 && typed !== party.code;
+}
+function updateCodeButton() {
+    copyBtn.textContent = wantsJoin() ? 'JOIN' : 'COPY';
+}
+code.oninput = updateCodeButton;
+code.onblur = () => {
+    if (party && !wantsJoin()) {
+        code.value = party.code;
+        updateCodeButton();
+    }
+};
+code.onkeydown = e => {
+    if (e.key === 'Enter')
+        copyBtn.click();
+};
+copyBtn.onclick = async () => {
+    if (wantsJoin()) {
+        sendMsg({ type: 'joinParty', code: code.value.trim().toUpperCase() });
+        code.blur();
+        return;
+    }
     try {
         await navigator.clipboard.writeText(code.value);
     }
     catch { }
-    const b = document.querySelector('#copy');
-    b.textContent = 'COPIED!';
-    setTimeout(() => b.textContent = 'COPY', 1200);
+    copyBtn.textContent = 'COPIED!';
+    copyBtn.classList.add('done');
+    setTimeout(() => { copyBtn.classList.remove('done'); updateCodeButton(); }, 1200);
 };
-document.querySelector('#play').onclick = () => location.href = mode === 'hunt' ? 'game.html' : 'showdown.html';
+
+$('#signup-form').onsubmit = e => {
+    e.preventDefault();
+    sendMsg({ type: 'setUsername', username: $('#username').value.trim() });
+};
+
+$('#play').onclick = () => location.href = mode === 'hunt' ? 'game.html' : 'showdown.html';
+
+connect();
 </script>
 </body></html>

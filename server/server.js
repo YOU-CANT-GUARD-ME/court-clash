@@ -4,6 +4,7 @@
 // tradeoffs of that approach.
 
 const { WebSocketServer } = require('ws');
+const lobby = require('./lobby');
 
 const PORT = process.env.PORT || 8080;
 const WINS_NEEDED = 2; // best of 3
@@ -107,6 +108,8 @@ wss.on('connection', (ws) => {
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
 
+    if (lobby.handleMessage(ws, msg)) return;
+
     if (msg.type === 'findMatch') {
       if (waitingPlayer && waitingPlayer !== ws && waitingPlayer.readyState === ws.OPEN) {
         const room = makeRoom(waitingPlayer, ws);
@@ -160,6 +163,7 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
+    lobby.handleClose(ws);
     if (waitingPlayer === ws) waitingPlayer = null;
     const room = rooms.get(ws.roomId);
     if (room && room.state !== 'matchover') {

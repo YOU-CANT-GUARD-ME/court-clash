@@ -19,6 +19,23 @@ in two separate browser tabs/windows to test a match against yourself.
 If you deploy the server somewhere other than `localhost:8080`, update
 `WS_URL` near the top of `showdown.html`'s script.
 
+## Lobby: usernames and parties
+- `server/lobby.js` runs on the same WebSocket server as matches.
+- On first visit, `index.html` asks for a username (3–16 letters, numbers
+  or `_`, unique ignoring case). The server stores it in `server/users.json`
+  under a random user ID, which the browser keeps in localStorage, so you
+  are only asked once per browser.
+- Everyone starts in their own party. Type a friend's 6-letter code into the
+  party code box and press JOIN to take a slot in their party (max 4).
+- The **party leader** is whoever has been in the party longest. Only the
+  leader can change the game mode; if they leave, the next-longest member
+  takes over. A refresh keeps your slot for 15 seconds.
+- To test with several players locally, use separate browsers or private
+  windows (tabs in the same browser share one user, and the newest tab wins).
+- Render's free tier has no persistent disk, so `users.json` is wiped on
+  every redeploy or restart. Attach a Render disk and point `USERS_FILE`
+  at it if usernames need to survive.
+
 ## How the match flow works
 1. Both clients hit "Find Match" → server pairs the first two waiting
    sockets into a room.

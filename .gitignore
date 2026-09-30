@@ -1,1 +1,3 @@
 node_modules
+server/users.json
+server/users.json.tmp
