@@ -307,15 +307,6 @@ function handleEnemyBullets(e, player) {
         }
     }
 }
-function drawHealthBar(e, sx, sy) {
-    const bw = Math.floor(e.radius * 2.4), bh = 4, frac = Math.max(0, e.health / Math.max(1, e.maxHealth));
-    ctx.fillStyle = '#28281e';
-    ctx.fillRect(sx - bw / 2, sy - e.radius - 9, bw, bh);
-    if (frac > 0) {
-        ctx.fillStyle = '#dc2828';
-        ctx.fillRect(sx - bw / 2, sy - e.radius - 9, bw * frac, bh);
-    }
-}
 function killEnemy(e, player) {
     e.alive = false;
     if (e.kind === 'bomber' && !e.exploded)
@@ -349,34 +340,6 @@ function updateGrunt(e, player) {
     }
     handleEnemyBullets(e, player);
 }
-function drawGrunt(e, camX, camY) {
-    const sx = e.x - camX, sy = e.y - camY, r = e.radius;
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.beginPath();
-    ctx.ellipse(sx, sy + r, r * 1.2, r * 0.4, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#783c28';
-    ctx.beginPath();
-    ctx.arc(sx, sy, r + 2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#b43c28';
-    ctx.beginPath();
-    ctx.arc(sx, sy, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#963c1e';
-    ctx.beginPath();
-    ctx.arc(sx, sy, r - 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#504638';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.lineTo(sx + Math.cos(e.angle) * (r + 4), sy + Math.sin(e.angle) * (r + 4));
-    ctx.stroke();
-    drawHealthBar(e, sx, sy);
-    for (const b of e.bullets)
-        drawBolt(b, camX, camY, '#5a3a20', '#ff7a30', '#ff5020', 12);
-}
 // ── BRUTE ────────────────────────────────────────────────────────────────────
 function makeBrute(tx, ty) {
     return { x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2, kind: 'brute', alive: true,
@@ -397,56 +360,6 @@ function updateBrute(e, player) {
         }
     }
     handleEnemyBullets(e, player);
-}
-function drawBrute(e, camX, camY) {
-    const sx = e.x - camX, sy = e.y - camY, r = e.radius;
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.beginPath();
-    ctx.ellipse(sx, sy + r, r * 1.2, r * 0.4, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#3c1e0f';
-    ctx.beginPath();
-    ctx.arc(sx, sy, r + 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#8c461e';
-    ctx.beginPath();
-    ctx.arc(sx, sy, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#aa5a28';
-    ctx.beginPath();
-    ctx.arc(sx, sy, r - 5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#643214';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(sx, sy, r - 5, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.strokeStyle = '#3c3020';
-    ctx.lineWidth = 6;
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.lineTo(sx + Math.cos(e.angle) * (r + 6), sy + Math.sin(e.angle) * (r + 6));
-    ctx.stroke();
-    ctx.strokeStyle = '#6e5a38';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.lineTo(sx + Math.cos(e.angle) * (r + 6), sy + Math.sin(e.angle) * (r + 6));
-    ctx.stroke();
-    ctx.fillStyle = '#dc8c32';
-    setFont(10);
-    ctx.fillText('BRUTE', sx - ctx.measureText('BRUTE').width / 2, sy - r - 12);
-    drawHealthBar(e, sx, sy);
-    for (const b of e.bullets) {
-        ctx.fillStyle = '#dc6414';
-        ctx.beginPath();
-        ctx.arc(b.x - camX, b.y - camY, 5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#ffc850';
-        ctx.beginPath();
-        ctx.arc(b.x - camX, b.y - camY, 2, 0, Math.PI * 2);
-        ctx.fill();
-    }
 }
 // ── BOMBER ───────────────────────────────────────────────────────────────────
 function makeBomber(tx, ty) {
@@ -480,43 +393,6 @@ function updateBomber(e, player) {
         bomberExplode(e, player);
         return;
     }
-}
-function drawBomber(e, camX, camY) {
-    const sx = e.x - camX, sy = e.y - camY, r = e.radius;
-    const pulse = Math.abs(Math.sin(e.bob * 3));
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.beginPath();
-    ctx.ellipse(sx, sy + r, r * 1.2, r * 0.4, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#505010';
-    ctx.beginPath();
-    ctx.arc(sx, sy, r + 2, 0, Math.PI * 2);
-    ctx.fill();
-    const bc = `rgb(${Math.floor(180 + pulse * 60)},${Math.floor(180 - pulse * 80)},20)`;
-    ctx.fillStyle = bc;
-    ctx.beginPath();
-    ctx.arc(sx, sy, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#3c280a';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(sx - r, sy - r);
-    ctx.lineTo(sx + r, sy + r);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(sx + r, sy - r);
-    ctx.lineTo(sx - r, sy + r);
-    ctx.stroke();
-    const rr = r + 3 + pulse * 4;
-    ctx.strokeStyle = `rgba(255,${Math.floor(120 + pulse * 80)},0,${0.4 + pulse * 0.6})`;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(sx, sy, rr, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.fillStyle = '#dcdc28';
-    setFont(10);
-    ctx.fillText('SAPPER', sx - ctx.measureText('SAPPER').width / 2, sy - r - 12);
-    drawHealthBar(e, sx, sy);
 }
 // ── BOSS ─────────────────────────────────────────────────────────────────────
 function makeBoss(tx, ty, wave) {
@@ -555,85 +431,328 @@ function updateBoss(e, player) {
     }
     handleEnemyBullets(e, player);
 }
+// ── FOE ART ──────────────────────────────────────────────────────────────────
+// Each foe is drawn in its own rotated frame where +x points the way it faces.
+function facing(sx, sy, angle, draw) {
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(angle);
+    draw();
+    ctx.restore();
+}
+function disc(x, y, r, fill) {
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+}
+function shaded(x, y, r, light, dark) {
+    const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.1, x, y, r);
+    g.addColorStop(0, light);
+    g.addColorStop(1, dark);
+    return g;
+}
+function groundShadow(sx, sy, r) {
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.beginPath();
+    ctx.ellipse(sx, sy + r * 0.9, r * 1.25, r * 0.42, 0, 0, Math.PI * 2);
+    ctx.fill();
+}
+function foeLabel(text, sx, sy, color) {
+    drawText(text, sx, sy, { size: 9, align: 'center', color, spacing: 1.5, shadow: 'rgba(0,0,0,0.9)', shadowOffset: 1 });
+}
+function drawHealthBar(e, sx, sy) {
+    const bw = Math.floor(e.radius * 2.4), bh = 4, y = sy - e.radius - 10;
+    const frac = Math.max(0, e.health / Math.max(1, e.maxHealth));
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.fillRect(sx - bw / 2 - 1, y - 1, bw + 2, bh + 2);
+    if (frac > 0) {
+        const g = ctx.createLinearGradient(0, y, 0, y + bh);
+        g.addColorStop(0, '#e05a44');
+        g.addColorStop(1, '#7a1414');
+        ctx.fillStyle = g;
+        ctx.fillRect(sx - bw / 2, y, bw * frac, bh);
+    }
+}
+function drawFireball(b, camX, camY, r) {
+    const x = b.x - camX, y = b.y - camY;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r * 2.2);
+    g.addColorStop(0, 'rgba(255,230,150,1)');
+    g.addColorStop(0.35, 'rgba(255,120,30,0.95)');
+    g.addColorStop(1, 'rgba(200,30,10,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 2.2, 0, Math.PI * 2);
+    ctx.fill();
+}
+// Brigand archer: ragged cloak, crimson hood, quiver, short bow.
+function drawGrunt(e, camX, camY) {
+    const sx = e.x - camX, sy = e.y - camY, r = e.radius;
+    groundShadow(sx, sy, r);
+    facing(sx, sy, e.angle, () => {
+        ctx.fillStyle = '#2a180c';
+        roundRect(-r - 4, -5, 8, 10, 2);
+        ctx.fill();
+        ctx.strokeStyle = '#c8b48a';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (const dy of [-3, 0, 3]) {
+            ctx.moveTo(-r - 4, dy);
+            ctx.lineTo(-r - 8, dy);
+        }
+        ctx.stroke();
+        // Ragged cloak edge.
+        ctx.fillStyle = shaded(0, 0, r, '#5a3a22', '#1a1008');
+        ctx.beginPath();
+        for (let i = 0; i <= 12; i++) {
+            const a = (i / 12) * Math.PI * 2, rr = r * (i % 2 ? 0.9 : 1.06);
+            i ? ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : ctx.moveTo(rr, 0);
+        }
+        ctx.fill();
+        disc(1, 0, r * 0.58, shaded(1, 0, r * 0.58, '#7a2418', '#3a0c08'));
+        disc(r * 0.32, 0, r * 0.24, '#0e0605');
+        // Bow and string.
+        const bx = r * 0.35, br = r * 0.95, span = 1.1;
+        ctx.strokeStyle = '#6a4424';
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(bx, 0, br, -span, span);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(220,205,170,0.8)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(bx + Math.cos(-span) * br, Math.sin(-span) * br);
+        ctx.lineTo(r * 0.45, 0);
+        ctx.lineTo(bx + Math.cos(span) * br, Math.sin(span) * br);
+        ctx.stroke();
+    });
+    drawHealthBar(e, sx, sy);
+    for (const b of e.bullets)
+        drawBolt(b, camX, camY, '#5a3a20', '#ff7a30', '#ff5020', 12);
+}
+// Dread knight: blackened plate, tower shield, great-helm, heavy crossbow.
+function drawBrute(e, camX, camY) {
+    const sx = e.x - camX, sy = e.y - camY, r = e.radius;
+    groundShadow(sx, sy, r);
+    facing(sx, sy, e.angle, () => {
+        // Heavy crossbow on the right.
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#1e140a';
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.moveTo(0, r * 0.4);
+        ctx.lineTo(r + 12, r * 0.4);
+        ctx.stroke();
+        ctx.strokeStyle = '#5a3c22';
+        ctx.lineWidth = 3.5;
+        ctx.stroke();
+        ctx.strokeStyle = '#8a9098';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(r + 2, r * 0.4, 13, -1, 1);
+        ctx.stroke();
+        // Plate body and pauldrons.
+        disc(0, 0, r + 2, '#050505');
+        disc(0, 0, r, shaded(0, 0, r, '#6a7078', '#16181c'));
+        for (const side of [-1, 1])
+            disc(-2, side * r * 0.72, r * 0.36, shaded(-2, side * r * 0.72, r * 0.36, '#8a9098', '#2a2d32'));
+        // Red plume behind the helm, then the flat-topped great-helm.
+        ctx.fillStyle = '#9a1c1c';
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.3, -r * 0.12);
+        ctx.quadraticCurveTo(-r * 1.0, 0, -r * 0.3, r * 0.12);
+        ctx.fill();
+        ctx.fillStyle = shaded(r * 0.05, 0, r * 0.62, '#dfe3e8', '#4a4e54');
+        roundRect(-r * 0.42, -r * 0.55, r * 1.05, r * 1.1, r * 0.22);
+        ctx.fill();
+        ctx.strokeStyle = '#050505';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.fillStyle = '#050505';
+        ctx.fillRect(r * 0.26, -r * 0.4, r * 0.14, r * 0.8);
+        ctx.fillRect(r * 0.02, -r * 0.07, r * 0.56, r * 0.14);
+        // Tower shield on the left, crimson cross.
+        ctx.save();
+        ctx.translate(r * 0.35, -r * 0.9);
+        ctx.rotate(0.3);
+        ctx.fillStyle = '#1e1e22';
+        roundRect(-r * 0.55, -r * 0.24, r * 1.1, r * 0.48, 3);
+        ctx.fill();
+        ctx.strokeStyle = '#8a9098';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = '#8e1c1c';
+        ctx.fillRect(-r * 0.06, -r * 0.18, r * 0.12, r * 0.36);
+        ctx.fillRect(-r * 0.32, -r * 0.05, r * 0.64, r * 0.1);
+        ctx.restore();
+    });
+    foeLabel('DREAD KNIGHT', sx, sy - r - 15, '#c8b48a');
+    drawHealthBar(e, sx, sy);
+    for (const b of e.bullets)
+        drawBolt(b, camX, camY, '#2a2a2a', '#d0d4da', '#ff5020', 18);
+}
+// Sapper: hunched in rags, hugging a powder keg with a sparking fuse.
+function drawBomber(e, camX, camY) {
+    const sx = e.x - camX, sy = e.y - camY, r = e.radius;
+    const pulse = Math.abs(Math.sin(e.bob * 3));
+    groundShadow(sx, sy, r);
+    const glow = ctx.createRadialGradient(sx, sy, r * 0.5, sx, sy, r * 3);
+    glow.addColorStop(0, `rgba(255,120,20,${0.15 + pulse * 0.25})`);
+    glow.addColorStop(1, 'rgba(255,120,20,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r * 3, 0, Math.PI * 2);
+    ctx.fill();
+    facing(sx, sy, e.angle, () => {
+        disc(0, 0, r, shaded(0, 0, r, '#5a5840', '#16150c'));
+        disc(-1, 0, r * 0.55, '#24231a');
+        // Keg with iron hoops.
+        const kx = r * 1.05, kr = r * 0.9;
+        disc(kx, 0, kr, shaded(kx, 0, kr, '#8a5a30', '#3a200e'));
+        ctx.strokeStyle = '#1a1a1a';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(kx, 0, kr * 0.62, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(kx, 0, kr, 0, Math.PI * 2);
+        ctx.stroke();
+        // Fuse and spark.
+        const fx = kx + kr + 4, fy = -4 - pulse * 2;
+        ctx.strokeStyle = '#3a2a1a';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(kx + kr * 0.6, -kr * 0.5);
+        ctx.quadraticCurveTo(kx + kr + 2, -kr, fx, fy);
+        ctx.stroke();
+        const sg = ctx.createRadialGradient(fx, fy, 0, fx, fy, 5 + pulse * 3);
+        sg.addColorStop(0, 'rgba(255,250,200,1)');
+        sg.addColorStop(0.4, 'rgba(255,170,40,0.9)');
+        sg.addColorStop(1, 'rgba(255,80,0,0)');
+        ctx.fillStyle = sg;
+        ctx.beginPath();
+        ctx.arc(fx, fy, 5 + pulse * 3, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    foeLabel('SAPPER', sx, sy - r - 15, '#ffb050');
+    drawHealthBar(e, sx, sy);
+}
+// Warlord: cape, black-and-gold armour, horned helm, greatsword (aflame when berserk).
 function drawBoss(e, camX, camY) {
     const sx = e.x - camX, sy = e.y - camY, r = e.radius;
-    const pulse = Math.abs(Math.sin(e.bob * 2));
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.beginPath();
-    ctx.ellipse(sx, sy + r + 2, r * 1.4, r * 0.5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    if (e.angerTimer > 0) {
-        ctx.fillStyle = `rgba(255,60,0,${e.angerTimer / 60 * 0.5})`;
+    const pulse = Math.abs(Math.sin(e.bob * 2)), berserk = e.phase === 2;
+    groundShadow(sx, sy, r * 1.1);
+    if (berserk || e.angerTimer > 0) {
+        const a = berserk ? 0.25 + pulse * 0.2 : e.angerTimer / 60 * 0.5;
+        const aura = ctx.createRadialGradient(sx, sy, r * 0.6, sx, sy, r + 22);
+        aura.addColorStop(0, `rgba(255,80,20,${a})`);
+        aura.addColorStop(1, 'rgba(255,80,20,0)');
+        ctx.fillStyle = aura;
         ctx.beginPath();
-        ctx.arc(sx, sy, r + 12, 0, Math.PI * 2);
+        ctx.arc(sx, sy, r + 22, 0, Math.PI * 2);
         ctx.fill();
     }
-    const ringR = e.phase === 2 ? r + 5 + pulse * 4 : r + 3;
-    ctx.strokeStyle = e.phase === 2 ? '#c8281e' : '#641e0a';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(sx, sy, ringR, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.fillStyle = '#500a05';
-    ctx.beginPath();
-    ctx.arc(sx, sy, r + 2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = e.phase === 2 ? '#dc321e' : '#b41e0a';
-    ctx.beginPath();
-    ctx.arc(sx, sy, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = e.phase === 2 ? '#dc3c14' : '#961e0a';
-    ctx.beginPath();
-    ctx.arc(sx, sy, r - 7, 0, Math.PI * 2);
-    ctx.fill();
-    const ex = sx + Math.cos(e.angle) * (r - 8), ey = sy + Math.sin(e.angle) * (r - 8);
-    ctx.fillStyle = '#ffdc00';
-    ctx.beginPath();
-    ctx.arc(ex, ey, 5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#0a0500';
-    ctx.beginPath();
-    ctx.arc(ex, ey, 2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#281e14';
-    ctx.lineWidth = 8;
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.lineTo(sx + Math.cos(e.angle) * (r + 10), sy + Math.sin(e.angle) * (r + 10));
-    ctx.stroke();
-    ctx.strokeStyle = '#5a4628';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.lineTo(sx + Math.cos(e.angle) * (r + 10), sy + Math.sin(e.angle) * (r + 10));
-    ctx.stroke();
+    facing(sx, sy, e.angle, () => {
+        // Cape billowing behind.
+        const sway = Math.sin(e.bob * 3) * 4;
+        const cg = ctx.createLinearGradient(-r * 1.8, 0, 0, 0);
+        cg.addColorStop(0, '#2a0404');
+        cg.addColorStop(1, '#7a1010');
+        ctx.fillStyle = cg;
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.2, -r * 0.9);
+        ctx.quadraticCurveTo(-r * 1.3, -r * 1.0 + sway, -r * 1.8, -r * 0.5 + sway);
+        ctx.lineTo(-r * 1.6, 0 + sway);
+        ctx.lineTo(-r * 1.85, r * 0.55 + sway);
+        ctx.quadraticCurveTo(-r * 1.3, r * 1.0 + sway, -r * 0.2, r * 0.9);
+        ctx.closePath();
+        ctx.fill();
+        // Greatsword on the right.
+        const by = r * 0.5, hilt = r * 0.35, tip = r + 30;
+        if (berserk) {
+            ctx.strokeStyle = `rgba(255,110,30,${0.35 + pulse * 0.3})`;
+            ctx.lineWidth = 12;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(hilt, by);
+            ctx.lineTo(tip, by);
+            ctx.stroke();
+        }
+        ctx.lineCap = 'butt';
+        ctx.strokeStyle = berserk ? '#ffd0a0' : '#c8ccd2';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(hilt, by);
+        ctx.lineTo(tip - 4, by);
+        ctx.stroke();
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.beginPath();
+        ctx.moveTo(tip - 4, by - 2.5);
+        ctx.lineTo(tip + 3, by);
+        ctx.lineTo(tip - 4, by + 2.5);
+        ctx.fill();
+        ctx.strokeStyle = '#c9a24a';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(hilt, by - 8);
+        ctx.lineTo(hilt, by + 8);
+        ctx.stroke();
+        // Armour with gold trim.
+        disc(0, 0, r + 2, '#050304');
+        disc(0, 0, r, shaded(0, 0, r, '#4a4046', '#0c0a0b'));
+        ctx.strokeStyle = '#c9a24a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, r - 2, 0, Math.PI * 2);
+        ctx.stroke();
+        // Spiked pauldrons.
+        for (const side of [-1, 1]) {
+            const py = side * r * 0.78;
+            ctx.fillStyle = '#d8ccb0';
+            ctx.beginPath();
+            ctx.moveTo(-r * 0.2, py + side * r * 0.2);
+            ctx.lineTo(-r * 0.05, py + side * r * 0.62);
+            ctx.lineTo(r * 0.12, py + side * r * 0.2);
+            ctx.fill();
+            disc(0, py, r * 0.38, shaded(0, py, r * 0.38, '#3a3236', '#0e0b0c'));
+            ctx.strokeStyle = '#c9a24a';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(0, py, r * 0.38, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        // Horned helm and burning eyes.
+        ctx.fillStyle = '#d8ccb0';
+        for (const side of [-1, 1]) {
+            ctx.beginPath();
+            ctx.moveTo(0, side * r * 0.3);
+            ctx.quadraticCurveTo(r * 0.1, side * r * 0.95, r * 0.75, side * r * 0.85);
+            ctx.quadraticCurveTo(r * 0.25, side * r * 0.62, r * 0.2, side * r * 0.25);
+            ctx.closePath();
+            ctx.fill();
+        }
+        disc(r * 0.12, 0, r * 0.48, shaded(r * 0.12, 0, r * 0.48, '#5a5056', '#141012'));
+        const eye = berserk ? '#ffcc40' : '#ff7a20';
+        ctx.save();
+        ctx.shadowColor = '#ff6a00';
+        ctx.shadowBlur = berserk ? 10 : 5;
+        disc(r * 0.42, -r * 0.14, 2.6, eye);
+        disc(r * 0.42, r * 0.14, 2.6, eye);
+        ctx.restore();
+    });
     const tierStr = e.tier <= 4 ? 'I'.repeat(e.tier) : `T${e.tier}`;
-    const nameCol = e.phase === 2 ? '#ff5020' : '#dc7828';
-    ctx.fillStyle = nameCol;
-    setFont(14, 'display');
-    const lbl = `\u25C6 WARLORD ${tierStr} \u25C6`;
-    ctx.fillText(lbl, sx - ctx.measureText(lbl).width / 2, sy - r - 14);
-    // Boss HP bar (larger)
-    const bw = 60, bh = 6, frac = Math.max(0, e.health / e.maxHealth);
-    ctx.fillStyle = '#281408';
-    ctx.fillRect(sx - bw / 2, sy - r - 11, bw, bh);
-    ctx.fillStyle = e.phase === 2 ? '#ff3c14' : '#c82808';
+    drawText(`WARLORD ${tierStr}`, sx, sy - r - 16, { size: 12, family: 'display', align: 'center', color: berserk ? '#ff6a3a' : '#c9a24a',
+        spacing: 1.5, shadow: 'rgba(0,0,0,0.9)', shadowOffset: 1 });
+    const bw = 64, bh = 6, frac = Math.max(0, e.health / e.maxHealth), hy = sy - r - 11;
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.fillRect(sx - bw / 2 - 1, hy - 1, bw + 2, bh + 2);
     if (frac > 0) {
-        ctx.fillRect(sx - bw / 2, sy - r - 11, bw * frac, bh);
+        ctx.fillStyle = berserk ? '#ff4a1e' : '#b81e10';
+        ctx.fillRect(sx - bw / 2, hy, bw * frac, bh);
     }
-    ctx.strokeStyle = '#643214';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(sx - bw / 2, sy - r - 11, bw, bh);
-    for (const b of e.bullets) {
-        ctx.fillStyle = '#ff3210';
-        ctx.beginPath();
-        ctx.arc(b.x - camX, b.y - camY, 5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#ffc83c';
-        ctx.beginPath();
-        ctx.arc(b.x - camX, b.y - camY, 2, 0, Math.PI * 2);
-        ctx.fill();
-    }
+    for (const b of e.bullets)
+        drawFireball(b, camX, camY, 4.5);
 }
 // ── UNIFIED ENEMY UPDATE/DRAW ─────────────────────────────────────────────────
 function updateEnemy(e, player) {
