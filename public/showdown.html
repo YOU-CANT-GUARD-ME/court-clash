@@ -145,7 +145,8 @@ const RAW_MAP = [
 const MAP_W = RAW_MAP[0].length, MAP_H = RAW_MAP.length;
 // Grow tiles when necessary so the complete arena covers the viewport. The
 // network protocol uses tile units, keeping matches aligned across displays.
-const TILE = Math.max(BASE_TILE, Math.ceil(Math.max(W / MAP_W, H / MAP_H)));
+// Sized for the whole screen, not just the window, so the arena still fills it in fullscreen.
+const TILE = Math.max(BASE_TILE, Math.ceil(Math.max(Math.max(W, screen.width) / MAP_W, Math.max(H, screen.height) / MAP_H)));
 const WORLD_SCALE = TILE / BASE_TILE;
 function isWall(tx, ty) {
     const mx = Math.floor(tx), my = Math.floor(ty);
@@ -950,7 +951,7 @@ function vignette(rgb, alpha) {
 function healthColors(hp) {
     return hp > 50 ? ['#d84a3a', '#7a1414'] : hp > 25 ? ['#e8743a', '#8a2a12'] : ['#ff6a4a', '#5a0a0a'];
 }
-const CONTROLS = [['WASD', 'Move'], ['CLICK', 'Fire'], ['SPACE', 'Roll'], ['R', 'Reload']];
+const CONTROLS = [['WASD', 'Move'], ['CLICK', 'Fire'], ['SPACE', 'Roll'], ['R', 'Reload'], ['F', 'Fullscreen']];
 // ── HUD ───────────────────────────────────────────────────────────────────────
 function drawHUD(camX, camY) {
     if (player.hurtTimer > 0)
@@ -1132,6 +1133,41 @@ function drawCrosshair() {
 document.addEventListener('keydown', e => {
     if (e.key === 'r' || e.key === 'R')
         player.ammo = 30; // local-only reload for now
+});
+// ── FULLSCREEN ────────────────────────────────────────────────────────────────
+// Browsers only allow fullscreen from a click or key press, so the first one on
+// this page enters it. F toggles it after that.
+function isFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function enterFullscreen() {
+    const el = document.documentElement, req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (!req || isFullscreen())
+        return;
+    try {
+        const p = req.call(el);
+        if (p && p.catch)
+            p.catch(() => { });
+    }
+    catch { }
+}
+function exitFullscreen() {
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit && isFullscreen())
+        exit.call(document);
+}
+let autoFullscreenDone = false;
+function onFirstGesture(e) {
+    if (autoFullscreenDone || (e.type === 'keydown' && (e.key === 'f' || e.key === 'F')))
+        return;
+    autoFullscreenDone = true;
+    enterFullscreen();
+}
+document.addEventListener('mousedown', onFirstGesture);
+document.addEventListener('keydown', onFirstGesture);
+document.addEventListener('keydown', e => {
+    if ((e.key === 'f' || e.key === 'F') && !e.repeat) {
+        autoFullscreenDone = true;
+        isFullscreen() ? exitFullscreen() : enterFullscreen();
+    }
 });
 // ── GAME LOOP ─────────────────────────────────────────────────────────────────
 const ME_COLOR = { cloak: '#3a2a1e', cloakDark: '#0e0a07', trim: '#c9a24a', helm: '#9aa0a8', label: '#e6d8b8' };

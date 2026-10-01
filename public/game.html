@@ -34,13 +34,20 @@ const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 // Render at the screen's pixel density so text and lines stay sharp on
 // high-DPI displays. All drawing code works in CSS pixels (W × H).
-const W = window.innerWidth, H = window.innerHeight;
+// The canvas follows the window, including going in and out of fullscreen.
 const DPR = Math.min(window.devicePixelRatio || 1, 2);
-canvas.width = W * DPR;
-canvas.height = H * DPR;
-canvas.style.width = W + 'px';
-canvas.style.height = H + 'px';
-ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+let W, H;
+function sizeCanvas() {
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+sizeCanvas();
+window.addEventListener('resize', sizeCanvas);
 // Canvas text doesn't trigger web-font downloads on its own.
 if (document.fonts)
     ['900 12px Cinzel', '700 12px Cinzel', '500 12px "EB Garamond"', '12px "Pirata One"'].forEach(f => document.fonts.load(f));
@@ -1200,7 +1207,7 @@ const UI = { navy: '#14110f', navy2: '#3d352e', navy3: '#070605', orange: '#8e1c
 const FONTS = { display: ["'Cinzel', Georgia, serif", 900], num: ["'Cinzel', Georgia, serif", 700],
     ui: ["'Cinzel', Georgia, serif", 700], body: ["'EB Garamond', Georgia, serif", 500],
     title: ["'Pirata One', Georgia, serif", 400] };
-const CONTROLS = [['WASD', 'Move'], ['CLICK', 'Fire'], ['SPACE', 'Roll'], ['G', 'Firepot'], ['R', 'Reload'], ['P', 'Pause']];
+const CONTROLS = [['WASD', 'Move'], ['CLICK', 'Fire'], ['SPACE', 'Roll'], ['G', 'Firepot'], ['R', 'Reload'], ['P', 'Pause'], ['F', 'Fullscreen']];
 const BEST_KEY = 'bloodsworn.hunt.best';
 const popups = []; // floating "+100" score text, in world coordinates
 let uiButtons = []; // clickable canvas buttons, rebuilt every frame
@@ -1893,7 +1900,7 @@ function drawSpawnCountdown(player, spawnCountdown) {
 function drawPauseOverlay() {
     ctx.fillStyle = 'rgba(10,8,7,0.72)';
     ctx.fillRect(0, 0, W, H);
-    const pw = Math.min(460, W - 32), ph = 318, px = W / 2 - pw / 2, py = H / 2 - ph / 2;
+    const pw = Math.min(460, W - 32), ph = 352, px = W / 2 - pw / 2, py = H / 2 - ph / 2;
     ctx.save();
     roundRect(px, py + 10, pw, ph, 18);
     ctx.fillStyle = UI.navy2;
@@ -1961,8 +1968,8 @@ document.addEventListener('keydown', e => {
             goToLobby();
         return;
     }
-    if (e.key === 'Escape')
-        endRun();
+    if (e.key === 'Escape' && !showingPowerup)
+        paused = true;
     if (e.key === 'p' || e.key === 'P') {
         if (!showingPowerup)
             paused = true;
@@ -2001,6 +2008,46 @@ canvas.addEventListener('mousedown', e => {
 canvas.addEventListener('mouseup', e => { if (e.button === 0)
     mouseDown = false; });
 function startNextWave() { showingPowerup = false; spawnCountdown = 180; }
+// ── FULLSCREEN ────────────────────────────────────────────────────────────────
+// Browsers only allow fullscreen from a click or key press, so the first one on
+// this page enters it. F toggles it after that.
+function isFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function enterFullscreen() {
+    const el = document.documentElement, req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (!req || isFullscreen())
+        return;
+    try {
+        const p = req.call(el);
+        if (p && p.catch)
+            p.catch(() => { });
+    }
+    catch { }
+}
+function exitFullscreen() {
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit && isFullscreen())
+        exit.call(document);
+}
+let autoFullscreenDone = false;
+function onFirstGesture(e) {
+    if (autoFullscreenDone || (e.type === 'keydown' && (e.key === 'f' || e.key === 'F')))
+        return;
+    autoFullscreenDone = true;
+    enterFullscreen();
+}
+document.addEventListener('mousedown', onFirstGesture);
+document.addEventListener('keydown', onFirstGesture);
+document.addEventListener('keydown', e => {
+    if ((e.key === 'f' || e.key === 'F') && !e.repeat) {
+        autoFullscreenDone = true;
+        isFullscreen() ? exitFullscreen() : enterFullscreen();
+    }
+});
+// Leaving fullscreen (usually via Esc) pauses the hunt.
+document.addEventListener('fullscreenchange', () => {
+    if (!isFullscreen() && !gameOver && !showingPowerup)
+        paused = true;
+});
 // ── GAME LOOP ─────────────────────────────────────────────────────────────────
 let last = 0;
 function loop(ts) {
