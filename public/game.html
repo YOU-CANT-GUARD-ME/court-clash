@@ -213,7 +213,14 @@ function spawnParticles(x, y, color, count, sMin, sMax, life, size = 3) {
     }
 }
 // ── BULLETS ──────────────────────────────────────────────────────────────────
-function makeBullet(x, y, angle, speed = 22) {
+// Distance from point (px, py) to the segment a→b. Used for bullet hits so a
+// fast bullet can't skip past a target between two frames.
+function distToSegment(px, py, ax, ay, bx, by) {
+    const dx = bx - ax, dy = by - ay, len2 = dx * dx + dy * dy;
+    const t = len2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2)) : 0;
+    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+function makeBullet(x, y, angle, speed = 30) {
     return { x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, alive: true, dist: 0 };
 }
 function updateBullet(b) {
@@ -709,10 +716,11 @@ function drawEnemy(e, camX, camY) {
     }
     ctx.restore();
 }
+const BASE_SPEED = 3.8, MAX_SPEED = 7.5;
 // ── PLAYER ───────────────────────────────────────────────────────────────────
 function makePlayer() {
-    return { x: 2.5 * TILE, y: 2.5 * TILE, angle: 0, speed: 2.8, health: 100, ammo: 30, grenades: 3,
-        score: 0, kills: 0, wave: 1, hurtTimer: 0, shootTimer: 0, reloadTimer: 0, reloadCd: 6, rollTimer: 0,
+    return { x: 2.5 * TILE, y: 2.5 * TILE, angle: 0, speed: BASE_SPEED, health: 100, ammo: 30, grenades: 3,
+        score: 0, kills: 0, wave: 1, hurtTimer: 0, shootTimer: 0, reloadTimer: 0, reloadCd: 4, rollTimer: 0,
         spawnImmunity: 180, bulletDamage: 1, damageReduction: 0, bullets: [], bob: 0, moving: false,
     };
 }
@@ -760,7 +768,7 @@ function updatePlayer(player, keys, mouseX, mouseY, camX, camY, enemies) {
         player.spawnImmunity--;
     player.angle = Math.atan2((camY + mouseY) - player.y, (camX + mouseX) - player.x);
     for (let i = player.bullets.length - 1; i >= 0; i--) {
-        const b = player.bullets[i];
+        const b = player.bullets[i], ox = b.x, oy = b.y;
         updateBullet(b);
         if (!b.alive) {
             player.bullets.splice(i, 1);
@@ -770,7 +778,7 @@ function updatePlayer(player, keys, mouseX, mouseY, camX, camY, enemies) {
         for (const e of enemies) {
             if (!e.alive)
                 continue;
-            if (Math.hypot(b.x - e.x, b.y - e.y) < e.radius + 5) {
+            if (distToSegment(e.x, e.y, ox, oy, b.x, b.y) < e.radius + 5) {
                 b.alive = false;
                 player.bullets.splice(i, 1);
                 e.health -= player.bulletDamage;
@@ -1200,7 +1208,7 @@ function drawHUD(player, enemies) {
         chips.push({ text: 'INVINCIBLE', color: UI.cyan, frac: player.spawnImmunity / 180 });
     if (player.bulletDamage > 1)
         chips.push({ text: `DMG ×${player.bulletDamage}`, color: UI.gold });
-    if (player.speed > 2.8)
+    if (player.speed > BASE_SPEED)
         chips.push({ text: `SPEED ${player.speed.toFixed(1)}`, color: UI.gold });
     if (player.damageReduction > 0)
         chips.push({ text: `ARMOR ${Math.round(player.damageReduction * 100)}%`, color: UI.gold });
@@ -1369,7 +1377,7 @@ function applyPowerup(player, p) {
     else if (p.name === 'EXTRA AMMO')
         player.ammo = Math.min(9999, player.ammo + 100 + w * 50);
     else if (p.name === 'SPEED BOOST')
-        player.speed = Math.min(player.speed + 0.35 + w * 0.05, 6);
+        player.speed = Math.min(player.speed + 0.35 + w * 0.05, MAX_SPEED);
     else if (p.name === 'HEAVY ROUNDS')
         player.bulletDamage = player.bulletDamage + 1 + Math.floor(w / 2);
     else if (p.name === 'EXTRA GRENADE')
@@ -1383,7 +1391,7 @@ function powerupEffect(player, p) {
     switch (p.name) {
         case 'FULL HEAL': return `${Math.ceil(player.health)} → 100 HP`;
         case 'EXTRA AMMO': return `+${100 + w * 50} SHOTS`;
-        case 'SPEED BOOST': return `${player.speed.toFixed(1)} → ${Math.min(player.speed + 0.35 + w * 0.05, 6).toFixed(1)}`;
+        case 'SPEED BOOST': return `${player.speed.toFixed(1)} → ${Math.min(player.speed + 0.35 + w * 0.05, MAX_SPEED).toFixed(1)}`;
         case 'HEAVY ROUNDS': return `DMG ${player.bulletDamage} → ${player.bulletDamage + 1 + Math.floor(w / 2)}`;
         case 'EXTRA GRENADE': return `+${Math.min(99, player.grenades + 5 + w * 3) - player.grenades} BOOSTS`;
         case 'IRON SKIN': {
