@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>COURT CLASH — HUNT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Rubik:wght@500;700&family=Oswald:wght@700&display=swap" rel="stylesheet">
 <style>
 * {
   margin: 0;
@@ -29,9 +32,18 @@ canvas {
 <script>
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-const W = canvas.width, H = canvas.height;
+// Render at the screen's pixel density so text and lines stay sharp on
+// high-DPI displays. All drawing code works in CSS pixels (W × H).
+const W = window.innerWidth, H = window.innerHeight;
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
+canvas.width = W * DPR;
+canvas.height = H * DPR;
+canvas.style.width = W + 'px';
+canvas.style.height = H + 'px';
+ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+// Canvas text doesn't trigger web-font downloads on its own.
+if (document.fonts)
+    ['12px Anton', '700 12px Rubik', '500 12px Rubik', '700 12px Oswald'].forEach(f => document.fonts.load(f));
 const TILE = 40;
 // ── MAP ──────────────────────────────────────────────────────────────────────
 const RAW_MAP = [
@@ -336,7 +348,10 @@ function killEnemy(e, player) {
     if (e.kind === 'bomber' && !e.exploded)
         bomberExplode(e, player, true);
     const scoreMap = { grunt: 100, brute: 250, bomber: 150, boss: 1000 };
-    player.score += (scoreMap[e.kind] || 100);
+    const points = scoreMap[e.kind] || 100;
+    player.score += points;
+    player.kills++;
+    addPopup(e.x, e.y - e.radius, '+' + points);
     const burst = e.kind === 'brute' || e.kind === 'boss' ? 25 : 15;
     spawnParticles(e.x, e.y, '#8c0a0a', burst, 1.5, 5, 35, 3);
 }
@@ -454,7 +469,7 @@ function drawBrute(e, camX, camY) {
     ctx.lineTo(sx + Math.cos(e.angle) * (r + 6), sy + Math.sin(e.angle) * (r + 6));
     ctx.stroke();
     ctx.fillStyle = '#dc8c32';
-    ctx.font = 'bold 10px monospace';
+    setFont(10);
     ctx.fillText('BRUTE', sx - ctx.measureText('BRUTE').width / 2, sy - r - 12);
     drawHealthBar(e, sx, sy);
     for (const b of e.bullets) {
@@ -534,7 +549,7 @@ function drawBomber(e, camX, camY) {
     ctx.arc(sx, sy, rr, 0, Math.PI * 2);
     ctx.stroke();
     ctx.fillStyle = '#dcdc28';
-    ctx.font = 'bold 10px monospace';
+    setFont(10);
     ctx.fillText('BOMB', sx - ctx.measureText('BOMB').width / 2, sy - r - 12);
     drawHealthBar(e, sx, sy);
 }
@@ -630,7 +645,7 @@ function drawBoss(e, camX, camY) {
     const tierStr = e.tier <= 4 ? 'I'.repeat(e.tier) : `T${e.tier}`;
     const nameCol = e.phase === 2 ? '#ff5020' : '#dc7828';
     ctx.fillStyle = nameCol;
-    ctx.font = 'bold 13px monospace';
+    setFont(14, 'display');
     const lbl = `\u25C6 BOSS ${tierStr} \u25C6`;
     ctx.fillText(lbl, sx - ctx.measureText(lbl).width / 2, sy - r - 14);
     // Boss HP bar (larger)
@@ -697,7 +712,7 @@ function drawEnemy(e, camX, camY) {
 // ── PLAYER ───────────────────────────────────────────────────────────────────
 function makePlayer() {
     return { x: 2.5 * TILE, y: 2.5 * TILE, angle: 0, speed: 2.8, health: 100, ammo: 30, grenades: 3,
-        score: 0, wave: 1, hurtTimer: 0, shootTimer: 0, reloadTimer: 0, reloadCd: 6, rollTimer: 0,
+        score: 0, kills: 0, wave: 1, hurtTimer: 0, shootTimer: 0, reloadTimer: 0, reloadCd: 6, rollTimer: 0,
         spawnImmunity: 180, bulletDamage: 1, damageReduction: 0, bullets: [], bob: 0, moving: false,
     };
 }
@@ -816,7 +831,7 @@ function drawPlayer(player, camX, camY) {
     ctx.arc(sx, sy, r - 4, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = '#fff3d8';
-    ctx.font = 'bold 9px monospace';
+    setFont(11, 'display');
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('7', sx, sy + 1);
@@ -942,179 +957,410 @@ function spawnEnemies(wave) {
     }
     return result;
 }
-// ── HUD ──────────────────────────────────────────────────────────────────────
-function drawHUD(player, enemies) {
-    if (player.hurtTimer > 0) {
-        ctx.fillStyle = `rgba(200,0,0,${player.hurtTimer / 40 * 0.5})`;
-        ctx.fillRect(0, 0, W, H);
+// ── UI KIT ───────────────────────────────────────────────────────────────────
+// Same palette and fonts as the lobby (index.html).
+const UI = { navy: '#0e1a34', navy2: '#1c3260', navy3: '#0a1226', orange: '#e8622c', orangeD: '#b8451a',
+    gold: '#f4b93c', goldD: '#c98f18', paper: '#fff3d8', ink: '#1a0f06', brown: '#9c8459', muted: '#8ea0c8',
+    red: '#ff5a3c', cyan: '#50c8ff' };
+const FONTS = { display: ["'Anton', Impact, sans-serif", 400], num: ["'Oswald', 'Arial Narrow', sans-serif", 700],
+    ui: ["'Rubik', Arial, sans-serif", 700] };
+const CONTROLS = [['WASD', 'Move'], ['CLICK', 'Shoot'], ['SPACE', 'Roll'], ['G', 'Boost'], ['R', 'Reload'], ['P', 'Pause']];
+const BEST_KEY = 'courtclash.hunt.best';
+const popups = []; // floating "+100" score text, in world coordinates
+let uiButtons = []; // clickable canvas buttons, rebuilt every frame
+let shownScore = 0, hudTime = 0, newBest = false;
+let bestScore = (() => { try { return Number(localStorage.getItem(BEST_KEY)) || 0; } catch { return 0; } })();
+function setFont(size, family = 'ui', weight) {
+    const [face, w] = FONTS[family];
+    ctx.font = `${weight || w} ${size}px ${face}`;
+}
+function drawText(str, x, y, o = {}) {
+    ctx.save();
+    setFont(o.size || 12, o.family, o.weight);
+    ctx.textAlign = o.align || 'left';
+    ctx.textBaseline = o.baseline || 'alphabetic';
+    if (o.spacing)
+        ctx.letterSpacing = o.spacing + 'px';
+    if (o.alpha != null)
+        ctx.globalAlpha *= o.alpha;
+    if (o.shadow) {
+        const off = o.shadowOffset ?? 2;
+        ctx.fillStyle = o.shadow;
+        ctx.fillText(str, x + off, y + off);
     }
-    if (player.spawnImmunity > 0) {
-        const p = Math.abs(Math.sin(Date.now() * 0.008));
-        ctx.fillStyle = `rgba(80,200,255,${p * 0.08})`;
-        ctx.fillRect(0, 0, W, H);
-    }
-    ctx.fillStyle = 'rgba(10,18,38,0.92)';
-    ctx.fillRect(0, H - 70, W, 70);
-    ctx.strokeStyle = '#c9803f';
-    ctx.lineWidth = 1;
+    ctx.fillStyle = o.color || UI.paper;
+    ctx.fillText(str, x, y);
+    const w = ctx.measureText(str).width;
+    ctx.restore();
+    return w;
+}
+function textWidth(str, size, family, spacing) {
+    ctx.save();
+    setFont(size, family);
+    if (spacing)
+        ctx.letterSpacing = spacing + 'px';
+    const w = ctx.measureText(str).width;
+    ctx.restore();
+    return w;
+}
+function roundRect(x, y, w, h, r) {
     ctx.beginPath();
-    ctx.moveTo(0, H - 70);
-    ctx.lineTo(W, H - 70);
-    ctx.stroke();
-    // Health
-    const hp = Math.max(0, player.health / 100);
-    const hcol = player.health > 50 ? '#50c83c' : player.health > 25 ? '#e68c1e' : '#dc2828';
-    ctx.fillStyle = '#0e1a34';
-    ctx.fillRect(20, H - 50, 220, 18);
-    ctx.fillStyle = hcol;
-    ctx.fillRect(20, H - 50, 220 * hp, 18);
-    ctx.strokeStyle = '#c9803f';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(20, H - 50, 220, 18);
-    ctx.fillStyle = '#c9803f';
-    ctx.font = '11px monospace';
-    ctx.fillText('HEALTH', 20, H - 54);
-    ctx.fillStyle = hcol;
-    ctx.font = '14px monospace';
-    ctx.fillText(Math.floor(player.health) + '%', 248, H - 37);
-    // Ammo
-    ctx.fillStyle = '#c9803f';
-    ctx.font = '11px monospace';
-    ctx.fillText('SHOTS', 300, H - 54);
-    for (let i = 0; i < 30; i++) {
-        ctx.fillStyle = i < player.ammo ? '#50c83c' : '#14213d';
-        ctx.fillRect(300 + (i % 10) * 13, H - 50 + Math.floor(i / 10) * 9, 10, 7);
-    }
-    // Grenades
-    ctx.fillStyle = '#c9803f';
-    ctx.font = '11px monospace';
-    ctx.fillText('BOOST', 450, H - 54);
-    for (let i = 0; i < 3; i++) {
-        ctx.fillStyle = i < player.grenades ? '#e68c1e' : '#14213d';
-        ctx.beginPath();
-        ctx.arc(462 + i * 22, H - 38, 8, 0, Math.PI * 2);
+    ctx.roundRect(x, y, w, h, r);
+}
+function panel(x, y, w, h, o = {}) {
+    const r = o.r ?? 12;
+    ctx.save();
+    if (o.shadow !== false) {
+        roundRect(x, y + 4, w, h, r);
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
         ctx.fill();
     }
-    // Score/wave
-    ctx.fillStyle = '#50b432';
-    ctx.font = '15px monospace';
-    const sc = `SCORE  ${String(player.score).padStart(6, '0')}`;
-    ctx.fillText(sc, W / 2 - ctx.measureText(sc).width / 2, H - 47);
-    ctx.fillStyle = '#c9803f';
-    ctx.font = '11px monospace';
-    const wv = `QUARTER  ${String(player.wave).padStart(2, '0')}`;
-    ctx.fillText(wv, W / 2 - ctx.measureText(wv).width / 2, H - 32);
-    // Spawn immunity bar
-    if (player.spawnImmunity > 0) {
-        const iw = 180, ifrac = player.spawnImmunity / 180;
-        ctx.fillStyle = '#142840';
-        ctx.fillRect(W / 2 - iw / 2, H - 88, iw, 8);
-        ctx.fillStyle = '#50c8ff';
-        ctx.fillRect(W / 2 - iw / 2, H - 88, iw * ifrac, 8);
-        ctx.fillStyle = '#50c8ff';
-        ctx.font = '11px monospace';
-        const il = 'INVINCIBLE';
-        ctx.fillText(il, W / 2 - ctx.measureText(il).width / 2, H - 93);
+    roundRect(x, y, w, h, r);
+    ctx.fillStyle = o.fill || 'rgba(10,18,38,0.88)';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = o.stroke || UI.navy2;
+    ctx.stroke();
+    if (o.accent) {
+        roundRect(x, y, w, h, r);
+        ctx.clip();
+        ctx.fillStyle = o.accent;
+        ctx.fillRect(x, y + h - 3, w, 3);
     }
-    // Reload
-    if (player.ammo === 0) {
-        ctx.fillStyle = '#dc5020';
-        ctx.font = 'bold 22px monospace';
-        const rw = '>> RELOAD [R] <<';
-        ctx.fillText(rw, W / 2 - ctx.measureText(rw).width / 2, H / 2 - 70);
+    ctx.restore();
+}
+function meter(x, y, w, h, frac, colA, colB) {
+    frac = Math.max(0, Math.min(1, frac));
+    ctx.save();
+    roundRect(x, y, w, h, h / 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fill();
+    if (frac > 0) {
+        const g = ctx.createLinearGradient(x, 0, x + w, 0);
+        g.addColorStop(0, colA);
+        g.addColorStop(1, colB);
+        roundRect(x, y, Math.max(h, w * frac), h, h / 2);
+        ctx.fillStyle = g;
+        ctx.fill();
+        roundRect(x + 3, y + 2, Math.max(0, w * frac - 6), h * 0.3, h * 0.15);
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        ctx.fill();
     }
-    // Controls
-    ctx.fillStyle = '#6a4a20';
-    ctx.font = '11px monospace';
-    ctx.fillText('WASD:MOVE  MOUSE:AIM  LMB:FIRE  G:BOOST  SPACE:ROLL  R:RELOAD  P:PAUSE  ESC:QUIT', 8, 20);
-    // Crosshair
-    const ccolor = player.ammo > 0 ? '#00eaff' : '#0a5a66';
-    ctx.strokeStyle = ccolor;
-    ctx.lineWidth = 1;
+    ctx.restore();
+}
+function keycap(k, x, y, size = 10, dark = false) {
+    const w = Math.max(size * 2.2, textWidth(k, size) + 12), h = size + 10;
+    ctx.save();
+    roundRect(x, y + 2, w, h, 5);
+    ctx.fillStyle = dark ? '#050a18' : UI.navy3;
+    ctx.fill();
+    roundRect(x, y, w, h, 5);
+    ctx.fillStyle = dark ? UI.navy3 : UI.navy2;
+    ctx.fill();
+    ctx.restore();
+    drawText(k, x + w / 2, y + h / 2 + 1, { size, align: 'center', baseline: 'middle', color: UI.gold });
+    return w;
+}
+function button(label, key, x, y, w, h, action, primary) {
+    const hov = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
+    const lift = hov ? -2 : 0;
+    uiButtons.push({ x, y, w, h, action });
+    ctx.save();
+    roundRect(x, y + 4, w, h, 10);
+    ctx.fillStyle = primary ? '#7c2e10' : UI.navy3;
+    ctx.fill();
+    roundRect(x, y + lift, w, h, 10);
+    ctx.fillStyle = primary ? (hov ? '#ff7a40' : UI.orange) : (hov ? '#27427a' : UI.navy2);
+    ctx.fill();
+    ctx.restore();
+    const kw = textWidth(key, 10) + 12, lw = textWidth(label, 18, 'display', 1);
+    const start = x + w / 2 - (lw + 10 + kw) / 2;
+    drawText(label, start, y + lift + h / 2 + 1, { size: 18, family: 'display', baseline: 'middle', spacing: 1 });
+    keycap(key, start + lw + 10, y + lift + h / 2 - 10, 10, !primary);
+}
+function vignette(rgb, alpha) {
+    const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.hypot(W, H) / 2);
+    g.addColorStop(0, `rgba(${rgb},0)`);
+    g.addColorStop(1, `rgba(${rgb},${alpha})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+}
+function courtBackdrop(tint) {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, UI.navy);
+    g.addColorStop(1, tint || UI.navy3);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(244,230,200,0.06)';
+    ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.moveTo(mouseX - 22, mouseY);
-    ctx.lineTo(mouseX - 8, mouseY);
+    ctx.arc(W / 2, H / 2, Math.min(W, H) * 0.32, 0, Math.PI * 2);
+    ctx.moveTo(0, H / 2);
+    ctx.lineTo(W, H / 2);
     ctx.stroke();
+    ctx.restore();
+}
+function drawBall(cx, cy, r, filled = true) {
+    ctx.save();
     ctx.beginPath();
-    ctx.moveTo(mouseX + 8, mouseY);
-    ctx.lineTo(mouseX + 22, mouseY);
-    ctx.stroke();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    if (filled) {
+        ctx.fillStyle = UI.orange;
+        ctx.fill();
+        ctx.strokeStyle = UI.ink;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cx - r, cy);
+        ctx.lineTo(cx + r, cy);
+        ctx.moveTo(cx, cy - r);
+        ctx.lineTo(cx, cy + r);
+        ctx.stroke();
+    }
+    else {
+        ctx.strokeStyle = 'rgba(142,160,200,0.35)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+function addPopup(x, y, text) {
+    popups.push({ x, y, text, life: 45 });
+}
+function endRun() {
+    gameOver = true;
+    newBest = player.score > bestScore;
+    if (newBest) {
+        bestScore = player.score;
+        try { localStorage.setItem(BEST_KEY, String(bestScore)); } catch { }
+    }
+}
+function goToLobby() { location.href = 'index.html'; }
+// ── HUD ──────────────────────────────────────────────────────────────────────
+function healthColors(hp) {
+    return hp > 50 ? ['#8af06a', '#2fa04a'] : hp > 25 ? ['#ffc24a', '#e0781e'] : ['#ff7a5a', '#c82020'];
+}
+function drawHUD(player, enemies) {
+    // Screen effects
+    if (player.hurtTimer > 0)
+        vignette('220,20,20', player.hurtTimer / 30 * 0.55);
+    if (player.health < 35 && player.health > 0)
+        vignette('200,0,0', 0.2 + Math.abs(Math.sin(Date.now() * 0.006)) * 0.25);
+    if (player.spawnImmunity > 0)
+        vignette('80,200,255', 0.12 + Math.abs(Math.sin(Date.now() * 0.008)) * 0.1);
+    // Score animates up toward the real value
+    shownScore = shownScore > player.score ? player.score : shownScore + Math.ceil((player.score - shownScore) * 0.15);
+    const counting = shownScore < player.score;
+    // Scoreboard (top-centre, clear of the top-left spawn corner)
+    const sbx = W / 2 - 118, sby = 16;
+    panel(sbx, sby, 236, 72, { accent: UI.orange });
+    drawText('SCORE', sbx + 16, sby + 22, { size: 9, color: UI.muted, spacing: 2 });
+    drawText(String(shownScore).padStart(6, '0'), sbx + 16, sby + 58, { size: 32, family: 'num', color: counting ? '#fff6c8' : UI.gold, spacing: 2 });
+    ctx.fillStyle = UI.navy2;
+    ctx.fillRect(sbx + 156, sby + 14, 2, 46);
+    drawText('QUARTER', sbx + 170, sby + 22, { size: 9, color: UI.muted, spacing: 2 });
+    drawText(String(player.wave).padStart(2, '0'), sbx + 170, sby + 58, { size: 32, family: 'num', color: UI.paper, spacing: 2 });
+    // Opponents left
+    const alive = enemies.filter(e => e.alive).length;
+    const status = spawnCountdown > 0 ? 'NEXT QUARTER INCOMING' : alive ? `${alive} DEFENDER${alive === 1 ? '' : 'S'} LEFT` : 'COURT CLEAR';
+    const stw = textWidth(status, 10, 'ui', 1) + 38;
+    const stx = W / 2 - stw / 2;
+    panel(stx, sby + 84, stw, 26, { r: 13, shadow: false });
+    ctx.fillStyle = alive && spawnCountdown === 0 ? UI.red : UI.gold;
     ctx.beginPath();
-    ctx.moveTo(mouseX, mouseY - 22);
-    ctx.lineTo(mouseX, mouseY - 8);
+    ctx.arc(stx + 15, sby + 97, 4, 0, Math.PI * 2);
+    ctx.fill();
+    drawText(status, stx + 26, sby + 101, { size: 10, spacing: 1 });
+    // Player panel (bottom-left)
+    const px = 16, pw = 320, ph = 86, py = H - ph - 16;
+    panel(px, py, pw, ph, { accent: UI.orange });
+    ctx.save();
+    roundRect(px + 14, py + 15, 54, 54, 12);
+    ctx.fillStyle = UI.orange;
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = UI.paper;
     ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(mouseX, mouseY + 8);
-    ctx.lineTo(mouseX, mouseY + 22);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(mouseX, mouseY, 6, 0, Math.PI * 2);
-    ctx.stroke();
-    // Boss HP bar
+    ctx.restore();
+    drawText('7', px + 41, py + 44, { size: 30, family: 'display', align: 'center', baseline: 'middle', shadow: UI.orangeD });
+    const hp = Math.max(0, player.health);
+    const [hA, hB] = healthColors(hp);
+    drawText('HEALTH', px + 82, py + 27, { size: 9, color: UI.muted, spacing: 2 });
+    drawText(String(Math.ceil(hp)), px + pw - 16, py + 29, { size: 18, family: 'num', align: 'right', color: hA });
+    meter(px + 82, py + 35, pw - 98, 14, hp / 100, hA, hB);
+    drawText('BOOST', px + 82, py + 70, { size: 9, color: UI.muted, spacing: 2 });
+    const shownBalls = Math.min(5, Math.max(3, player.grenades));
+    for (let i = 0; i < shownBalls; i++)
+        drawBall(px + 138 + i * 18, py + 66, 6.5, i < player.grenades);
+    if (player.grenades > 5)
+        drawText(`×${player.grenades}`, px + 138 + 5 * 18 - 2, py + 71, { size: 14, family: 'num', color: UI.gold });
+    // Status chips above the player panel
+    const chips = [];
+    if (player.spawnImmunity > 0)
+        chips.push({ text: 'INVINCIBLE', color: UI.cyan, frac: player.spawnImmunity / 180 });
+    if (player.bulletDamage > 1)
+        chips.push({ text: `DMG ×${player.bulletDamage}`, color: UI.gold });
+    if (player.speed > 2.8)
+        chips.push({ text: `SPEED ${player.speed.toFixed(1)}`, color: UI.gold });
+    if (player.damageReduction > 0)
+        chips.push({ text: `ARMOR ${Math.round(player.damageReduction * 100)}%`, color: UI.gold });
+    let cx = px;
+    for (const c of chips) {
+        const w = textWidth(c.text, 10, 'ui', 1) + 22 + (c.frac != null ? 50 : 0);
+        panel(cx, py - 34, w, 24, { r: 12, shadow: false, stroke: c.color === UI.cyan ? '#2a6a8a' : UI.navy2 });
+        drawText(c.text, cx + 11, py - 18, { size: 10, color: c.color, spacing: 1 });
+        if (c.frac != null)
+            meter(cx + w - 58, py - 25, 46, 6, c.frac, '#a8e8ff', UI.cyan);
+        cx += w + 6;
+    }
+    // Ammo panel (bottom-right)
+    const aw = 214, ax = W - aw - 16, ay = py;
+    panel(ax, ay, aw, ph, { accent: player.ammo ? UI.orange : UI.red });
+    drawText('SHOTS', ax + 16, ay + 27, { size: 9, color: UI.muted, spacing: 2 });
+    const ammoCol = player.ammo === 0 ? UI.red : player.ammo <= 5 ? '#ffc24a' : UI.paper;
+    drawText(String(player.ammo), ax + 16, ay + 68, { size: 38, family: 'num', color: ammoCol });
+    const pipX = ax + aw - 16 - 100;
+    for (let i = 0; i < 30; i++) {
+        ctx.fillStyle = i < player.ammo ? (player.ammo <= 5 ? '#ffc24a' : UI.gold) : 'rgba(142,160,200,0.15)';
+        roundRect(pipX + (i % 10) * 10, ay + 20 + Math.floor(i / 10) * 10, 7, 6, 2);
+        ctx.fill();
+    }
+    if (player.ammo > 30)
+        drawText(`+${player.ammo - 30} RESERVE`, ax + aw - 16, ay + 68, { size: 9, color: UI.muted, align: 'right', spacing: 1 });
+    else if (player.ammo === 0) {
+        const kw = keycap('R', pipX, ay + 52);
+        drawText('RELOAD', pipX + kw + 8, ay + 66, { size: 11, color: UI.red, spacing: 1, alpha: 0.6 + Math.abs(Math.sin(Date.now() * 0.008)) * 0.4 });
+    }
+    // Controls reminder for the first few seconds of a run
+    const hintAlpha = hudTime < 420 ? 1 : Math.max(0, 1 - (hudTime - 420) / 60);
+    if (hintAlpha > 0) {
+        ctx.save();
+        ctx.globalAlpha = hintAlpha;
+        drawControls(W / 2, H - 150);
+        ctx.restore();
+    }
+    // Boss bar (under the scoreboard)
     const boss = enemies.find(e => e.kind === 'boss' && e.alive);
     if (boss) {
-        const bw = 400, bx = W / 2 - bw / 2, by = 30;
-        const bcol = boss.phase === 2 ? '#ff3c14' : '#c82808';
-        const bfrac = Math.max(0, boss.health / boss.maxHealth);
+        const bw = Math.min(460, W - 32), bx = W / 2 - bw / 2, by = 136;
+        const berserk = boss.phase === 2;
         const tierStr = boss.tier <= 4 ? 'I'.repeat(boss.tier) : `T${boss.tier}`;
-        const bLabel = `\u25C6 BOSS ${tierStr}  ${Math.ceil(boss.health)} / ${boss.maxHealth} \u25C6`;
-        ctx.fillStyle = bcol;
-        ctx.font = 'bold 14px monospace';
-        ctx.fillText(bLabel, W / 2 - ctx.measureText(bLabel).width / 2, by - 4);
-        ctx.fillStyle = '#1e0805';
-        ctx.fillRect(bx, by, bw, 18);
-        ctx.fillStyle = bcol;
-        if (bfrac > 0)
-            ctx.fillRect(bx, by, bw * bfrac, 18);
-        ctx.strokeStyle = '#782010';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(bx, by, bw, 18);
-        if (boss.phase === 2) {
-            ctx.fillStyle = '#ff5020';
-            ctx.font = 'bold 11px monospace';
-            const bk = '— BERSERK —';
-            ctx.fillText(bk, W / 2 - ctx.measureText(bk).width / 2, by + 32);
+        panel(bx, by, bw, 60, { fill: 'rgba(30,8,5,0.9)', stroke: berserk ? '#ff5020' : '#782010' });
+        const nw = drawText(`BOSS ${tierStr}`, bx + 16, by + 27, { size: 20, family: 'display', color: berserk ? '#ff6a3a' : '#ff9a60', spacing: 1 });
+        if (berserk) {
+            const a = 0.6 + Math.abs(Math.sin(Date.now() * 0.01)) * 0.4;
+            ctx.save();
+            ctx.globalAlpha = a;
+            roundRect(bx + 26 + nw, by + 12, 70, 18, 9);
+            ctx.fillStyle = '#ff3c14';
+            ctx.fill();
+            ctx.restore();
+            drawText('BERSERK', bx + 61 + nw, by + 22, { size: 9, align: 'center', baseline: 'middle', spacing: 1 });
         }
+        drawText(`${Math.ceil(Math.max(0, boss.health))} / ${boss.maxHealth}`, bx + bw - 16, by + 26, { size: 14, family: 'num', align: 'right' });
+        meter(bx + 16, by + 36, bw - 32, 12, boss.health / boss.maxHealth, berserk ? '#ff8a3a' : '#ff6a2a', '#b01808');
+    }
+}
+function drawControls(cx, y) {
+    const items = CONTROLS.map(([k, label]) => ({ k, label, w: Math.max(22, textWidth(k, 10) + 12) + 6 + textWidth(label, 11) }));
+    const total = items.reduce((s, i) => s + i.w, 0) + (items.length - 1) * 18 + 32;
+    panel(cx - total / 2, y - 8, total, 36, { r: 18, shadow: false });
+    let x = cx - total / 2 + 16;
+    for (const i of items) {
+        const kw = keycap(i.k, x, y);
+        drawText(i.label, x + kw + 6, y + 14, { size: 11, color: UI.muted });
+        x += i.w + 18;
+    }
+}
+function drawCrosshair(player) {
+    const empty = player.ammo <= 0;
+    const gap = 7 + (player.shootTimer / 8) * 5, len = 9;
+    const col = empty ? UI.red : UI.gold;
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (const [lw, c] of [[4, 'rgba(10,18,38,0.85)'], [2, col]]) {
+        ctx.lineWidth = lw;
+        ctx.strokeStyle = c;
+        ctx.beginPath();
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            ctx.moveTo(mouseX + dx * gap, mouseY + dy * gap);
+            ctx.lineTo(mouseX + dx * (gap + len), mouseY + dy * (gap + len));
+        }
+        ctx.stroke();
+    }
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.arc(mouseX, mouseY, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+}
+function drawPopups(camX, camY) {
+    for (const p of popups) {
+        const t = 1 - p.life / 45;
+        drawText(p.text, p.x - camX, p.y - camY - t * 28, { size: 15, family: 'num', align: 'center', color: UI.gold,
+            shadow: 'rgba(0,0,0,0.7)', shadowOffset: 1, alpha: Math.min(1, p.life / 15) });
     }
 }
 // ── MINIMAP ───────────────────────────────────────────────────────────────────
-function drawMinimap(player, enemies) {
-    const ms = 3, mw = MAP_W * ms, mh = MAP_H * ms, mx2 = W - mw - 12, my2 = 12;
-    ctx.fillStyle = 'rgba(10,18,38,0.9)';
-    ctx.fillRect(mx2 - 2, my2 - 2, mw + 4, mh + 4);
+const MM_SCALE = 3;
+const minimapBase = (() => {
+    // The map never changes, so draw its tiles once instead of every frame.
+    const c = document.createElement('canvas');
+    c.width = MAP_W * MM_SCALE;
+    c.height = MAP_H * MM_SCALE;
+    const m = c.getContext('2d');
     for (let r = 0; r < MAP_H; r++)
-        for (let c = 0; c < MAP_W; c++) {
-            ctx.fillStyle = RAW_MAP[r][c] === '#' ? '#1c3260' : '#a8642c';
-            ctx.fillRect(mx2 + c * ms, my2 + r * ms, ms, ms);
+        for (let col = 0; col < MAP_W; col++) {
+            m.fillStyle = RAW_MAP[r][col] === '#' ? '#1c3260' : '#a8642c';
+            m.fillRect(col * MM_SCALE, r * MM_SCALE, MM_SCALE, MM_SCALE);
         }
+    return c;
+})();
+function drawMinimap(player, enemies, camX, camY) {
+    const s = MM_SCALE, mw = MAP_W * s, mh = MAP_H * s, pad = 10;
+    const x = W - mw - pad * 2 - 16, y = 16;
+    panel(x, y, mw + pad * 2, mh + pad + 30, { accent: UI.orange });
+    drawText('COURT MAP', x + pad, y + 19, { size: 9, color: UI.muted, spacing: 2 });
+    const ox = x + pad, oy = y + 27;
+    ctx.save();
+    roundRect(ox, oy, mw, mh, 6);
+    ctx.clip();
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(minimapBase, ox, oy);
+    ctx.strokeStyle = 'rgba(255,243,216,0.55)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(ox + camX / TILE * s + 0.5, oy + camY / TILE * s + 0.5, W / TILE * s, H / TILE * s);
     for (const e of enemies) {
         if (!e.alive)
             continue;
-        ctx.fillStyle = e.kind === 'boss' ? '#ff5020' : e.kind === 'brute' ? '#ff8c20' : '#c82828';
-        ctx.fillRect(mx2 + Math.floor(e.x / TILE * ms) - 1, my2 + Math.floor(e.y / TILE * ms) - 1, 3, 3);
+        ctx.fillStyle = e.kind === 'boss' ? '#ff5020' : e.kind === 'brute' ? '#ffa040' : e.kind === 'bomber' ? '#ffd040' : '#ff4040';
+        ctx.beginPath();
+        ctx.arc(ox + e.x / TILE * s, oy + e.y / TILE * s, e.kind === 'boss' ? 4 : 2, 0, Math.PI * 2);
+        ctx.fill();
     }
-    ctx.fillStyle = '#50c83c';
+    const mx = ox + player.x / TILE * s, my = oy + player.y / TILE * s;
+    ctx.strokeStyle = UI.paper;
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(mx2 + player.x / TILE * ms, my2 + player.y / TILE * ms, 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#96ff64';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(mx2 + player.x / TILE * ms, my2 + player.y / TILE * ms);
-    ctx.lineTo(mx2 + player.x / TILE * ms + Math.cos(player.angle) * 6, my2 + player.y / TILE * ms + Math.sin(player.angle) * 6);
+    ctx.moveTo(mx, my);
+    ctx.lineTo(mx + Math.cos(player.angle) * 9, my + Math.sin(player.angle) * 9);
     ctx.stroke();
-    ctx.strokeStyle = '#c9803f';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(mx2 - 2, my2 - 2, mw + 4, mh + 4);
+    ctx.fillStyle = UI.gold;
+    ctx.strokeStyle = UI.navy3;
+    ctx.beginPath();
+    ctx.arc(mx, my, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
 }
 // ── POWERUP SCREEN ────────────────────────────────────────────────────────────
 const POWERUPS = [
-    { name: 'FULL HEAL', desc: 'Restore HP to 100', icon: '+' },
-    { name: 'EXTRA AMMO', desc: 'Shots+, grows each wave', icon: 'A' },
-    { name: 'SPEED BOOST', desc: 'Move faster, modest gain', icon: '>' },
-    { name: 'HEAVY ROUNDS', desc: 'Bullet damage+, scales per wave', icon: 'D' },
-    { name: 'EXTRA GRENADE', desc: 'Boost+, more per wave', icon: 'G' },
-    { name: 'IRON SKIN', desc: 'Damage reduction, stacks 95%', icon: 'S' },
+    { name: 'FULL HEAL', desc: 'Restore HP to 100', icon: 'heal' },
+    { name: 'EXTRA AMMO', desc: 'Shots+, grows each wave', icon: 'ammo' },
+    { name: 'SPEED BOOST', desc: 'Move faster, modest gain', icon: 'speed' },
+    { name: 'HEAVY ROUNDS', desc: 'Bullet damage+, scales per wave', icon: 'damage' },
+    { name: 'EXTRA GRENADE', desc: 'Boost+, more per wave', icon: 'boost' },
+    { name: 'IRON SKIN', desc: 'Damage reduction, stacks 95%', icon: 'armor' },
 ];
 function applyPowerup(player, p) {
     const w = player.wave;
@@ -1131,156 +1377,266 @@ function applyPowerup(player, p) {
     else if (p.name === 'IRON SKIN')
         player.damageReduction = Math.min(0.95, (player.damageReduction || 0) + 0.22 + w * 0.06);
 }
-function drawPowerupScreen(options, hovered, wave) {
-    ctx.fillStyle = '#0a1226';
-    ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = '#f4b93c';
-    ctx.font = 'bold 52px monospace';
-    const t = 'CHOOSE UPGRADE';
-    ctx.fillText(t, W / 2 - ctx.measureText(t).width / 2, 100);
-    ctx.fillStyle = '#c9803f';
-    ctx.font = '16px monospace';
-    const sub = `QUARTER ${wave - 1} CLEARED  —  SELECT ONE UPGRADE`;
-    ctx.fillText(sub, W / 2 - ctx.measureText(sub).width / 2, 148);
-    ctx.strokeStyle = '#6a4a20';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(80, 170);
-    ctx.lineTo(W - 80, 170);
-    ctx.stroke();
-    const cw = 240, ch = 170, gap = 28, cols = 3, tw = cols * cw + (cols - 1) * gap, sx2 = W / 2 - tw / 2, sy2 = 195;
-    for (let i = 0; i < options.length; i++) {
-        const p = options[i], cx = sx2 + (i % cols) * (cw + gap), cy = sy2 + Math.floor(i / cols) * (ch + gap), hov = i === hovered;
-        ctx.fillStyle = hov ? '#122808' : '#0a1006';
-        ctx.beginPath();
-        ctx.roundRect(cx, cy, cw, ch, 6);
-        ctx.fill();
-        ctx.strokeStyle = hov ? '#f4b93c' : '#234614';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.roundRect(cx, cy, cw, ch, 6);
-        ctx.stroke();
-        ctx.fillStyle = hov ? '#f4b93c' : '#286e18';
-        ctx.beginPath();
-        ctx.arc(cx + cw / 2, cy + 42, 24, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#0a1226';
-        ctx.font = 'bold 22px monospace';
-        ctx.fillText(p.icon, cx + cw / 2 - ctx.measureText(p.icon).width / 2, cy + 50);
-        ctx.fillStyle = hov ? '#f4b93c' : '#37961e';
-        ctx.font = 'bold 15px monospace';
-        ctx.fillText(p.name, cx + cw / 2 - ctx.measureText(p.name).width / 2, cy + 90);
-        ctx.fillStyle = hov ? '#3c8c28' : '#235012';
-        ctx.font = '12px monospace';
-        ctx.fillText(p.desc, cx + cw / 2 - ctx.measureText(p.desc).width / 2, cy + 114);
-        ctx.fillStyle = hov ? '#f4b93c' : '#234614';
-        ctx.font = '11px monospace';
-        ctx.fillText(`[${i + 1}]`, cx + cw - 30, cy + ch - 12);
+// Shows exactly what picking the card does, using the same maths as applyPowerup.
+function powerupEffect(player, p) {
+    const w = player.wave;
+    switch (p.name) {
+        case 'FULL HEAL': return `${Math.ceil(player.health)} → 100 HP`;
+        case 'EXTRA AMMO': return `+${100 + w * 50} SHOTS`;
+        case 'SPEED BOOST': return `${player.speed.toFixed(1)} → ${Math.min(player.speed + 0.35 + w * 0.05, 6).toFixed(1)}`;
+        case 'HEAVY ROUNDS': return `DMG ${player.bulletDamage} → ${player.bulletDamage + 1 + Math.floor(w / 2)}`;
+        case 'EXTRA GRENADE': return `+${Math.min(99, player.grenades + 5 + w * 3) - player.grenades} BOOSTS`;
+        case 'IRON SKIN': {
+            const dr = player.damageReduction || 0;
+            return `${Math.round(dr * 100)}% → ${Math.round(Math.min(0.95, dr + 0.22 + w * 0.06) * 100)}%`;
+        }
     }
-    ctx.fillStyle = '#6a4a20';
-    ctx.font = '13px monospace';
-    const h = 'CLICK A CARD  OR  PRESS 1-3  TO CHOOSE';
-    ctx.fillText(h, W / 2 - ctx.measureText(h).width / 2, H - 40);
+}
+function drawPowerupIcon(icon, cx, cy) {
+    ctx.save();
+    ctx.fillStyle = UI.paper;
+    ctx.strokeStyle = UI.paper;
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    switch (icon) {
+        case 'heal':
+            ctx.moveTo(cx - 12, cy);
+            ctx.lineTo(cx + 12, cy);
+            ctx.moveTo(cx, cy - 12);
+            ctx.lineTo(cx, cy + 12);
+            ctx.stroke();
+            break;
+        case 'ammo':
+            for (const dx of [-10, 0, 10]) {
+                ctx.roundRect(cx + dx - 3.5, cy - 11, 7, 22, [4, 4, 1, 1]);
+            }
+            ctx.fill();
+            break;
+        case 'speed':
+            ctx.moveTo(cx - 12, cy - 10);
+            ctx.lineTo(cx - 2, cy);
+            ctx.lineTo(cx - 12, cy + 10);
+            ctx.moveTo(cx + 1, cy - 10);
+            ctx.lineTo(cx + 11, cy);
+            ctx.lineTo(cx + 1, cy + 10);
+            ctx.stroke();
+            break;
+        case 'damage':
+            ctx.roundRect(cx - 7, cy - 14, 14, 28, [7, 7, 2, 2]);
+            ctx.fill();
+            break;
+        case 'boost':
+            ctx.lineWidth = 3;
+            ctx.arc(cx, cy, 13, 0, Math.PI * 2);
+            ctx.moveTo(cx - 13, cy);
+            ctx.lineTo(cx + 13, cy);
+            ctx.moveTo(cx, cy - 13);
+            ctx.lineTo(cx, cy + 13);
+            ctx.stroke();
+            break;
+        case 'armor':
+            ctx.moveTo(cx, cy - 14);
+            ctx.lineTo(cx + 12, cy - 9);
+            ctx.quadraticCurveTo(cx + 12, cy + 8, cx, cy + 15);
+            ctx.quadraticCurveTo(cx - 12, cy + 8, cx - 12, cy - 9);
+            ctx.closePath();
+            ctx.fill();
+            break;
+    }
+    ctx.restore();
+}
+function powerupLayout(n) {
+    const gap = 24, cw = Math.min(250, (W - 64 - gap * (n - 1)) / n), ch = 240;
+    const total = n * cw + (n - 1) * gap, x0 = W / 2 - total / 2, y0 = Math.max(180, H / 2 - ch / 2 + 30);
+    return Array.from({ length: n }, (_, i) => ({ x: x0 + i * (cw + gap), y: y0, w: cw, h: ch }));
+}
+function drawPowerupScreen(options, hovered, player) {
+    courtBackdrop();
+    const rects = powerupLayout(options.length);
+    const top = rects[0].y;
+    drawText('CHOOSE YOUR UPGRADE', W / 2, top - 62, { size: Math.min(52, W / 14), family: 'display', align: 'center', shadow: UI.orangeD, shadowOffset: 3, spacing: 1 });
+    drawText(`QUARTER ${player.wave - 1} CLEARED  ·  PICK ONE`, W / 2, top - 30, { size: 12, align: 'center', color: UI.gold, spacing: 3 });
+    for (let i = 0; i < options.length; i++) {
+        const p = options[i], r = rects[i], hov = i === hovered;
+        const y = r.y + (hov ? -8 : 0);
+        ctx.save();
+        roundRect(r.x, y + 10, r.w, r.h, 16);
+        ctx.fillStyle = hov ? UI.goldD : UI.navy2;
+        ctx.fill();
+        roundRect(r.x, y, r.w, r.h, 16);
+        ctx.fillStyle = UI.paper;
+        ctx.fill();
+        ctx.clip();
+        const hg = ctx.createLinearGradient(0, y, 0, y + 46);
+        hg.addColorStop(0, UI.navy2);
+        hg.addColorStop(1, UI.navy);
+        ctx.fillStyle = hg;
+        ctx.fillRect(r.x, y, r.w, 46);
+        ctx.fillStyle = UI.orange;
+        ctx.fillRect(r.x, y + 46, r.w, 4);
+        ctx.restore();
+        if (hov) {
+            ctx.save();
+            roundRect(r.x, y, r.w, r.h, 16);
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = UI.gold;
+            ctx.stroke();
+            ctx.restore();
+        }
+        keycap(String(i + 1), r.x + 14, y + 12, 11);
+        drawText('UPGRADE', r.x + r.w - 14, y + 28, { size: 9, align: 'right', color: UI.gold, spacing: 2 });
+        const icx = r.x + r.w / 2, icy = y + 94;
+        ctx.save();
+        const ig = ctx.createRadialGradient(icx - 8, icy - 10, 4, icx, icy, 32);
+        ig.addColorStop(0, '#ff9a63');
+        ig.addColorStop(0.6, UI.orange);
+        ig.addColorStop(1, UI.orangeD);
+        ctx.beginPath();
+        ctx.arc(icx, icy, 32, 0, Math.PI * 2);
+        ctx.fillStyle = ig;
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = hov ? UI.gold : UI.paper;
+        ctx.stroke();
+        ctx.restore();
+        drawPowerupIcon(p.icon, icx, icy);
+        drawText(p.name, icx, y + 157, { size: 22, family: 'display', align: 'center', color: UI.navy3, spacing: 0.5 });
+        drawText(p.desc, icx, y + 178, { size: 11, weight: 500, align: 'center', color: '#6b5a3c' });
+        const eff = powerupEffect(player, p);
+        const ew = textWidth(eff, 14, 'num', 1) + 24;
+        ctx.save();
+        roundRect(icx - ew / 2, y + 194, ew, 28, 8);
+        ctx.fillStyle = UI.navy3;
+        ctx.fill();
+        ctx.restore();
+        drawText(eff, icx, y + 209, { size: 14, family: 'num', align: 'center', baseline: 'middle', color: UI.gold, spacing: 1 });
+    }
+    drawText('CLICK A CARD  OR  PRESS 1–3', W / 2, Math.min(H - 30, top + rects[0].h + 60), { size: 11, align: 'center', color: UI.muted, spacing: 2 });
 }
 // ── SCREENS ───────────────────────────────────────────────────────────────────
 function drawGameOver(player) {
-    ctx.fillStyle = '#0a1226';
-    ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = '#b41e1e';
-    ctx.font = 'bold 72px monospace';
-    ctx.fillText('FOULED OUT', W / 2 - ctx.measureText('FOULED OUT').width / 2, 160);
-    ctx.fillStyle = '#8a6a2e';
-    ctx.font = 'bold 28px monospace';
-    ctx.fillText('GAME OVER', W / 2 - ctx.measureText('GAME OVER').width / 2, 230);
-    ctx.strokeStyle = '#3a2a14';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(80, 265);
-    ctx.lineTo(W - 80, 265);
-    ctx.stroke();
-    ctx.fillStyle = '#f4b93c';
-    ctx.font = 'bold 24px monospace';
-    const sc = `FINAL SCORE  ${String(player.score).padStart(6, '0')}`;
-    ctx.fillText(sc, W / 2 - ctx.measureText(sc).width / 2, 310);
-    const wv = `QUARTER REACHED  ${String(player.wave).padStart(2, '0')}`;
-    ctx.fillText(wv, W / 2 - ctx.measureText(wv).width / 2, 355);
-    ctx.strokeStyle = '#3a2a14';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(80, 385);
-    ctx.lineTo(W - 80, 385);
-    ctx.stroke();
-    ctx.fillStyle = '#c9803f';
-    ctx.font = '16px monospace';
-    const pr = 'R — RESTART         Q — QUIT';
-    ctx.fillText(pr, W / 2 - ctx.measureText(pr).width / 2, 420);
+    courtBackdrop('#2a0c08');
+    const cy = H / 2;
+    drawText('FOULED OUT', W / 2, cy - 120, { size: Math.min(96, W / 7), family: 'display', align: 'center', color: UI.red, shadow: '#5a0e08', shadowOffset: 5, spacing: 2 });
+    drawText('FINAL BUZZER  ·  GAME OVER', W / 2, cy - 86, { size: 12, align: 'center', color: UI.gold, spacing: 4 });
+    const cw = Math.min(560, W - 32), ch = 104, cx = W / 2 - cw / 2, cardY = cy - 50;
+    ctx.save();
+    roundRect(cx, cardY + 8, cw, ch, 16);
+    ctx.fillStyle = UI.navy2;
+    ctx.fill();
+    roundRect(cx, cardY, cw, ch, 16);
+    ctx.fillStyle = UI.paper;
+    ctx.fill();
+    ctx.restore();
+    const stats = [['SCORE', String(player.score).padStart(6, '0')], ['QUARTER', String(player.wave).padStart(2, '0')],
+        ['KNOCKOUTS', String(player.kills)], ['BEST', String(bestScore).padStart(6, '0')]];
+    const colW = cw / stats.length;
+    stats.forEach(([label, value], i) => {
+        const x = cx + colW * i + colW / 2;
+        if (i > 0) {
+            ctx.fillStyle = '#e2c898';
+            ctx.fillRect(cx + colW * i, cardY + 22, 2, ch - 44);
+        }
+        drawText(label, x, cardY + 38, { size: 9, align: 'center', color: UI.orangeD, spacing: 2 });
+        drawText(value, x, cardY + 76, { size: Math.min(30, colW / 4), family: 'num', align: 'center', color: UI.navy3, spacing: 1 });
+    });
+    if (newBest) {
+        const t = 'NEW PERSONAL BEST!';
+        const tw = textWidth(t, 11, 'ui', 2) + 28;
+        const bob = Math.sin(Date.now() * 0.005) * 2;
+        ctx.save();
+        roundRect(W / 2 - tw / 2, cardY - 14 + bob, tw, 26, 13);
+        ctx.fillStyle = UI.gold;
+        ctx.fill();
+        ctx.restore();
+        drawText(t, W / 2, cardY + bob, { size: 11, align: 'center', baseline: 'middle', color: UI.navy3, spacing: 2 });
+    }
+    const bw = Math.min(210, (cw - 16) / 2), by = cardY + ch + 40;
+    button('PLAY AGAIN', 'R', W / 2 - bw - 8, by, bw, 52, newGame, true);
+    button('LOBBY', 'Q', W / 2 + 8, by, bw, 52, goToLobby, false);
 }
 function drawWaveClear(player) {
-    const msg = `QUARTER ${player.wave - 1} CLEARED  //  ADVANCING...`;
-    const tw = ctx.measureText(msg).width;
+    const t = (60 - waveClearTimer) / 60;
+    const ease = 1 - Math.pow(1 - Math.min(1, t * 3), 3);
+    const bh = 112, by = H / 2 - bh / 2 - 40;
+    ctx.save();
+    ctx.globalAlpha = ease;
     ctx.fillStyle = 'rgba(10,18,38,0.92)';
-    ctx.fillRect(W / 2 - tw / 2 - 15, H / 2 - 24, tw + 30, 46);
-    ctx.fillStyle = '#f4b93c';
-    ctx.font = 'bold 22px monospace';
-    ctx.fillText(msg, W / 2 - tw / 2, H / 2 + 8);
+    ctx.fillRect(0, by, W, bh);
+    ctx.fillStyle = UI.orange;
+    ctx.fillRect(0, by, W, 4);
+    ctx.fillRect(0, by + bh - 4, W, 4);
+    const slide = (1 - ease) * 80;
+    drawText(`QUARTER ${player.wave} CLEARED`, W / 2 - slide, by + 64, { size: 48, family: 'display', align: 'center', shadow: UI.orangeD, shadowOffset: 3, spacing: 1 });
+    drawText('+500 BONUS  ·  UPGRADE INCOMING', W / 2 + slide, by + 90, { size: 11, align: 'center', color: UI.gold, spacing: 3 });
+    ctx.restore();
 }
 function drawSpawnCountdown(player, spawnCountdown) {
     const secs = Math.ceil(spawnCountdown / 60);
-    const isBossWave = player.wave % 5 === 0;
-    if (isBossWave) {
-        const pulse = Math.abs(Math.sin(Date.now() * 0.005));
-        const col = `rgb(${Math.floor(200 + pulse * 55)},${Math.floor(40 + pulse * 20)},20)`;
-        ctx.fillStyle = 'rgba(60,0,0,0.6)';
-        ctx.fillRect(0, 0, W, H);
-        const t = '\u25C6  BOSS INCOMING  \u25C6';
-        const sub = `PREPARE FOR COMBAT — DEPLOYING IN ${secs}...`;
-        ctx.fillStyle = col;
-        ctx.font = 'bold 58px monospace';
-        ctx.fillText(t, W / 2 - ctx.measureText(t).width / 2, H / 2 - 20);
-        ctx.fillStyle = '#b44014';
-        ctx.font = 'bold 24px monospace';
-        ctx.fillText(sub, W / 2 - ctx.measureText(sub).width / 2, H / 2 + 40);
-    }
-    else {
-        const msg = `QUARTER ${player.wave}  DEPLOYING IN  ${secs}...`;
-        const tw = ctx.measureText(msg).width;
-        ctx.fillStyle = 'rgba(10,18,38,0.92)';
-        ctx.fillRect(W / 2 - tw / 2 - 20, H / 2 + 30, tw + 40, 48);
-        ctx.fillStyle = '#f4b93c';
-        ctx.font = 'bold 22px monospace';
-        ctx.fillText(msg, W / 2 - tw / 2, H / 2 + 62);
-    }
+    const boss = player.wave % 5 === 0;
+    const accent = boss ? '#ff5020' : UI.gold;
+    if (boss)
+        vignette('120,0,0', 0.45 + Math.abs(Math.sin(Date.now() * 0.005)) * 0.25);
+    const cx = W / 2, cy = H / 2 - 30;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, 60, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(10,18,38,0.88)';
+    ctx.fill();
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 52, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = accent;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 52, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (spawnCountdown / 180));
+    ctx.stroke();
+    ctx.restore();
+    const inSec = (spawnCountdown % 60) / 60;
+    drawText(String(secs), cx, cy + 3, { size: 56 + Math.max(0, inSec - 0.75) * 60, family: 'display', align: 'center', baseline: 'middle' });
+    drawText(boss ? 'BOSS INCOMING' : `QUARTER ${player.wave}`, cx, cy - 86, { size: boss ? 56 : 42, family: 'display', align: 'center',
+        color: boss ? accent : UI.paper, shadow: boss ? '#3a0804' : UI.orangeD, shadowOffset: 3, spacing: 1 });
+    const sub = boss ? 'SURVIVE THE ONSLAUGHT' : 'GET READY';
+    const sw = textWidth(sub, 12, 'ui', 4) + 32;
+    panel(cx - sw / 2, cy + 78, sw, 30, { r: 15, shadow: false, stroke: boss ? '#782010' : UI.navy2 });
+    drawText(sub, cx + 2, cy + 98, { size: 12, align: 'center', color: accent, spacing: 4 });
 }
 function drawPauseOverlay() {
-    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.fillStyle = 'rgba(10,18,38,0.72)';
     ctx.fillRect(0, 0, W, H);
-    const pw = 420, ph = 240, px = W / 2 - pw / 2, py = H / 2 - ph / 2;
-    ctx.fillStyle = 'rgba(10,18,38,0.95)';
-    ctx.fillRect(px, py, pw, ph);
-    ctx.strokeStyle = '#e8622c';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(px, py, pw, ph);
-    ctx.fillStyle = '#f4b93c';
-    ctx.font = 'bold 42px monospace';
-    ctx.fillText('// PAUSED //', px + pw / 2 - ctx.measureText('// PAUSED //').width / 2, py + 70);
-    ctx.strokeStyle = '#3a2a14';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(px + 20, py + 90);
-    ctx.lineTo(px + pw - 20, py + 90);
-    ctx.stroke();
-    const lines = [['P / ESC', 'RESUME GAME'], ['R', 'RESTART  (game over only)']];
-    for (let i = 0; i < lines.length; i++) {
-        ctx.fillStyle = '#f4b93c';
-        ctx.font = 'bold 16px monospace';
-        ctx.fillText(lines[i][0], px + 40, py + 118 + i * 38);
-        ctx.fillStyle = '#8a6a2e';
-        ctx.font = '13px monospace';
-        ctx.fillText(lines[i][1], px + 160, py + 122 + i * 38);
-    }
-    ctx.fillStyle = '#6a4a20';
-    ctx.font = '11px monospace';
-    ctx.fillText('TIMEOUT — COURT CLASH', px + pw / 2 - ctx.measureText('TIMEOUT — COURT CLASH').width / 2, py + ph - 18);
+    const pw = Math.min(460, W - 32), ph = 318, px = W / 2 - pw / 2, py = H / 2 - ph / 2;
+    ctx.save();
+    roundRect(px, py + 10, pw, ph, 18);
+    ctx.fillStyle = UI.navy2;
+    ctx.fill();
+    roundRect(px, py, pw, ph, 18);
+    ctx.fillStyle = UI.paper;
+    ctx.fill();
+    ctx.clip();
+    const hg = ctx.createLinearGradient(0, py, 0, py + 70);
+    hg.addColorStop(0, UI.navy2);
+    hg.addColorStop(1, UI.navy);
+    ctx.fillStyle = hg;
+    ctx.fillRect(px, py, pw, 70);
+    ctx.fillStyle = UI.orange;
+    ctx.fillRect(px, py + 70, pw, 4);
+    ctx.restore();
+    drawText('TIMEOUT', px + 24, py + 44, { size: 34, family: 'display', shadow: UI.orangeD, spacing: 1 });
+    drawText('GAME PAUSED', px + 26, py + 60, { size: 9, color: UI.gold, spacing: 3 });
+    drawText('CONTROLS', px + 24, py + 102, { size: 9, color: UI.orangeD, spacing: 2 });
+    const colW = (pw - 48) / 2;
+    CONTROLS.forEach(([k, label], i) => {
+        const x = px + 24 + (i % 2) * colW, y = py + 116 + Math.floor(i / 2) * 34;
+        const kw = keycap(k, x, y, 11);
+        drawText(label, x + kw + 10, y + 15, { size: 12, color: UI.navy3 });
+    });
+    const bw = (pw - 60) / 2, by = py + ph - 76;
+    button('RESUME', 'P', px + 24, by, bw, 50, () => { paused = false; }, true);
+    button('LOBBY', 'Q', px + 36 + bw, by, bw, 50, goToLobby, false);
 }
 // ── GAME STATE ────────────────────────────────────────────────────────────────
 let player = makePlayer(), enemies = spawnEnemies(1);
@@ -1292,6 +1648,10 @@ let mouseX = W / 2, mouseY = H / 2, mouseDown = false;
 function newGame() {
     grenades.length = 0;
     particles.length = 0;
+    popups.length = 0;
+    shownScore = 0;
+    hudTime = 0;
+    newBest = false;
     player = makePlayer();
     enemies = spawnEnemies(1);
     gameOver = false;
@@ -1306,16 +1666,18 @@ document.addEventListener('keydown', e => {
         if (e.key === 'r' || e.key === 'R')
             newGame();
         if (e.key === 'q' || e.key === 'Q')
-            window.close();
+            goToLobby();
         return;
     }
     if (paused) {
         if (e.key === 'p' || e.key === 'P' || e.key === 'Escape')
             paused = false;
+        if (e.key === 'q' || e.key === 'Q')
+            goToLobby();
         return;
     }
     if (e.key === 'Escape')
-        gameOver = true;
+        endRun();
     if (e.key === 'p' || e.key === 'P') {
         if (!showingPowerup)
             paused = true;
@@ -1342,6 +1704,9 @@ canvas.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clien
 canvas.addEventListener('mousedown', e => {
     if (e.button !== 0)
         return;
+    const btn = uiButtons.find(b => mouseX >= b.x && mouseX <= b.x + b.w && mouseY >= b.y && mouseY <= b.y + b.h);
+    if (btn)
+        return btn.action();
     mouseDown = true;
     if (showingPowerup && powerupHovered >= 0) {
         applyPowerup(player, powerupOptions[powerupHovered]);
@@ -1357,6 +1722,8 @@ function loop(ts) {
     requestAnimationFrame(loop);
     const dt = Math.min((ts - last) / 16.67, 3);
     last = ts;
+    uiButtons = [];
+    canvas.style.cursor = gameOver || paused || showingPowerup ? 'default' : 'none';
     if (gameOver) {
         drawGameOver(player);
         return;
@@ -1364,20 +1731,14 @@ function loop(ts) {
     let camX = Math.max(0, Math.min(MAP_W * TILE - W, player.x - W / 2));
     let camY = Math.max(0, Math.min(MAP_H * TILE - H, player.y - H / 2));
     if (showingPowerup) {
-        canvas.style.cursor = 'default';
-        const cw = 240, ch = 170, gap = 28, cols = 3, sw = cols * cw + (cols - 1) * gap, sx2 = W / 2 - sw / 2, sy2 = 195;
-        powerupHovered = -1;
-        for (let i = 0; i < powerupOptions.length; i++) {
-            const cx = sx2 + (i % cols) * (cw + gap), cy = sy2 + Math.floor(i / cols) * (ch + gap);
-            if (mouseX >= cx && mouseX <= cx + cw && mouseY >= cy && mouseY <= cy + ch)
-                powerupHovered = i;
-        }
-        drawPowerupScreen(powerupOptions, powerupHovered, player.wave);
+        powerupHovered = powerupLayout(powerupOptions.length)
+            .findIndex(r => mouseX >= r.x && mouseX <= r.x + r.w && mouseY >= r.y - 8 && mouseY <= r.y + r.h);
+        drawPowerupScreen(powerupOptions, powerupHovered, player);
         return;
     }
     if (!paused) {
+        hudTime++;
         updatePlayer(player, keys, mouseX, mouseY, camX, camY, enemies);
-        canvas.style.cursor = 'none';
         if (mouseDown)
             playerShoot(player, mouseX, mouseY, camX, camY);
         for (const e of enemies)
@@ -1397,8 +1758,11 @@ function loop(ts) {
             if (p.life <= 0)
                 particles.splice(i, 1);
         }
+        for (let i = popups.length - 1; i >= 0; i--)
+            if (--popups[i].life <= 0)
+                popups.splice(i, 1);
         if (player.health <= 0) {
-            gameOver = true;
+            endRun();
             return;
         }
         if (spawnCountdown > 0) {
@@ -1453,14 +1817,17 @@ function loop(ts) {
     for (const e of enemies)
         drawEnemy(e, camX, camY);
     drawPlayer(player, camX, camY);
-    if (waveClearTimer > 30)
+    drawPopups(camX, camY);
+    if (waveClearTimer > 0)
         drawWaveClear(player);
     if (spawnCountdown > 0)
         drawSpawnCountdown(player, spawnCountdown);
     drawHUD(player, enemies);
-    drawMinimap(player, enemies);
+    drawMinimap(player, enemies, camX, camY);
     if (paused)
         drawPauseOverlay();
+    else
+        drawCrosshair(player);
 }
 requestAnimationFrame(loop);
 </script>

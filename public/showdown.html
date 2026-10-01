@@ -4,77 +4,119 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>COURT CLASH — 1V1 SHOWDOWN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Rubik:wght@500;700&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --navy: #0e1a34; --navy2: #1c3260; --navy3: #0a1226;
+    --orange: #e8622c; --orange-d: #b8451a; --gold: #f4b93c; --gold-d: #c98f18;
+    --paper: #fff3d8; --red: #ff5a3c;
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #0a1226; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; font-family: monospace; }
+  body { background: var(--navy3); display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; font-family: 'Rubik', Arial, sans-serif; }
   canvas { display: block; cursor: none; }
+  /* ---- status overlay (menus between rounds) ---- */
   #overlay {
-    position: fixed; inset: 0; color: #f4b93c;
-    background: radial-gradient(ellipse at center, #14213d 0%, #0a1226 75%);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    z-index: 20; text-align: center;
-    animation: overlayFadeIn 0.35s ease-out;
+    position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px;
+    background: radial-gradient(ellipse at center, rgba(28,50,96,0.7), rgba(10,18,38,0.94) 75%);
+    backdrop-filter: blur(4px);
+    animation: fadeIn .3s ease-out;
   }
-  @keyframes overlayFadeIn { from { opacity: 0; } to { opacity: 1; } }
-  #overlay h2 {
-    font-size: 34px; letter-spacing: 3px; margin-bottom: 16px;
-    text-shadow: 0 0 10px rgba(244,185,60,0.5);
-    animation: titlePulse 2.6s ease-in-out infinite;
+  @keyframes fadeIn { from { opacity: 0; } }
+  .card {
+    width: min(440px, 100%); background: var(--paper); border-radius: 18px; overflow: hidden;
+    box-shadow: 0 10px 0 var(--navy2), 0 18px 34px #0008;
+    animation: rise .4s cubic-bezier(.2,.9,.3,1.2) both;
   }
-  @keyframes titlePulse {
-    0%, 100% { text-shadow: 0 0 10px rgba(244,185,60,0.4); }
-    50% { text-shadow: 0 0 22px rgba(244,185,60,0.75); }
+  @keyframes rise { from { opacity: 0; transform: translateY(18px) scale(.98); } }
+  .card-head {
+    display: flex; align-items: center; gap: 14px; padding: 18px 22px;
+    background: linear-gradient(180deg, var(--navy2), var(--navy)); border-bottom: 4px solid var(--orange);
   }
-  #overlay p { color: #e8622c; font-size: 14px; letter-spacing: 1px; margin-bottom: 24px; }
-  #overlay button {
-    background: #0e1a34; border: 2px solid #c98f18; color: #f4b93c;
-    font-family: monospace; font-size: 16px; letter-spacing: 2px;
-    padding: 14px 28px; cursor: pointer; border-radius: 3px;
-    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease,
-                transform 0.15s ease, box-shadow 0.2s ease;
+  .card.win .card-head { border-bottom-color: var(--gold); }
+  .card.lose .card-head { border-bottom-color: var(--red); }
+  .card-head h2 {
+    font: italic 34px/1 'Anton', sans-serif; letter-spacing: .5px; color: var(--paper);
+    text-shadow: 2px 2px 0 var(--orange-d);
   }
-  #overlay button:hover {
-    background: #1c3260; border-color: #f4b93c; color: #f4b93c;
-    transform: translateY(-2px); box-shadow: 0 4px 16px rgba(244,185,60,0.25);
+  .card.win h2 { color: var(--gold); text-shadow: 2px 2px 0 #7a4a08; }
+  .card.lose h2 { color: var(--red); text-shadow: 2px 2px 0 #5a0e08; }
+  .card-head small {
+    display: block; margin-top: 7px; font: normal 700 10px 'Oswald', sans-serif; letter-spacing: 3px; color: var(--gold);
+    text-shadow: none;
   }
-  #overlay button:active { transform: translateY(0); }
   .spinner {
-    width: 30px; height: 30px; border: 3px solid rgba(244,185,60,0.15);
-    border-top-color: #f4b93c; border-right-color: rgba(244,185,60,0.5);
-    border-radius: 50%; animation: spin 0.7s cubic-bezier(0.5,0.1,0.5,0.9) infinite;
-    margin-bottom: 20px;
+    width: 34px; height: 34px; flex: none; border-radius: 50%;
+    border: 4px solid rgba(244,185,60,.15); border-top-color: var(--gold); border-right-color: var(--orange);
+    animation: spin .7s cubic-bezier(.5,.1,.5,.9) infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  #hidden-link {
-    color: #8a6a2e; font-size: 11px; margin-top: 30px; cursor: pointer;
-    letter-spacing: 1px; transition: color 0.2s ease;
+  .card-body { padding: 20px 22px 22px; }
+  .card-body > p { font-size: 13px; font-weight: 500; line-height: 1.5; color: #6b5a3c; }
+  .card-body > * + * { margin-top: 16px; }
+  .tally { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; text-align: center; }
+  .tally .side small { display: block; font-size: 9px; font-weight: 700; letter-spacing: 2px; color: var(--orange-d); }
+  .tally .side.opp small { color: #a0242a; }
+  .tally .side b { display: block; margin: 2px 0 4px; font: 700 46px/1 'Oswald', sans-serif; color: var(--navy3); }
+  .tally .vs { font: 22px 'Anton', sans-serif; color: #c9a877; }
+  .pips { display: flex; justify-content: center; gap: 5px; }
+  .pips i { width: 10px; height: 10px; border-radius: 50%; background: #e2c898; }
+  .pips i.on { background: var(--orange); box-shadow: 0 0 0 2px #f8c9a8; }
+  .opp .pips i.on { background: #c8281e; box-shadow: 0 0 0 2px #f2b0a8; }
+  .progress { height: 8px; border-radius: 4px; background: #e2c898; overflow: hidden; }
+  .progress i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--gold), var(--orange)); transform-origin: left; animation: fill 3s linear both; }
+  @keyframes fill { from { transform: scaleX(0); } }
+  .progress-label { display: flex; justify-content: space-between; font-size: 9px; font-weight: 700; letter-spacing: 2px; color: #9c8459; }
+  .keys { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
+  .keys div { display: flex; align-items: center; gap: 9px; font-size: 12px; font-weight: 700; color: var(--navy3); }
+  kbd {
+    min-width: 26px; padding: 4px 7px; border-radius: 5px; text-align: center;
+    background: var(--navy2); box-shadow: 0 2px 0 var(--navy3); color: var(--gold); font: 700 10px 'Rubik', sans-serif;
   }
-  #hidden-link:hover { color: #f4b93c; }
+  .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .btns.one { grid-template-columns: 1fr; }
+  .btn {
+    border: 0; border-radius: 10px; padding: 14px 10px; cursor: pointer; color: #fff;
+    font: 18px 'Anton', sans-serif; letter-spacing: 1px;
+    background: var(--navy2); box-shadow: 0 4px 0 var(--navy3); transition: background .15s, transform .1s;
+  }
+  .btn:hover { background: #27427a; transform: translateY(-2px); }
+  .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--navy3); }
+  .btn.primary { background: var(--orange); box-shadow: 0 4px 0 #7c2e10; }
+  .btn.primary:hover { background: #ff7a40; }
+  .btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    #overlay, .card, .spinner, .progress i { animation: none; }
+  }
 </style>
 </head>
 
 <body>
 <canvas id="c"></canvas>
-
-<div id="overlay">
-  <h2>1V1 SHOWDOWN</h2>
-  <p>ONLINE — BEST OF 3 — FIRST TO 2 WINS TAKES IT</p>
-  <button id="find-match-btn">FIND MATCH</button>
-  <div id="hidden-link" style="display:none;">&lt; BACK TO HOME</div>
-</div>
+<div id="overlay" role="dialog" aria-live="polite"></div>
 
 <script>
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-let W = canvas.width, H = canvas.height;
-window.addEventListener('resize', () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    W = canvas.width;
-    H = canvas.height;
-});
+// Render at the screen's pixel density so text and lines stay sharp on
+// high-DPI displays. All drawing code works in CSS pixels (W × H).
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
+let W, H;
+function sizeCanvas() {
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+sizeCanvas();
+window.addEventListener('resize', sizeCanvas);
+// Canvas text doesn't trigger web-font downloads on its own.
+if (document.fonts)
+    ['12px Anton', '700 12px Rubik', '700 12px Oswald'].forEach(f => document.fonts.load(f));
 const BASE_TILE = 40;
 // ── ARENA MAP (compact, symmetric — built for 1v1, not survival) ─────────────
 const RAW_MAP = [
@@ -283,7 +325,7 @@ function drawFighter(p, camX, camY, color, label, number) {
     ctx.arc(sx, sy, r - 4, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = '#fff3d8';
-    ctx.font = 'bold 9px monospace';
+    setFont(11, 'display');
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(number, sx, sy + 1);
@@ -330,9 +372,8 @@ function drawFighter(p, camX, camY, color, label, number) {
         ctx.arc(fx, fy, 10, 0, Math.PI * 2);
         ctx.fill();
     }
-    ctx.fillStyle = color.mid;
-    ctx.font = 'bold 11px monospace';
-    ctx.fillText(label, sx - ctx.measureText(label).width / 2, sy - r - 14);
+    drawText(label, sx, sy - r - 14, { size: 10, align: 'center', color: color.label, spacing: 1,
+        shadow: 'rgba(10,18,38,0.8)', shadowOffset: 1 });
     for (const b of p.bullets) {
         ctx.fillStyle = '#ffe650';
         ctx.beginPath();
@@ -369,28 +410,40 @@ function sendMsg(msg) {
         socket.send(JSON.stringify(msg));
 }
 function connect() {
-    socket = new WebSocket(WS_URL);
-    socket.addEventListener('open', () => {
-        sendMsg({ type: 'findMatch' });
-        setStatus('spinner', 'SEARCHING FOR OPPONENT...');
+    if (socket)
+        disconnect();
+    const ws = socket = new WebSocket(WS_URL);
+    matchState = 'queued';
+    showSearching();
+    // Events from a socket we've since replaced or cancelled are ignored.
+    ws.addEventListener('open', () => {
+        if (ws === socket)
+            sendMsg({ type: 'findMatch' });
     });
-    socket.addEventListener('message', (ev) => {
-        const msg = JSON.parse(ev.data);
-        handleServerMessage(msg);
+    ws.addEventListener('message', (ev) => {
+        if (ws === socket)
+            handleServerMessage(JSON.parse(ev.data));
     });
-    socket.addEventListener('close', () => {
-        if (matchState !== 'matchover') {
-            setStatus('text', 'CONNECTION LOST', 'The match server disconnected.', true);
-        }
+    ws.addEventListener('close', () => {
+        // 'idle' means the error handler already explained the problem.
+        if (ws === socket && matchState !== 'matchover' && matchState !== 'idle')
+            showConnectionProblem('CONNECTION LOST', 'The match server disconnected.');
     });
-    socket.addEventListener('error', () => {
-        setStatus('text', 'CONNECTION FAILED', 'Could not reach the match server — is it running?', true);
+    ws.addEventListener('error', () => {
+        if (ws === socket)
+            showConnectionProblem('CONNECTION FAILED', 'Could not reach the match server. It may be waking up, so try again in a few seconds.');
     });
+}
+function disconnect() {
+    const ws = socket;
+    socket = null;
+    if (ws)
+        ws.close();
 }
 function handleServerMessage(msg) {
     switch (msg.type) {
         case 'queued':
-            setStatus('spinner', 'SEARCHING FOR OPPONENT...');
+            showSearching();
             break;
         case 'matchFound':
             myPlayerNum = msg.playerNum;
@@ -404,6 +457,7 @@ function handleServerMessage(msg) {
             opponent.targetY = opponent.y;
             opponent.targetAngle = opponent.angle;
             matchState = 'playing';
+            roundBannerStart = performance.now();
             hideOverlay();
             break;
         case 'opponentState':
@@ -428,59 +482,122 @@ function handleServerMessage(msg) {
         case 'roundOver':
             scores = msg.scores;
             matchState = 'roundover';
-            setStatus('text', msg.youWon ? 'ROUND WON' : 'ROUND LOST', `SCORE  ${scores[myPlayerNum]} — ${scores[1 - myPlayerNum]}   //   NEXT ROUND STARTING...`);
+            showRoundOver(msg.youWon);
             break;
         case 'matchOver':
             scores = msg.scores;
             matchState = 'matchover';
-            setStatus('text', msg.youWon ? 'VICTORY' : 'DEFEAT', `FINAL SCORE  ${scores[myPlayerNum]} — ${scores[1 - myPlayerNum]}`, true, true);
+            showMatchOver(msg.youWon ? 'VICTORY' : 'DEFEAT', 'FINAL SCORE', msg.youWon ? 'win' : 'lose');
             break;
         case 'opponentDisconnected':
             matchState = 'matchover';
-            setStatus('text', 'OPPONENT DISCONNECTED', 'You win by forfeit.', true, true);
+            showMatchOver('OPPONENT LEFT', 'YOU WIN BY FORFEIT', 'win');
             break;
     }
 }
 // ── OVERLAY / STATUS UI ────────────────────────────────────────────────────────
+const WINS_NEEDED = 2; // best of 3, must match the server
 const overlay = document.getElementById('overlay');
-const findBtn = document.getElementById('find-match-btn');
-const backLink = document.getElementById('hidden-link');
-function setStatus(kind, title, sub, showBack, showRematch) {
-    overlay.style.display = 'flex';
-    overlay.innerHTML = '';
-    if (kind === 'spinner') {
-        const spin = document.createElement('div');
-        spin.className = 'spinner';
-        overlay.appendChild(spin);
+function el(tag, cls, text) {
+    const n = document.createElement(tag);
+    if (cls)
+        n.className = cls;
+    if (text != null)
+        n.textContent = text;
+    return n;
+}
+// Builds a lobby-style card: navy header (title + tag), then body content.
+function showCard({ title, tag, tone, spinner, body = [], buttons = [] }) {
+    const card = el('div', 'card' + (tone ? ' ' + tone : ''));
+    const head = el('div', 'card-head');
+    if (spinner)
+        head.append(el('div', 'spinner'));
+    const h2 = el('h2', null, title);
+    if (tag)
+        h2.append(el('small', null, tag));
+    head.append(h2);
+    const content = el('div', 'card-body');
+    content.append(...body);
+    if (buttons.length) {
+        const row = el('div', 'btns' + (buttons.length === 1 ? ' one' : ''));
+        for (const [label, onClick, primary] of buttons) {
+            const b = el('button', 'btn' + (primary ? ' primary' : ''), label);
+            b.onclick = onClick;
+            row.append(b);
+        }
+        content.append(row);
     }
-    const h2 = document.createElement('h2');
-    h2.textContent = title;
-    overlay.appendChild(h2);
-    if (sub) {
-        const p = document.createElement('p');
-        p.textContent = sub;
-        overlay.appendChild(p);
-    }
-    if (showRematch) {
-        const btn = document.createElement('button');
-        btn.textContent = 'FIND NEW MATCH';
-        btn.onclick = () => { matchState = 'idle'; connect(); };
-        overlay.appendChild(btn);
-    }
-    if (showBack) {
-        const back = document.createElement('div');
-        back.id = 'hidden-link';
-        back.style.display = 'block';
-        back.textContent = '< BACK TO HOME';
-        back.onclick = () => window.location.href = 'index.html';
-        overlay.appendChild(back);
-    }
+    card.append(head, content);
+    overlay.replaceChildren(card);
+    overlay.style.display = 'grid';
+    overlay.querySelector('.btn.primary')?.focus();
 }
 function hideOverlay() { overlay.style.display = 'none'; }
-findBtn.addEventListener('click', () => {
-    overlay.querySelector('p') && (overlay.querySelector('p').textContent = '');
-    connect();
-});
+function goToLobby() { window.location.href = 'index.html'; }
+function tally() {
+    const mine = myPlayerNum !== null ? scores[myPlayerNum] : 0;
+    const theirs = myPlayerNum !== null ? scores[1 - myPlayerNum] : 0;
+    const side = (label, value, cls) => {
+        const d = el('div', 'side ' + cls);
+        const pips = el('div', 'pips');
+        for (let i = 0; i < WINS_NEEDED; i++)
+            pips.append(el('i', i < value ? 'on' : ''));
+        d.append(el('small', null, label), el('b', null, String(value)), pips);
+        return d;
+    };
+    const t = el('div', 'tally');
+    t.append(side('YOU', mine, 'me'), el('div', 'vs', 'VS'), side('OPPONENT', theirs, 'opp'));
+    return t;
+}
+function controlsList() {
+    const keys = el('div', 'keys');
+    for (const [k, label] of CONTROLS) {
+        const row = el('div');
+        row.append(el('kbd', null, k), label);
+        keys.append(row);
+    }
+    return keys;
+}
+function showIntro() {
+    showCard({
+        title: '1V1 SHOWDOWN', tag: 'ONLINE  ·  BEST OF 3',
+        body: [el('p', null, 'Go head to head with another player. First to 2 round wins takes the match.'), controlsList()],
+        buttons: [['FIND MATCH', connect, true], ['LOBBY', goToLobby]],
+    });
+}
+function showSearching() {
+    showCard({
+        title: 'SEARCHING', tag: 'LOOKING FOR AN OPPONENT', spinner: true,
+        body: [el('p', null, 'Hang tight. You’ll drop into the arena as soon as another player is ready.')],
+        buttons: [['CANCEL', () => { matchState = 'idle'; disconnect(); showIntro(); }]],
+    });
+}
+function showRoundOver(youWon) {
+    const decided = Math.max(...scores) >= WINS_NEEDED;
+    const label = el('div', 'progress-label');
+    label.append(el('span', null, decided ? 'MATCH DECIDED' : `ROUND ${round + 1} STARTING`), el('span', null, 'GET READY'));
+    const bar = el('div', 'progress');
+    bar.append(el('i'));
+    showCard({
+        title: youWon ? 'ROUND WON' : 'ROUND LOST', tag: `ROUND ${round} COMPLETE`, tone: youWon ? 'win' : 'lose',
+        body: [tally(), label, bar],
+    });
+}
+function showMatchOver(title, tag, tone) {
+    showCard({
+        title, tag, tone,
+        body: [tally()],
+        buttons: [['FIND NEW MATCH', connect, true], ['LOBBY', goToLobby]],
+    });
+}
+function showConnectionProblem(title, text) {
+    matchState = 'idle';
+    showCard({
+        title, tag: 'MATCH SERVER', tone: 'lose',
+        body: [el('p', null, text)],
+        buttons: [['TRY AGAIN', connect, true], ['LOBBY', goToLobby]],
+    });
+}
 // ── INPUT ─────────────────────────────────────────────────────────────────────
 const keys = {};
 let mouseX = W / 2, mouseY = H / 2, mouseDown = false;
@@ -537,117 +654,293 @@ let player = makePlayer({ x: 2.5 * TILE, y: 2.5 * TILE });
 let opponent = makePlayer({ x: 31.5 * TILE, y: 17.5 * TILE });
 let prevMyHealth = 100;
 let lastStateSend = 0;
-// ── HUD ───────────────────────────────────────────────────────────────────────
-function drawHUD() {
-    if (player.hurtTimer > 0) {
-        ctx.fillStyle = `rgba(200,0,0,${player.hurtTimer / 40 * 0.4})`;
-        ctx.fillRect(0, 0, W, H);
+// ── UI KIT ───────────────────────────────────────────────────────────────────
+// Same palette, fonts and panel style as the lobby and Hunt mode.
+const UI = { navy: '#0e1a34', navy2: '#1c3260', navy3: '#0a1226', orange: '#e8622c', orangeD: '#b8451a',
+    gold: '#f4b93c', paper: '#fff3d8', muted: '#8ea0c8', red: '#ff5a3c', oppRed: '#ff6a5a' };
+const FONTS = { display: ["'Anton', Impact, sans-serif", 400], num: ["'Oswald', 'Arial Narrow', sans-serif", 700],
+    ui: ["'Rubik', Arial, sans-serif", 700] };
+let roundBannerStart = -Infinity;
+function setFont(size, family = 'ui', weight) {
+    const [face, w] = FONTS[family];
+    ctx.font = `${weight || w} ${size}px ${face}`;
+}
+function drawText(str, x, y, o = {}) {
+    ctx.save();
+    setFont(o.size || 12, o.family, o.weight);
+    ctx.textAlign = o.align || 'left';
+    ctx.textBaseline = o.baseline || 'alphabetic';
+    if (o.spacing)
+        ctx.letterSpacing = o.spacing + 'px';
+    if (o.alpha != null)
+        ctx.globalAlpha *= o.alpha;
+    if (o.shadow) {
+        const off = o.shadowOffset ?? 2;
+        ctx.fillStyle = o.shadow;
+        ctx.fillText(str, x + off, y + off);
     }
+    ctx.fillStyle = o.color || UI.paper;
+    ctx.fillText(str, x, y);
+    const w = ctx.measureText(str).width;
+    ctx.restore();
+    return w;
+}
+function textWidth(str, size, family, spacing) {
+    ctx.save();
+    setFont(size, family);
+    if (spacing)
+        ctx.letterSpacing = spacing + 'px';
+    const w = ctx.measureText(str).width;
+    ctx.restore();
+    return w;
+}
+function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, r);
+}
+function panel(x, y, w, h, o = {}) {
+    const r = o.r ?? 12;
+    ctx.save();
+    if (o.shadow !== false) {
+        roundRect(x, y + 4, w, h, r);
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.fill();
+    }
+    roundRect(x, y, w, h, r);
+    ctx.fillStyle = o.fill || 'rgba(10,18,38,0.88)';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = o.stroke || UI.navy2;
+    ctx.stroke();
+    if (o.accent) {
+        roundRect(x, y, w, h, r);
+        ctx.clip();
+        ctx.fillStyle = o.accent;
+        ctx.fillRect(x, y + h - 3, w, 3);
+    }
+    ctx.restore();
+}
+// A rounded bar; `reverse` drains it toward the right (used for the opponent).
+function meter(x, y, w, h, frac, colA, colB, reverse) {
+    frac = Math.max(0, Math.min(1, frac));
+    ctx.save();
+    roundRect(x, y, w, h, h / 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fill();
+    if (frac > 0) {
+        const fw = Math.max(h, w * frac), fx = reverse ? x + w - fw : x;
+        const g = ctx.createLinearGradient(fx, 0, fx + fw, 0);
+        g.addColorStop(0, reverse ? colB : colA);
+        g.addColorStop(1, reverse ? colA : colB);
+        roundRect(fx, y, fw, h, h / 2);
+        ctx.fillStyle = g;
+        ctx.fill();
+        roundRect(fx + 3, y + 2, Math.max(0, fw - 6), h * 0.3, h * 0.15);
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        ctx.fill();
+    }
+    ctx.restore();
+}
+function keycap(k, x, y, size = 10) {
+    const w = Math.max(size * 2.2, textWidth(k, size) + 12), h = size + 10;
+    ctx.save();
+    roundRect(x, y + 2, w, h, 5);
+    ctx.fillStyle = UI.navy3;
+    ctx.fill();
+    roundRect(x, y, w, h, 5);
+    ctx.fillStyle = UI.navy2;
+    ctx.fill();
+    ctx.restore();
+    drawText(k, x + w / 2, y + h / 2 + 1, { size, align: 'center', baseline: 'middle', color: UI.gold });
+    return w;
+}
+function vignette(rgb, alpha) {
+    const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.hypot(W, H) / 2);
+    g.addColorStop(0, `rgba(${rgb},0)`);
+    g.addColorStop(1, `rgba(${rgb},${alpha})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+}
+function healthColors(hp) {
+    return hp > 50 ? ['#8af06a', '#2fa04a'] : hp > 25 ? ['#ffc24a', '#e0781e'] : ['#ff7a5a', '#c82020'];
+}
+const CONTROLS = [['WASD', 'Move'], ['CLICK', 'Shoot'], ['SPACE', 'Roll'], ['R', 'Reload']];
+// ── HUD ───────────────────────────────────────────────────────────────────────
+function drawHUD(camX, camY) {
+    if (player.hurtTimer > 0)
+        vignette('220,20,20', player.hurtTimer / 30 * 0.55);
+    if (player.health < 35 && player.health > 0)
+        vignette('200,0,0', 0.2 + Math.abs(Math.sin(Date.now() * 0.006)) * 0.25);
     // Ease the displayed health toward the real value instead of snapping,
     // so damage reads as a smooth drain rather than an instant jump.
     player.displayHealth += (player.health - player.displayHealth) * 0.15;
     opponent.displayHealth += (opponent.health - opponent.displayHealth) * 0.15;
-    // Bottom bar — soft gradient panel instead of a flat fill
-    const barGrad = ctx.createLinearGradient(0, H - 64, 0, H);
-    barGrad.addColorStop(0, 'rgba(10,18,38,0.8)');
-    barGrad.addColorStop(1, 'rgba(8,14,28,0.95)');
-    ctx.fillStyle = barGrad;
-    ctx.fillRect(0, H - 64, W, 64);
-    ctx.strokeStyle = 'rgba(244,185,60,0.35)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, H - 64);
-    ctx.lineTo(W, H - 64);
-    ctx.stroke();
-    function healthBar(x, label, pct, color, alignRight) {
-        const bw = 200, bh = 16, bx = alignRight ? x - bw : x;
-        ctx.fillStyle = 'rgba(14,26,52,0.9)';
-        ctx.beginPath();
-        ctx.roundRect(bx, H - 46, bw, bh, 4);
-        ctx.fill();
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.roundRect(bx, H - 46, Math.max(2, bw * pct), bh, 4);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(180,130,50,0.8)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.roundRect(bx, H - 46, bw, bh, 4);
-        ctx.stroke();
-        ctx.fillStyle = '#c9803f';
-        ctx.font = '11px monospace';
-        ctx.fillText(label, bx, H - 50);
+    drawScoreboard();
+    drawAmmo();
+    drawOpponentMarker(camX, camY);
+    drawRoundBanner();
+    if (round === 1) {
+        const t = (performance.now() - roundBannerStart) / 1000;
+        const a = t < 6 ? 1 : Math.max(0, 1 - (t - 6));
+        if (a > 0) {
+            ctx.save();
+            ctx.globalAlpha = a;
+            drawControls(W / 2, H - 150);
+            ctx.restore();
+        }
     }
-    const hp = Math.max(0, player.displayHealth / 100);
-    const hcol = player.health > 50 ? '#50c83c' : player.health > 25 ? '#e68c1e' : '#dc2828';
-    healthBar(20, 'YOU', hp, hcol, false);
-    const ohp = Math.max(0, opponent.displayHealth / 100);
-    const ohcol = opponent.health > 50 ? '#50c83c' : opponent.health > 25 ? '#e68c1e' : '#dc2828';
-    healthBar(W - 20, 'OPPONENT', ohp, ohcol, true);
-    // Score / round
-    ctx.fillStyle = '#f4b93c';
-    ctx.font = 'bold 16px monospace';
-    ctx.shadowColor = 'rgba(244,185,60,0.5)';
-    ctx.shadowBlur = 6;
-    const sc = myPlayerNum !== null ? `${scores[myPlayerNum]} — ${scores[1 - myPlayerNum]}` : '0 — 0';
-    ctx.fillText(sc, W / 2 - ctx.measureText(sc).width / 2, H - 42);
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = '#c9803f';
-    ctx.font = '11px monospace';
-    const rv = `ROUND ${round}`;
-    ctx.fillText(rv, W / 2 - ctx.measureText(rv).width / 2, H - 24);
-    // Ammo
-    ctx.fillStyle = '#c9803f';
-    ctx.font = '11px monospace';
-    ctx.fillText('SHOTS', 260, H - 54);
+    if (matchState === 'playing')
+        drawCrosshair();
+}
+// TV-style scoreboard: your health | round + score | opponent's health
+function drawScoreboard() {
+    const sw = Math.min(680, W - 32), sx = W / 2 - sw / 2, sy = 16, sh = 76, mid = 150;
+    const side = (sw - mid) / 2;
+    panel(sx, sy, sw, sh, { accent: UI.orange });
+    const mine = myPlayerNum !== null ? scores[myPlayerNum] : 0;
+    const theirs = myPlayerNum !== null ? scores[1 - myPlayerNum] : 0;
+    // Centre: round + score
+    ctx.save();
+    roundRect(sx + side, sy + 8, mid, sh - 16, 10);
+    ctx.fillStyle = UI.navy3;
+    ctx.fill();
+    ctx.restore();
+    drawText(`ROUND ${round}`, W / 2, sy + 25, { size: 9, align: 'center', color: UI.muted, spacing: 2 });
+    drawText(String(mine), W / 2 - 22, sy + 60, { size: 32, family: 'num', align: 'center', color: UI.gold });
+    drawText(':', W / 2, sy + 57, { size: 24, family: 'num', align: 'center', color: UI.muted });
+    drawText(String(theirs), W / 2 + 22, sy + 60, { size: 32, family: 'num', align: 'center', color: UI.oppRed });
+    // Round-win pips under each team name
+    const pips = (x, won, col, alignRight) => {
+        for (let i = 0; i < WINS_NEEDED; i++) {
+            ctx.beginPath();
+            ctx.arc(alignRight ? x - i * 13 : x + i * 13, sy + 63, 4, 0, Math.PI * 2);
+            ctx.fillStyle = i < won ? col : 'rgba(142,160,200,0.2)';
+            ctx.fill();
+        }
+    };
+    // Left: you
+    const lx = sx + 16, lw = side - 32;
+    const hp = Math.max(0, player.displayHealth);
+    const [hA, hB] = healthColors(player.health);
+    drawText('YOU', lx, sy + 26, { size: 16, family: 'display', color: '#ffb48a', spacing: 1 });
+    drawText(String(Math.ceil(Math.max(0, player.health))), lx + lw, sy + 27, { size: 16, family: 'num', align: 'right', color: hA });
+    meter(lx, sy + 34, lw, 14, hp / 100, hA, hB);
+    pips(lx + 4, mine, UI.orange);
+    // Right: opponent (mirrored)
+    const rx = sx + side + mid + 16;
+    const ohp = Math.max(0, opponent.displayHealth);
+    const [oA, oB] = healthColors(opponent.health);
+    drawText('OPPONENT', rx + lw, sy + 26, { size: 16, family: 'display', align: 'right', color: UI.oppRed, spacing: 1 });
+    drawText(String(Math.ceil(Math.max(0, opponent.health))), rx, sy + 27, { size: 16, family: 'num', color: oA });
+    meter(rx, sy + 34, lw, 14, ohp / 100, oA, oB, true);
+    pips(rx + lw - 4, theirs, '#c8281e', true);
+}
+function drawAmmo() {
+    // Bottom-centre: the corners are where the two players spawn.
+    const aw = 214, ah = 86, ax = W / 2 - aw / 2, ay = H - ah - 16;
+    panel(ax, ay, aw, ah, { accent: player.ammo ? UI.orange : UI.red });
+    drawText('SHOTS', ax + 16, ay + 27, { size: 9, color: UI.muted, spacing: 2 });
+    const ammoCol = player.ammo === 0 ? UI.red : player.ammo <= 5 ? '#ffc24a' : UI.paper;
+    drawText(String(player.ammo), ax + 16, ay + 68, { size: 38, family: 'num', color: ammoCol });
+    const pipX = ax + aw - 16 - 100;
     for (let i = 0; i < 30; i++) {
-        ctx.fillStyle = i < player.ammo ? '#50c83c' : '#14213d';
-        ctx.beginPath();
-        ctx.roundRect(260 + (i % 10) * 13, H - 50 + Math.floor(i / 10) * 7, 10, 5, 1);
+        ctx.fillStyle = i < player.ammo ? (player.ammo <= 5 ? '#ffc24a' : UI.gold) : 'rgba(142,160,200,0.15)';
+        roundRect(pipX + (i % 10) * 10, ay + 20 + Math.floor(i / 10) * 10, 7, 6, 2);
         ctx.fill();
     }
     if (player.ammo === 0) {
-        ctx.fillStyle = '#dc5020';
-        ctx.font = 'bold 20px monospace';
-        ctx.shadowColor = 'rgba(220,80,32,0.6)';
-        ctx.shadowBlur = 8;
-        const rw = '>> RELOAD [R] <<';
-        ctx.fillText(rw, W / 2 - ctx.measureText(rw).width / 2, H / 2 - 70);
-        ctx.shadowBlur = 0;
+        const kw = keycap('R', pipX, ay + 52);
+        drawText('RELOAD', pipX + kw + 8, ay + 66, { size: 11, color: UI.red, spacing: 1, alpha: 0.6 + Math.abs(Math.sin(Date.now() * 0.008)) * 0.4 });
     }
-    ctx.fillStyle = '#6a4a20';
-    ctx.font = '11px monospace';
-    ctx.fillText('WASD:MOVE  MOUSE:AIM  LMB:FIRE  SPACE:ROLL  R:RELOAD', 8, 20);
-    // Crosshair — soft outer glow ring + crisp inner lines
-    const ccolor = player.ammo > 0 ? '#00eaff' : '#0a5a66';
+}
+// Arrow on the screen edge pointing at the opponent when they're out of view.
+function drawOpponentMarker(camX, camY) {
+    const ox = opponent.x - camX, oy = opponent.y - camY, m = 40;
+    if (ox > -10 && ox < W + 10 && oy > -10 && oy < H + 10)
+        return;
+    const ang = Math.atan2(oy - H / 2, ox - W / 2);
+    // Clamp to the screen edge, staying clear of the scoreboard and ammo panel.
+    const ex = Math.max(m, Math.min(W - m, ox)), ey = Math.max(110 + m / 2, Math.min(H - m, oy));
     ctx.save();
-    ctx.strokeStyle = ccolor;
-    ctx.globalAlpha = 0.25;
-    ctx.lineWidth = 3;
+    ctx.translate(ex, ey);
     ctx.beginPath();
-    ctx.arc(mouseX, mouseY, 11, 0, Math.PI * 2);
+    ctx.arc(0, 0, 18, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(10,18,38,0.85)';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#c8281e';
     ctx.stroke();
-    ctx.globalAlpha = 1;
-    ctx.lineWidth = 1.5;
+    ctx.rotate(ang);
     ctx.beginPath();
-    ctx.moveTo(mouseX - 22, mouseY);
-    ctx.lineTo(mouseX - 8, mouseY);
-    ctx.stroke();
+    ctx.moveTo(12, 0);
+    ctx.lineTo(1, -7);
+    ctx.lineTo(1, 7);
+    ctx.closePath();
+    ctx.fillStyle = UI.oppRed;
+    ctx.fill();
+    ctx.restore();
+}
+// "ROUND 2" then "FIGHT!" at the start of each round.
+function drawRoundBanner() {
+    const t = (performance.now() - roundBannerStart) / 1000;
+    if (t < 0 || t > 1.8)
+        return;
+    const fight = t > 0.9;
+    const local = fight ? (t - 0.9) / 0.9 : t / 0.9;
+    const alpha = local < 0.15 ? local / 0.15 : local > 0.75 ? Math.max(0, (1 - local) / 0.25) : 1;
+    const scale = fight ? 1 + (1 - Math.min(1, local * 4)) * 0.4 : 1;
+    const bh = 120, by = H / 2 - bh / 2;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = 'rgba(10,18,38,0.85)';
+    ctx.fillRect(0, by, W, bh);
+    ctx.fillStyle = fight ? UI.gold : UI.orange;
+    ctx.fillRect(0, by, W, 4);
+    ctx.fillRect(0, by + bh - 4, W, 4);
+    ctx.translate(W / 2, H / 2);
+    ctx.scale(scale, scale);
+    if (fight)
+        drawText('FIGHT!', 0, 4, { size: 72, family: 'display', align: 'center', baseline: 'middle', color: UI.gold, shadow: '#7a4a08', shadowOffset: 4, spacing: 2 });
+    else {
+        drawText(`ROUND ${round}`, 0, -2, { size: 56, family: 'display', align: 'center', baseline: 'middle', shadow: UI.orangeD, shadowOffset: 3, spacing: 1 });
+        const mine = myPlayerNum !== null ? scores[myPlayerNum] : 0;
+        const theirs = myPlayerNum !== null ? scores[1 - myPlayerNum] : 0;
+        const sub = mine === WINS_NEEDED - 1 && theirs === WINS_NEEDED - 1 ? 'DECIDING ROUND' : mine === WINS_NEEDED - 1 ? 'MATCH POINT' : 'BEST OF 3';
+        drawText(sub, 0, 40, { size: 11, align: 'center', color: UI.gold, spacing: 4 });
+    }
+    ctx.restore();
+}
+function drawControls(cx, y) {
+    const items = CONTROLS.map(([k, label]) => ({ k, label, w: Math.max(22, textWidth(k, 10) + 12) + 6 + textWidth(label, 11) }));
+    const total = items.reduce((s, i) => s + i.w, 0) + (items.length - 1) * 18 + 32;
+    panel(cx - total / 2, y - 8, total, 36, { r: 18, shadow: false });
+    let x = cx - total / 2 + 16;
+    for (const i of items) {
+        const kw = keycap(i.k, x, y);
+        drawText(i.label, x + kw + 6, y + 14, { size: 11, color: UI.muted });
+        x += i.w + 18;
+    }
+}
+function drawCrosshair() {
+    const empty = player.ammo <= 0;
+    const gap = 7 + (player.shootTimer / 8) * 5, len = 9;
+    const col = empty ? UI.red : UI.gold;
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (const [lw, c] of [[4, 'rgba(10,18,38,0.85)'], [2, col]]) {
+        ctx.lineWidth = lw;
+        ctx.strokeStyle = c;
+        ctx.beginPath();
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            ctx.moveTo(mouseX + dx * gap, mouseY + dy * gap);
+            ctx.lineTo(mouseX + dx * (gap + len), mouseY + dy * (gap + len));
+        }
+        ctx.stroke();
+    }
+    ctx.fillStyle = col;
     ctx.beginPath();
-    ctx.moveTo(mouseX + 8, mouseY);
-    ctx.lineTo(mouseX + 22, mouseY);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(mouseX, mouseY - 22);
-    ctx.lineTo(mouseX, mouseY - 8);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(mouseX, mouseY + 8);
-    ctx.lineTo(mouseX, mouseY + 22);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(mouseX, mouseY, 6, 0, Math.PI * 2);
-    ctx.stroke();
+    ctx.arc(mouseX, mouseY, 2, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
 }
 document.addEventListener('keydown', e => {
@@ -655,8 +948,8 @@ document.addEventListener('keydown', e => {
         player.ammo = 30; // local-only reload for now
 });
 // ── GAME LOOP ─────────────────────────────────────────────────────────────────
-const ME_COLOR = { dark: '#7a2e0f', mid: '#e8622c', light: '#b8451a' };
-const OPP_COLOR = { dark: '#2a0a12', mid: '#c8281e', light: '#7a1626' };
+const ME_COLOR = { dark: '#7a2e0f', mid: '#e8622c', light: '#b8451a', label: '#ffd9b8' };
+const OPP_COLOR = { dark: '#2a0a12', mid: '#c8281e', light: '#7a1626', label: '#ffb0a8' };
 function clampCam(worldSize, viewSize, focus) {
     if (worldSize <= viewSize)
         return (worldSize - viewSize) / 2; // center the map in the extra space
@@ -726,9 +1019,10 @@ function loop(ts) {
     if (matchState === 'playing' || matchState === 'roundover') {
         drawFighter(opponent, camX, camY, OPP_COLOR, 'OPPONENT', '23');
         drawFighter(player, camX, camY, ME_COLOR, 'YOU', '7');
-        drawHUD();
+        drawHUD(camX, camY);
     }
 }
+showIntro();
 requestAnimationFrame(loop);
 </script>
 </body>
