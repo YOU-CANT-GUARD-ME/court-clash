@@ -7,6 +7,7 @@
 const crypto = require('crypto');
 const db = require('./db');
 const auth = require('./auth');
+const armory = require('./armory');
 
 const PARTY_SIZE = 4;
 const MODES = ['hunt', 'showdown'];
@@ -99,7 +100,10 @@ function attach(ws, player, tokenHash, token) {
   ws.playerId = player.id;
   ws.username = player.username;
   ws.tokenHash = tokenHash;
-  send(ws, { type: 'welcome', username: player.username, profile: db.profileOf(player), ...(token ? { token } : {}) });
+  send(ws, {
+    type: 'welcome', username: player.username, profile: db.profileOf(player), armory: armory.CATALOG,
+    ...(token ? { token } : {}),
+  });
 
   const party = parties.get(session.partyCode);
   if (party) broadcast(party);
@@ -187,6 +191,18 @@ async function handleMessage(ws, msg) {
       detach(ws);
       send(ws, { type: 'needAuth' });
       return true;
+
+    case 'buyUpgrade': {
+      if (!me) return true;
+      const player = await db.playerById(me);
+      const next = player && armory.nextCost(player.upgrades, msg.id);
+      if (!next) return error(ws, 'That cannot be forged any further'), true;
+      if (player.gold < next.cost) return error(ws, 'Not enough gold'), true;
+      const row = await db.buyUpgrade(me, msg.id, next.level, next.cost);
+      if (!row) return error(ws, 'Not enough gold'), true;
+      pushProfile(me, row);
+      return true;
+    }
 
     case 'joinParty': {
       if (!me) return true;

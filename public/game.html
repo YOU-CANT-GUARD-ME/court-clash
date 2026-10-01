@@ -1014,11 +1014,41 @@ function drawTorchlight(px, py) {
     ctx.restore();
 }
 // ── PLAYER ───────────────────────────────────────────────────────────────────
+// Starting stats from Armory upgrades. These are the no-upgrade values; signed-in
+// players get theirs from the server (loadArmory) before or just after the run starts.
+let loadout = { maxHealth: 100, magSize: 30, damageMult: 1, speed: BASE_SPEED, firepots: 3, waveHeal: 0 };
+function applyLoadout(p) {
+    p.maxHealth = p.health = loadout.maxHealth;
+    p.magSize = p.ammo = loadout.magSize;
+    p.damageMult = loadout.damageMult;
+    p.speed = Math.min(loadout.speed, MAX_SPEED);
+    p.grenades = loadout.firepots;
+    p.waveHeal = loadout.waveHeal;
+    return p;
+}
 function makePlayer() {
-    return { x: 2.5 * TILE, y: 2.5 * TILE, angle: 0, speed: BASE_SPEED, health: 100, ammo: 30, grenades: 3,
+    return applyLoadout({ x: 2.5 * TILE, y: 2.5 * TILE, angle: 0,
         score: 0, kills: 0, wave: 1, hurtTimer: 0, shootTimer: 0, reloadTimer: 0, reloadCd: 4, rollTimer: 0,
         spawnImmunity: 180, bulletDamage: 1, damageReduction: 0, bullets: [], bob: 0, moving: false,
-    };
+    });
+}
+async function loadArmory() {
+    const token = getToken();
+    if (!token)
+        return;
+    try {
+        const res = await fetch(SERVER.api + '/api/me', { headers: { Authorization: 'Bearer ' + token } });
+        if (!res.ok)
+            return;
+        const me = await res.json();
+        if (!me.loadout)
+            return;
+        loadout = me.loadout;
+        // If the first run has only just begun, give it the upgrades too.
+        if (player.wave === 1 && player.kills === 0 && !gameOver)
+            applyLoadout(player);
+    }
+    catch { }
 }
 function updatePlayer(player, keys, mouseX, mouseY, camX, camY, enemies) {
     const M = 10;
@@ -1077,7 +1107,7 @@ function updatePlayer(player, keys, mouseX, mouseY, camX, camY, enemies) {
             if (distToSegment(e.x, e.y, ox, oy, b.x, b.y) < e.radius + 5) {
                 b.alive = false;
                 player.bullets.splice(i, 1);
-                e.health -= player.bulletDamage;
+                e.health -= player.bulletDamage * player.damageMult;
                 if (e.health <= 0)
                     killEnemy(e, player);
                 else
@@ -1473,7 +1503,7 @@ function drawHUD(player, enemies) {
     // Screen effects
     if (player.hurtTimer > 0)
         vignette('220,20,20', player.hurtTimer / 30 * 0.55);
-    if (player.health < 35 && player.health > 0)
+    if (player.health < player.maxHealth * 0.35 && player.health > 0)
         vignette('200,0,0', 0.2 + Math.abs(Math.sin(Date.now() * 0.006)) * 0.25);
     if (player.spawnImmunity > 0)
         vignette('150,190,230', 0.12 + Math.abs(Math.sin(Date.now() * 0.008)) * 0.1);
@@ -1505,10 +1535,10 @@ function drawHUD(player, enemies) {
     panel(px, py, pw, ph, { accent: UI.orange });
     drawCrest(px + 41, py + 43, 26);
     const hp = Math.max(0, player.health);
-    const [hA, hB] = healthColors(hp);
+    const [hA, hB] = healthColors(hp / player.maxHealth * 100);
     drawText('HEALTH', px + 82, py + 27, { size: 9, color: UI.muted, spacing: 2 });
     drawText(String(Math.ceil(hp)), px + pw - 16, py + 29, { size: 18, family: 'num', align: 'right', color: hA });
-    meter(px + 82, py + 35, pw - 98, 14, hp / 100, hA, hB);
+    meter(px + 82, py + 35, pw - 98, 14, hp / player.maxHealth, hA, hB);
     drawText('FIREPOTS', px + 82, py + 70, { size: 9, color: UI.muted, spacing: 2 });
     const shownBalls = Math.min(5, Math.max(3, player.grenades));
     for (let i = 0; i < shownBalls; i++)
@@ -1519,8 +1549,9 @@ function drawHUD(player, enemies) {
     const chips = [];
     if (player.spawnImmunity > 0)
         chips.push({ text: 'WARDED', color: UI.cyan, frac: player.spawnImmunity / 180 });
-    if (player.bulletDamage > 1)
-        chips.push({ text: `DMG ×${player.bulletDamage}`, color: UI.gold });
+    const dmg = player.bulletDamage * player.damageMult;
+    if (dmg > 1)
+        chips.push({ text: `DMG ×${+dmg.toFixed(1)}`, color: UI.gold });
     if (player.speed > BASE_SPEED)
         chips.push({ text: `SPEED ${player.speed.toFixed(1)}`, color: UI.gold });
     if (player.damageReduction > 0)
@@ -1541,13 +1572,15 @@ function drawHUD(player, enemies) {
     const ammoCol = player.ammo === 0 ? UI.red : player.ammo <= 5 ? '#ffc24a' : UI.paper;
     drawText(String(player.ammo), ax + 16, ay + 68, { size: 32, family: 'num', color: ammoCol });
     const pipX = ax + aw - 16 - 100;
+    // 30 pips stand for a full quiver, however big the Armory has made it.
+    const pipsFull = Math.ceil(Math.min(player.ammo, player.magSize) / player.magSize * 30);
     for (let i = 0; i < 30; i++) {
-        ctx.fillStyle = i < player.ammo ? (player.ammo <= 5 ? '#ffc24a' : UI.gold) : 'rgba(154,139,116,0.15)';
+        ctx.fillStyle = i < pipsFull ? (player.ammo <= 5 ? '#ffc24a' : UI.gold) : 'rgba(154,139,116,0.15)';
         roundRect(pipX + (i % 10) * 10, ay + 20 + Math.floor(i / 10) * 10, 7, 6, 2);
         ctx.fill();
     }
-    if (player.ammo > 30)
-        drawText(`+${player.ammo - 30} RESERVE`, ax + aw - 16, ay + 68, { size: 9, color: UI.muted, align: 'right', spacing: 1 });
+    if (player.ammo > player.magSize)
+        drawText(`+${player.ammo - player.magSize} RESERVE`, ax + aw - 16, ay + 68, { size: 9, color: UI.muted, align: 'right', spacing: 1 });
     else if (player.ammo === 0) {
         const kw = keycap('R', pipX, ay + 52);
         drawText('RELOAD', pipX + kw + 8, ay + 66, { size: 11, color: UI.red, spacing: 1, alpha: 0.6 + Math.abs(Math.sin(Date.now() * 0.008)) * 0.4 });
@@ -1686,7 +1719,7 @@ const POWERUPS = [
 function applyPowerup(player, p) {
     const w = player.wave;
     if (p.id === 'heal')
-        player.health = 100;
+        player.health = player.maxHealth;
     else if (p.id === 'ammo')
         player.ammo = Math.min(9999, player.ammo + 100 + w * 50);
     else if (p.id === 'speed')
@@ -1702,7 +1735,7 @@ function applyPowerup(player, p) {
 function powerupEffect(player, p) {
     const w = player.wave;
     switch (p.id) {
-        case 'heal': return `${Math.ceil(player.health)} → 100 HP`;
+        case 'heal': return `${Math.ceil(player.health)} → ${player.maxHealth} HP`;
         case 'ammo': return `+${100 + w * 50} BOLTS`;
         case 'speed': return `${player.speed.toFixed(1)} → ${Math.min(player.speed + 0.35 + w * 0.05, MAX_SPEED).toFixed(1)}`;
         case 'damage': return `DMG ${player.bulletDamage} → ${player.bulletDamage + 1 + Math.floor(w / 2)}`;
@@ -1973,6 +2006,7 @@ let showingPowerup = false, powerupOptions = [], powerupHovered = -1;
 let spawnCountdown = 0;
 const keys = {};
 let mouseX = W / 2, mouseY = H / 2, mouseDown = false;
+loadArmory();
 function newGame() {
     grenades.length = 0;
     particles.length = 0;
@@ -2019,7 +2053,7 @@ document.addEventListener('keydown', e => {
             player.rollTimer = 15;
     }
     if (e.key === 'r' || e.key === 'R')
-        player.ammo = 30;
+        player.ammo = player.magSize;
     if (showingPowerup && ['1', '2', '3'].includes(e.key)) {
         const idx = parseInt(e.key) - 1;
         if (idx < powerupOptions.length) {
@@ -2149,6 +2183,7 @@ function loop(ts) {
                 if (waveClearTimer === 0) {
                     player.wave++;
                     player.score += 500;
+                    player.health = Math.min(player.maxHealth, player.health + Math.round(player.maxHealth * player.waveHeal));
                     showingPowerup = true;
                     powerupOptions = [...POWERUPS].sort(() => Math.random() - 0.5).slice(0, 3);
                     powerupHovered = -1;

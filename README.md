@@ -15,6 +15,7 @@ A dark medieval top-down shooter: survive **The Hunt** solo, or fight
   - `api.js` — leaderboard, profile, Hunt results
   - `db.js` — Postgres access; creates its tables on startup
   - `auth.js` — scrypt password hashing, session tokens
+  - `armory.js` — the Armory's upgrades, prices and effects
 
 ## Database (Neon Postgres)
 All accounts, gold and stats live in Postgres. The server creates its tables
@@ -53,6 +54,22 @@ the same browser share one login, and the newest tab takes over.
 - **Gold:** the Hunt pays bounty ÷ 10 when you die (retreating forfeits the
   run). A Duel pays 100 for a win and 25 for a loss; leaving mid-Duel
   forfeits it and pays nothing.
+- **The Armory** (ARMORY in the lobby) sells permanent Hunt upgrades, each
+  with 5 levels costing 150 / 400 / 800 / 1500 / 2500 gold:
+
+  | Upgrade | Effect per level | Max |
+  |---|---|---|
+  | Hardened Mail | +20 max health | 200 HP |
+  | Deep Quiver | +6 bolts per quiver | 60 |
+  | Barbed Bolts | +20% bolt damage | +100% |
+  | Fleet Boots | +0.15 move speed | 4.55 |
+  | Firepot Satchel | +1 starting firepot | 8 |
+  | Field Medic | heal 5% of max health after each wave | 25% |
+
+  Prices and effects live only in `server/armory.js`. The lobby shows the
+  catalog the server sends, and the Hunt loads its starting stats from
+  `/api/me`. A purchase is one SQL update that re-checks the gold and the
+  current level, so double clicks or two devices can't overspend.
 - **Hall of Legends** (LEGENDS in the lobby) shows your record and the top
   10 Hunt bounties and Duel records.
 
@@ -61,11 +78,11 @@ the same browser share one login, and the newest tab takes over.
 |---|---|---|
 | GET | `/` | Health check |
 | GET | `/api/leaderboard` | Top 10 Hunt bounties and Duel records |
-| GET | `/api/me` | Your profile (`Authorization: Bearer <token>`) |
+| GET | `/api/me` | Your profile, upgrade levels and Hunt loadout (`Authorization: Bearer <token>`) |
 | POST | `/api/hunt` | `{ score, wave, kills }` for a finished Hunt (bearer token; one per 10s) |
 
 Lobby and Duel traffic goes over the WebSocket: `hello {token}`,
-`signup`/`login {username, password}`, `logout`, warband messages, then
+`signup`/`login {username, password}`, `logout`, `buyUpgrade {id}`, warband messages, then
 `findMatch` and the match messages below.
 
 ## Warbands (parties)
@@ -97,7 +114,7 @@ Lobby and Duel traffic goes over the WebSocket: `hello {token}`,
   Fixing this means simulating bolts on the server.
 - **No lag compensation**, and no rejoin if a socket drops mid-Duel (the
   other player wins by forfeit).
-- **Gold has nothing to spend it on yet.**
+- **Armory upgrades only affect the Hunt.** The Duel stays even on purpose.
 
 ## Deploying
 Two services: the Node server on Render, and the static `public/` site on

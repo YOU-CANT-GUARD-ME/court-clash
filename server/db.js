@@ -3,6 +3,7 @@
 // database needs no manual setup beyond setting DATABASE_URL.
 
 const { Pool } = require('pg');
+const armory = require('./armory');
 
 // Forgive the usual copy-paste extras (spaces, surrounding quotes), then make
 // sure it's a full URL. Anything else gets parsed as a relative address and
@@ -42,6 +43,9 @@ CREATE TABLE IF NOT EXISTS sessions (
   created_at timestamptz NOT NULL DEFAULT now(),
   last_seen  timestamptz NOT NULL DEFAULT now()
 );
+-- Armory upgrade levels, e.g. {"mail": 2, "boots": 1}. Added after launch,
+-- so existing databases get it via ALTER.
+ALTER TABLE players ADD COLUMN IF NOT EXISTS upgrades jsonb NOT NULL DEFAULT '{}'::jsonb;
 CREATE INDEX IF NOT EXISTS sessions_player_idx ON sessions (player_id);
 CREATE INDEX IF NOT EXISTS players_bounty_idx ON players (best_bounty DESC);
 CREATE INDEX IF NOT EXISTS players_duel_idx ON players (duel_wins DESC);
@@ -62,6 +66,8 @@ function profileOf(row) {
     totalKills: row.total_kills,
     duelWins: row.duel_wins,
     duelLosses: row.duel_losses,
+    upgrades: row.upgrades || {},
+    loadout: armory.loadoutOf(row.upgrades),
   };
 }
 
@@ -82,6 +88,10 @@ async function createPlayer(id, username, passwordHash) {
     if (err.code === '23505') return null; // unique violation
     throw err;
   }
+}
+
+function playerById(id) {
+  return one('SELECT * FROM players WHERE id = $1', [id]);
 }
 
 function playerByUsername(username) {
@@ -126,6 +136,20 @@ function recordDuel(playerId, won, gold) {
   );
 }
 
+// Spends gold on the next level of an upgrade. The WHERE clause re-checks the
+// balance and the current level, so two quick clicks can't buy the same level
+// twice or spend gold that's already gone. Returns null if it didn't go through.
+function buyUpgrade(playerId, id, level, cost) {
+  return one(
+    `UPDATE players SET
+       gold = gold - $3,
+       upgrades = upgrades || jsonb_build_object($2::text, $4::int)
+     WHERE id = $1 AND gold >= $3 AND COALESCE((upgrades->>$2::text)::int, 0) = $4 - 1
+     RETURNING *`,
+    [playerId, id, cost, level],
+  );
+}
+
 async function leaderboard() {
   const [hunt, duel] = await Promise.all([
     pool.query(
@@ -143,6 +167,6 @@ async function leaderboard() {
 }
 
 module.exports = {
-  init, profileOf, createPlayer, playerByUsername, createSession, playerBySession,
-  deleteSession, recordHunt, recordDuel, leaderboard,
+  init, profileOf, createPlayer, playerById, playerByUsername, createSession, playerBySession,
+  deleteSession, recordHunt, recordDuel, buyUpgrade, leaderboard,
 };

@@ -750,7 +750,80 @@ main {
   color: var(--ink2);
   border: 0;
 }
+/* ---- armory ---- */
+.modal .armory-card {
+  width: min(700px,100%);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+}
+.purse {
+  margin: -4px 0 14px;
+  font: italic 500 16px 'EB Garamond',serif;
+  color: var(--ink2);
+}
+.purse b {
+  font: 700 16px 'Cinzel',serif;
+  font-style: normal;
+  color: var(--gold-d);
+}
+.wares {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.ware {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid rgba(90,70,48,.35);
+  border-radius: 4px;
+  background: rgba(255,255,255,.18);
+}
+.ware h3 {
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font: 900 13px 'Cinzel',serif;
+  letter-spacing: 1.5px;
+  color: var(--ink);
+}
+.ware p {
+  margin: 0;
+  font-size: 15px;
+}
+.pips {
+  display: flex;
+  gap: 4px;
+}
+.pips i {
+  width: 12px;
+  height: 12px;
+  transform: rotate(45deg) scale(.8);
+  border: 1px solid var(--ink2);
+  background: rgba(42,29,18,.1);
+}
+.pips i.on {
+  border-color: var(--blood-d);
+  background: var(--blood);
+}
+.ware .effect {
+  font: 700 11px 'Cinzel',serif;
+  letter-spacing: 1px;
+  color: var(--blood);
+}
+.ware .btn {
+  height: 36px;
+}
+.ware .btn:disabled {
+  filter: grayscale(.8) brightness(.8);
+  cursor: not-allowed;
+  transform: none;
+}
 @media(max-width:560px) {
+  .wares {
+    grid-template-columns: 1fr;
+  }
   .boards,.ledger {
     grid-template-columns: 1fr 1fr;
   }
@@ -905,6 +978,7 @@ main {
 <header class="top">
   <div class="brand"><svg class="emblem" aria-hidden="true"><use href="#crest"/></svg><div class="brand-text">Bloodsworn<small>MERCENARIES OF THE ASHEN REALM</small></div></div>
   <div class="top-right">
+    <button class="hdr-btn" id="armory-btn">ARMORY</button>
     <button class="hdr-btn" id="legends-btn">LEGENDS</button>
     <div class="scoretile" title="Gold earned in battle"><b id="gold">0000</b><span>GOLD</span></div>
     <button class="hdr-btn quiet" id="logout" title="Log out of this account" hidden>LEAVE</button>
@@ -965,6 +1039,17 @@ main {
   </div>
 </div>
 
+<div class="modal" id="armory" hidden>
+  <div class="lobby armory-card" role="dialog" aria-labelledby="armory-title">
+    <div class="lobby-head"><h1 id="armory-title">THE ARMORY<small>STEEL FOR THE HUNT</small></h1><button class="close" id="armory-close" aria-label="Close">✕</button></div>
+    <div class="lobby-body">
+      <div class="purse">Your purse holds <b id="purse">0</b> gold. Every upgrade lasts for good and is ready on your next Hunt.</div>
+      <div class="wares" id="wares"></div>
+      <div class="notice" id="armory-notice" role="status"></div>
+    </div>
+  </div>
+</div>
+
 <script src="config.js"></script>
 <script>
 const PARTY_SIZE = 4;
@@ -979,6 +1064,7 @@ let retries = 0;
 let replaced = false;
 let noticeTimer = null;
 let profile = null; // our gold and stats, from the server
+let armory = []; // the upgrade catalog, from the server
 let authMode = 'signup'; // or 'login'
 function sendMsg(msg) {
     if (socket && socket.readyState === WebSocket.OPEN)
@@ -1036,6 +1122,7 @@ function onMessage(msg) {
             $('#logout').hidden = false;
             $('#status').textContent = 'SWORN AS ' + msg.username.toUpperCase();
             profile = msg.profile;
+            armory = msg.armory || [];
             showProfile();
             break;
         case 'profile':
@@ -1048,7 +1135,9 @@ function onMessage(msg) {
             break;
         case 'lobbyError':
             $('#auth-submit').disabled = false;
-            notify(msg.message, $('#signup').hidden ? $('#notice') : $('#signup-notice'));
+            notify(msg.message, !$('#signup').hidden ? $('#signup-notice') : !$('#armory').hidden ? $('#armory-notice') : $('#notice'));
+            if (!$('#armory').hidden)
+                renderArmory();
             break;
         case 'launch':
             // The party leader started a 1v1: follow them into the match.
@@ -1198,6 +1287,8 @@ $('#logout').onclick = () => {
 // ---- gold + hall of legends ----
 function showProfile() {
     $('#gold').textContent = String(profile ? profile.gold : 0).padStart(4, '0');
+    if (!$('#armory').hidden)
+        renderArmory();
 }
 function boardRow(rank, name, value) {
     const li = document.createElement('li');
@@ -1244,6 +1335,55 @@ async function openLegends() {
         $('#legends-notice').textContent = 'The chronicles could not be reached. Try again shortly.';
     }
 }
+// ---- armory ----
+function renderArmory() {
+    const gold = profile ? profile.gold : 0;
+    $('#purse').textContent = gold;
+    $('#wares').replaceChildren(...armory.map(u => {
+        const level = (profile && profile.upgrades[u.id]) || 0;
+        const maxed = level >= u.costs.length, cost = u.costs[level];
+        const card = Object.assign(document.createElement('div'), { className: 'ware' });
+        const h = document.createElement('h3');
+        const pips = Object.assign(document.createElement('span'), { className: 'pips' });
+        pips.setAttribute('aria-label', `Level ${level} of ${u.costs.length}`);
+        for (let i = 0; i < u.costs.length; i++)
+            pips.append(Object.assign(document.createElement('i'), { className: i < level ? 'on' : '' }));
+        h.append(u.name, pips);
+        const btn = Object.assign(document.createElement('button'), { className: 'btn small' });
+        if (maxed) {
+            btn.textContent = 'MASTERED';
+            btn.disabled = true;
+        }
+        else {
+            btn.textContent = `FORGE · ${cost} GOLD`;
+            btn.disabled = !profile || gold < cost;
+            btn.onclick = () => {
+                btn.disabled = true; // until the server answers with a new profile
+                sendMsg({ type: 'buyUpgrade', id: u.id });
+            };
+        }
+        card.append(h, Object.assign(document.createElement('p'), { textContent: u.desc }),
+            Object.assign(document.createElement('div'), {
+                className: 'effect',
+                textContent: maxed ? u.labels[level] : `${u.labels[level]} → ${u.labels[level + 1]}`,
+            }), btn);
+        return card;
+    }));
+}
+function openArmory() {
+    $('#armory').hidden = false;
+    $('#armory-notice').textContent = profile ? '' : 'Swear in before you visit the smith.';
+    renderArmory();
+    $('#armory-close').focus();
+}
+function closeArmory() {
+    $('#armory').hidden = true;
+    $('#armory-btn').focus();
+}
+$('#armory-btn').onclick = openArmory;
+$('#armory-close').onclick = closeArmory;
+$('#armory').onclick = e => e.target === $('#armory') && closeArmory();
+
 function closeLegends() {
     $('#legends').hidden = true;
     $('#legends-btn').focus();
@@ -1254,6 +1394,8 @@ $('#legends').onclick = e => e.target === $('#legends') && closeLegends();
 document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && !$('#legends').hidden)
         closeLegends();
+    if (e.key === 'Escape' && !$('#armory').hidden)
+        closeArmory();
 });
 
 $('#play').onclick = () => {
