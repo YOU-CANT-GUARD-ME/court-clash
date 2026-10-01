@@ -4,12 +4,21 @@
 
 const { Pool } = require('pg');
 
-if (!process.env.DATABASE_URL) {
-  console.error('DATABASE_URL is not set. Set it to your Neon Postgres connection string (see README).');
+// Forgive the usual copy-paste extras (spaces, surrounding quotes), then make
+// sure it's a full URL. Anything else gets parsed as a relative address and
+// fails with a baffling "getaddrinfo ENOTFOUND base".
+const DATABASE_URL = (process.env.DATABASE_URL || '').trim().replace(/^(['"])(.*)\1$/, '$2').trim();
+if (!/^postgres(ql)?:\/\//.test(DATABASE_URL)) {
+  // Describe the problem without printing the value: it contains the password.
+  const hint = !DATABASE_URL ? 'it is not set'
+    : /^[A-Z_]+=/.test(DATABASE_URL) ? 'it includes the variable name (e.g. "DATABASE_URL=..."); paste only the part after the ='
+    : /postgres(ql)?:\/\//.test(DATABASE_URL) ? 'there is extra text before postgresql://'
+    : 'it does not contain a postgresql:// address';
+  console.error(`DATABASE_URL must be your full Neon connection string, starting with postgresql:// — but ${hint}. See README.`);
   process.exit(1);
 }
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 5 });
+const pool = new Pool({ connectionString: DATABASE_URL, max: 5 });
 pool.on('error', (err) => console.error('Postgres pool error:', err.message));
 
 const SCHEMA = `
