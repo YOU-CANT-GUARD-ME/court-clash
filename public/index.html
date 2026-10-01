@@ -734,6 +734,11 @@ function onMessage(msg) {
         case 'lobbyError':
             notify(msg.message, $('#signup').hidden ? $('#notice') : $('#signup-notice'));
             break;
+        case 'launch':
+            // The party leader started a 1v1: follow them into the match.
+            if (msg.mode === 'showdown')
+                location.href = 'showdown.html#party';
+            break;
         case 'replaced':
             replaced = true;
             $('#status').textContent = 'OPENED IN ANOTHER TAB';
@@ -854,7 +859,17 @@ $('#signup-form').onsubmit = e => {
     sendMsg({ type: 'setUsername', username: $('#username').value.trim() });
 };
 
-$('#play').onclick = () => location.href = mode === 'hunt' ? 'game.html' : 'showdown.html';
+$('#play').onclick = () => {
+    if (mode === 'hunt')
+        return location.href = 'game.html';
+    const withParty = party && party.members.length > 1;
+    // The leader brings everyone along; members who press PLAY just go in
+    // themselves. Either way the 1v1 page only matches within the party.
+    if (withParty && party.youAreLeader)
+        sendMsg({ type: 'launch' });
+    // Give the launch message a moment to leave before the page unloads.
+    setTimeout(() => location.href = 'showdown.html' + (withParty ? '#party' : ''), withParty ? 150 : 0);
+};
 
 connect();
 </script>

@@ -160,6 +160,12 @@ function handleMessage(ws, msg) {
       createParty(me);
       return true;
 
+    case 'launch':
+      // Leader pressed PLAY: bring everyone else in the party along.
+      if (!party || party.members[0] !== me) return true;
+      party.members.slice(1).forEach((id) => send(sessions.get(id)?.ws, { type: 'launch', mode: party.mode }));
+      return true;
+
     case 'setMode':
       if (!party) return true;
       if (party.members[0] !== me) return error(ws, 'Only the party leader can change the mode'), true;
@@ -184,4 +190,16 @@ function handleClose(ws) {
   }, RECONNECT_GRACE_MS);
 }
 
-module.exports = { handleMessage, handleClose };
+function usernameOf(ws) {
+  return ws.lobbyUserId ? users[ws.lobbyUserId].username : null;
+}
+
+// The party code to matchmake within, or null if this player isn't in a
+// party with anyone else (they use public matchmaking instead).
+function matchPartyOf(ws) {
+  const session = ws.lobbyUserId && sessions.get(ws.lobbyUserId);
+  const party = session && parties.get(session.partyCode);
+  return party && party.members.length >= 2 ? party.code : null;
+}
+
+module.exports = { handleMessage, handleClose, usernameOf, matchPartyOf };

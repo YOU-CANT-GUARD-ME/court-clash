@@ -30,6 +30,12 @@ If you deploy the server somewhere other than `localhost:8080`, update
 - The **party leader** is whoever has been in the party longest. Only the
   leader can change the game mode; if they leave, the next-longest member
   takes over. A refresh keeps your slot for 15 seconds.
+- **Party 1v1s:** `showdown.html` says hello with the same user ID, so the
+  server knows your party. If your party has 2+ players, Find Match only
+  pairs you with party members (first two to search play each other);
+  solo players use the public queue. When the leader presses PLAY in 1v1
+  mode, everyone in the party is sent to `showdown.html#party`, which starts
+  searching automatically.
 - To test with several players locally, use separate browsers or private
   windows (tabs in the same browser share one user, and the newest tab wins).
 - Render's free tier has no persistent disk, so `users.json` is wiped on

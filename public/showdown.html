@@ -398,7 +398,7 @@ function drawFighter(p, camX, camY, color, label, number) {
 // ═══════════════════════════════════════════════════════════════════════════
 const DEPLOYED_SERVER_HOST = "court-clash.onrender.com";
 const WS_URL = (() => {
-    const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    const isLocal = ['localhost', '127.0.0.1', ''].includes(location.hostname);
     const protocol = location.protocol === 'https:' ? 'wss://' : 'ws://';
     if (isLocal)
         return `ws://localhost:8080`;
@@ -407,24 +407,35 @@ const WS_URL = (() => {
     }
     return `${protocol}${DEPLOYED_SERVER_HOST}`;
 })();
+const USER_KEY = 'courtclash.userId'; // saved by the lobby (index.html)
 let socket = null;
 let myPlayerNum = null;
 let matchState = 'idle'; // idle | queued | playing | roundover | matchover
 let scores = [0, 0];
 let round = 1;
+let wantMatch = false; // should we be in the matchmaking queue?
+let party = null; // our lobby party, once the server recognises us
+let oppName = null;
+function getUserId() {
+    try { return localStorage.getItem(USER_KEY); } catch { return null; }
+}
+function partyMates() { return party ? party.members.filter(m => !m.you) : []; }
+function oppLabel() { return (oppName || 'OPPONENT').toUpperCase(); }
 function sendMsg(msg) {
     if (socket && socket.readyState === WebSocket.OPEN)
         socket.send(JSON.stringify(msg));
 }
-function connect() {
-    if (socket)
-        disconnect();
+// One socket for the whole visit. Saying hello with our lobby user ID keeps us
+// in our party while on this page, and the server then only matches us
+// against party members.
+function openSocket() {
     const ws = socket = new WebSocket(WS_URL);
-    matchState = 'queued';
-    showSearching();
-    // Events from a socket we've since replaced or cancelled are ignored.
+    // Events from a socket we've since dropped are ignored.
     ws.addEventListener('open', () => {
-        if (ws === socket)
+        if (ws !== socket)
+            return;
+        sendMsg({ type: 'hello', userId: getUserId() });
+        if (wantMatch)
             sendMsg({ type: 'findMatch' });
     });
     ws.addEventListener('message', (ev) => {
@@ -432,28 +443,61 @@ function connect() {
             handleServerMessage(JSON.parse(ev.data));
     });
     ws.addEventListener('close', () => {
-        // 'idle' means the error handler already explained the problem.
-        if (ws === socket && matchState !== 'matchover' && matchState !== 'idle')
+        if (ws !== socket)
+            return;
+        socket = null;
+        // 'idle' means nothing was in progress, or the error handler already explained.
+        if (matchState !== 'idle' && matchState !== 'matchover')
             showConnectionProblem('CONNECTION LOST', 'The match server disconnected.');
     });
     ws.addEventListener('error', () => {
-        if (ws === socket)
+        if (ws === socket && matchState !== 'idle' && matchState !== 'matchover')
             showConnectionProblem('CONNECTION FAILED', 'Could not reach the match server. It may be waking up, so try again in a few seconds.');
     });
 }
-function disconnect() {
-    const ws = socket;
-    socket = null;
-    if (ws)
-        ws.close();
+function findMatch() {
+    wantMatch = true;
+    matchState = 'queued';
+    showSearching();
+    if (!socket)
+        openSocket(); // the open handler sends findMatch
+    else
+        sendMsg({ type: 'findMatch' }); // no-op while connecting; the open handler covers it
+}
+function cancelSearch() {
+    wantMatch = false;
+    matchState = 'idle';
+    sendMsg({ type: 'cancelMatch' });
+    showIntro();
 }
 function handleServerMessage(msg) {
     switch (msg.type) {
+        case 'party':
+            party = msg;
+            if (matchState === 'idle')
+                showIntro();
+            else if (matchState === 'queued')
+                showSearching();
+            break;
+        case 'launch':
+            // The party leader started a 1v1 from the lobby while we were already here.
+            if (msg.mode === 'showdown' && matchState === 'idle')
+                findMatch();
+            break;
+        case 'replaced':
+            socket = null;
+            matchState = 'idle';
+            showCard({ title: 'OPENED ELSEWHERE', tag: 'ANOTHER TAB TOOK OVER', tone: 'lose',
+                body: [el('p', null, 'Your account was opened in another tab, so this one has been disconnected.')],
+                buttons: [['LOBBY', goToLobby, true]] });
+            break;
         case 'queued':
             showSearching();
             break;
         case 'matchFound':
             myPlayerNum = msg.playerNum;
+            oppName = msg.opponentName;
+            wantMatch = false;
             break;
         case 'roundStart':
             round = msg.round;
@@ -553,7 +597,7 @@ function tally() {
         return d;
     };
     const t = el('div', 'tally');
-    t.append(side('YOU', mine, 'me'), el('div', 'vs', 'VS'), side('OPPONENT', theirs, 'opp'));
+    t.append(side('YOU', mine, 'me'), el('div', 'vs', 'VS'), side(oppLabel(), theirs, 'opp'));
     return t;
 }
 function controlsList() {
@@ -565,18 +609,34 @@ function controlsList() {
     }
     return keys;
 }
+function namesList(members) {
+    const names = members.map(m => m.username);
+    return names.length <= 1 ? names.join('') : names.slice(0, -1).join(', ') + ' or ' + names[names.length - 1];
+}
 function showIntro() {
+    const mates = partyMates();
+    if (mates.length) {
+        showCard({
+            title: '1V1 SHOWDOWN', tag: 'PARTY MATCH  ·  BEST OF 3',
+            body: [el('p', null, `You’re in a party, so you’ll face ${namesList(mates)}. First to 2 round wins takes the match.`), controlsList()],
+            buttons: [['FIND MATCH', findMatch, true], ['LOBBY', goToLobby]],
+        });
+        return;
+    }
     showCard({
         title: '1V1 SHOWDOWN', tag: 'ONLINE  ·  BEST OF 3',
         body: [el('p', null, 'Go head to head with another player. First to 2 round wins takes the match.'), controlsList()],
-        buttons: [['FIND MATCH', connect, true], ['LOBBY', goToLobby]],
+        buttons: [['FIND MATCH', findMatch, true], ['LOBBY', goToLobby]],
     });
 }
 function showSearching() {
+    const mates = partyMates();
     showCard({
-        title: 'SEARCHING', tag: 'LOOKING FOR AN OPPONENT', spinner: true,
-        body: [el('p', null, 'Hang tight. You’ll drop into the arena as soon as another player is ready.')],
-        buttons: [['CANCEL', () => { matchState = 'idle'; disconnect(); showIntro(); }]],
+        title: 'SEARCHING', tag: mates.length ? 'WAITING FOR YOUR PARTY' : 'LOOKING FOR AN OPPONENT', spinner: true,
+        body: [el('p', null, mates.length
+            ? `You’ll drop into the arena as soon as ${namesList(mates)} is ready.`
+            : 'Hang tight. You’ll drop into the arena as soon as another player is ready.')],
+        buttons: [['CANCEL', cancelSearch]],
     });
 }
 function showRoundOver(youWon) {
@@ -594,7 +654,7 @@ function showMatchOver(title, tag, tone) {
     showCard({
         title, tag, tone,
         body: [tally()],
-        buttons: [['FIND NEW MATCH', connect, true], ['LOBBY', goToLobby]],
+        buttons: [[partyMates().length ? 'REMATCH' : 'FIND NEW MATCH', findMatch, true], ['LOBBY', goToLobby]],
     });
 }
 function showConnectionProblem(title, text) {
@@ -602,7 +662,7 @@ function showConnectionProblem(title, text) {
     showCard({
         title, tag: 'MATCH SERVER', tone: 'lose',
         body: [el('p', null, text)],
-        buttons: [['TRY AGAIN', connect, true], ['LOBBY', goToLobby]],
+        buttons: [['TRY AGAIN', findMatch, true], ['LOBBY', goToLobby]],
     });
 }
 // ── INPUT ─────────────────────────────────────────────────────────────────────
@@ -837,7 +897,7 @@ function drawScoreboard() {
     const rx = sx + side + mid + 16;
     const ohp = Math.max(0, opponent.displayHealth);
     const [oA, oB] = healthColors(opponent.health);
-    drawText('OPPONENT', rx + lw, sy + 26, { size: 16, family: 'display', align: 'right', color: UI.oppRed, spacing: 1 });
+    drawText(oppLabel(), rx + lw, sy + 26, { size: 16, family: 'display', align: 'right', color: UI.oppRed, spacing: 1 });
     drawText(String(Math.ceil(Math.max(0, opponent.health))), rx, sy + 27, { size: 16, family: 'num', color: oA });
     meter(rx, sy + 34, lw, 14, ohp / 100, oA, oB, true);
     pips(rx + lw - 4, theirs, '#c8281e', true);
@@ -1024,12 +1084,20 @@ function loop(ts) {
     }
     ctx.globalAlpha = 1;
     if (matchState === 'playing' || matchState === 'roundover') {
-        drawFighter(opponent, camX, camY, OPP_COLOR, 'OPPONENT', '23');
+        drawFighter(opponent, camX, camY, OPP_COLOR, oppLabel(), '23');
         drawFighter(player, camX, camY, ME_COLOR, 'YOU', '7');
         drawHUD(camX, camY);
     }
 }
-showIntro();
+// Arriving from the lobby's party PLAY button: start searching straight away.
+if (location.hash === '#party') {
+    history.replaceState(null, '', location.pathname);
+    findMatch();
+}
+else {
+    showIntro();
+    openSocket();
+}
 requestAnimationFrame(loop);
 </script>
 </body>

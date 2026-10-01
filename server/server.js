@@ -19,7 +19,8 @@ const SPAWN_POINTS = [
 
 const wss = new WebSocketServer({ port: PORT });
 
-let waitingPlayer = null; // a socket waiting for an opponent
+let waitingPlayer = null; // a socket waiting for a public opponent
+const partyWaiting = new Map(); // party code -> socket waiting for a party member
 const rooms = new Map();  // roomId -> room state
 let nextRoomId = 1;
 
@@ -43,6 +44,52 @@ function makeRoom(playerA, playerB) {
   playerB.playerNum = 1;
   rooms.set(roomId, room);
   return room;
+}
+
+function startMatch(playerA, playerB) {
+  const room = makeRoom(playerA, playerB);
+  room.players.forEach((sock, i) => {
+    send(sock, {
+      type: 'matchFound', playerNum: i, roomId: room.id,
+      yourName: lobby.usernameOf(sock),
+      opponentName: lobby.usernameOf(room.players[1 - i]),
+    });
+  });
+  startRound(room);
+}
+
+function dequeue(ws) {
+  if (waitingPlayer === ws) waitingPlayer = null;
+  if (ws.partyQueue && partyWaiting.get(ws.partyQueue) === ws) partyWaiting.delete(ws.partyQueue);
+  ws.partyQueue = null;
+}
+
+// Players in a party (2+ members) are only matched with each other;
+// everyone else goes into the public queue.
+function findMatch(ws) {
+  if (rooms.has(ws.roomId)) return; // already in a match
+  dequeue(ws);
+  const partyCode = lobby.matchPartyOf(ws);
+  if (partyCode) {
+    const other = partyWaiting.get(partyCode);
+    if (other && other !== ws && other.readyState === ws.OPEN) {
+      dequeue(other);
+      startMatch(other, ws);
+    } else {
+      partyWaiting.set(partyCode, ws);
+      ws.partyQueue = partyCode;
+      send(ws, { type: 'queued', party: true });
+    }
+    return;
+  }
+  if (waitingPlayer && waitingPlayer !== ws && waitingPlayer.readyState === ws.OPEN) {
+    const other = waitingPlayer;
+    dequeue(other);
+    startMatch(other, ws);
+  } else {
+    waitingPlayer = ws;
+    send(ws, { type: 'queued', party: false });
+  }
 }
 
 function opponentOf(room, ws) {
@@ -110,20 +157,8 @@ wss.on('connection', (ws) => {
 
     if (lobby.handleMessage(ws, msg)) return;
 
-    if (msg.type === 'findMatch') {
-      if (waitingPlayer && waitingPlayer !== ws && waitingPlayer.readyState === ws.OPEN) {
-        const room = makeRoom(waitingPlayer, ws);
-        waitingPlayer = null;
-        room.players.forEach((sock, i) => {
-          send(sock, { type: 'matchFound', playerNum: i, roomId: room.id });
-        });
-        startRound(room);
-      } else {
-        waitingPlayer = ws;
-        send(ws, { type: 'queued' });
-      }
-      return;
-    }
+    if (msg.type === 'findMatch') return findMatch(ws);
+    if (msg.type === 'cancelMatch') return dequeue(ws);
 
     const room = rooms.get(ws.roomId);
     if (!room || room.state !== 'playing') return;
@@ -164,7 +199,7 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     lobby.handleClose(ws);
-    if (waitingPlayer === ws) waitingPlayer = null;
+    dequeue(ws);
     const room = rooms.get(ws.roomId);
     if (room && room.state !== 'matchover') {
       const opp = opponentOf(room, ws);
