@@ -29,6 +29,7 @@ canvas {
 </head>
 <body>
 <canvas id="c"></canvas>
+<script src="config.js"></script>
 <script>
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
@@ -1212,6 +1213,7 @@ const BEST_KEY = 'bloodsworn.hunt.best';
 const popups = []; // floating "+100" score text, in world coordinates
 let uiButtons = []; // clickable canvas buttons, rebuilt every frame
 let shownScore = 0, hudTime = 0, newBest = false;
+let huntReward = null; // what the server said about this run: { state: 'saving' | 'saved' | 'guest' | 'failed', gold }
 let bestScore = (() => { try { return Number(localStorage.getItem(BEST_KEY)) || 0; } catch { return 0; } })();
 function setFont(size, family = 'ui', weight) {
     const [face, w] = FONTS[family];
@@ -1429,11 +1431,37 @@ function addPopup(x, y, text) {
 }
 function endRun() {
     gameOver = true;
+    submitHunt();
     newBest = player.score > bestScore;
     if (newBest) {
         bestScore = player.score;
         try { localStorage.setItem(BEST_KEY, String(bestScore)); } catch { }
     }
+}
+// Sends the finished run to the server, which pays out gold and updates the
+// leaderboard. Only signed-in players (with a token from the lobby) count.
+async function submitHunt() {
+    const run = player, token = getToken();
+    if (!token) {
+        huntReward = { state: 'guest' };
+        return;
+    }
+    huntReward = { state: 'saving' };
+    let reward;
+    try {
+        const res = await fetch(SERVER.api + '/api/hunt', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify({ score: run.score, wave: run.wave, kills: run.kills }),
+        });
+        const body = await res.json().catch(() => ({}));
+        reward = res.ok ? { state: 'saved', gold: body.gold } : { state: res.status === 401 ? 'guest' : 'failed' };
+    }
+    catch {
+        reward = { state: 'failed' };
+    }
+    if (player === run) // ignore if a new run has already started
+        huntReward = reward;
 }
 function goToLobby() { location.href = 'index.html'; }
 // ── HUD ──────────────────────────────────────────────────────────────────────
@@ -1845,7 +1873,15 @@ function drawGameOver(player) {
         ctx.restore();
         drawText(t, W / 2, cardY + bob, { size: 11, align: 'center', baseline: 'middle', color: UI.navy3, spacing: 2 });
     }
-    const bw = Math.min(210, (cw - 16) / 2), by = cardY + ch + 40;
+    const reward = {
+        saving: ['ENTERING YOUR BOUNTY IN THE LEDGER…', UI.muted],
+        saved: [`+${huntReward?.gold ?? 0} GOLD FOR YOUR PURSE`, UI.gold],
+        guest: ['SIGN IN AT THE HALL TO EARN GOLD', UI.muted],
+        failed: ['THE LEDGER COULD NOT BE REACHED. THIS BOUNTY IS LOST', UI.red],
+    }[huntReward?.state];
+    if (reward)
+        drawText(reward[0], W / 2, cardY + ch + 34, { size: 12, align: 'center', color: reward[1], spacing: 2 });
+    const bw = Math.min(210, (cw - 16) / 2), by = cardY + ch + 60;
     button('RISE AGAIN', 'R', W / 2 - bw - 8, by, bw, 52, newGame, true);
     button('RETREAT', 'Q', W / 2 + 8, by, bw, 52, goToLobby, false);
 }
@@ -1944,6 +1980,7 @@ function newGame() {
     shownScore = 0;
     hudTime = 0;
     newBest = false;
+    huntReward = null;
     player = makePlayer();
     enemies = spawnEnemies(1);
     gameOver = false;

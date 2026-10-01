@@ -75,6 +75,7 @@
     min-width: 26px; padding: 4px 7px; border-radius: 3px; text-align: center;
     background: var(--stone3); box-shadow: 0 2px 0 #000; color: var(--gold); font: 700 9px 'Cinzel', serif;
   }
+  .card-body > p.purse { text-align: center; font: 700 15px 'Cinzel', serif; font-style: normal; letter-spacing: 1px; color: var(--gold-d); }
   .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .btns.one { grid-template-columns: 1fr; }
   .btn {
@@ -97,6 +98,7 @@
 <canvas id="c"></canvas>
 <div id="overlay" role="dialog" aria-live="polite"></div>
 
+<script src="config.js"></script>
 <script>
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
@@ -509,24 +511,7 @@ function drawFighter(p, camX, camY, pal, label) {
     ctx.restore();
 }
 // ── NETWORKING ────────────────────────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════
-// EDIT THIS when you deploy: put your Render server's URL here (no protocol,
-// no trailing slash) — e.g. "mercenary-showdown-server.onrender.com".
-// While it's still the placeholder below, the game auto-falls-back to
-// localhost:8080 so local testing keeps working without any edits.
-// ═══════════════════════════════════════════════════════════════════════════
-const DEPLOYED_SERVER_HOST = "court-clash.onrender.com";
-const WS_URL = (() => {
-    const isLocal = ['localhost', '127.0.0.1', ''].includes(location.hostname);
-    const protocol = location.protocol === 'https:' ? 'wss://' : 'ws://';
-    if (isLocal)
-        return `ws://localhost:8080`;
-    if (DEPLOYED_SERVER_HOST === "PUT-YOUR-RENDER-SERVER-URL-HERE") {
-        console.error('Set DEPLOYED_SERVER_HOST in showdown.html before deploying.');
-    }
-    return `${protocol}${DEPLOYED_SERVER_HOST}`;
-})();
-const USER_KEY = 'courtclash.userId'; // saved by the lobby (index.html)
+// The server address and login token come from config.js.
 let socket = null;
 let myPlayerNum = null;
 let matchState = 'idle'; // idle | queued | playing | roundover | matchover
@@ -535,9 +520,7 @@ let round = 1;
 let wantMatch = false; // should we be in the matchmaking queue?
 let party = null; // our lobby party, once the server recognises us
 let oppName = null;
-function getUserId() {
-    try { return localStorage.getItem(USER_KEY); } catch { return null; }
-}
+let signedIn = false; // only signed-in players earn gold and records
 function partyMates() { return party ? party.members.filter(m => !m.you) : []; }
 function oppLabel() { return (oppName || 'FOE').toUpperCase(); }
 function sendMsg(msg) {
@@ -548,12 +531,12 @@ function sendMsg(msg) {
 // in our party while on this page, and the server then only matches us
 // against party members.
 function openSocket() {
-    const ws = socket = new WebSocket(WS_URL);
+    const ws = socket = new WebSocket(SERVER.ws);
     // Events from a socket we've since dropped are ignored.
     ws.addEventListener('open', () => {
         if (ws !== socket)
             return;
-        sendMsg({ type: 'hello', userId: getUserId() });
+        sendMsg({ type: 'hello', token: getToken() });
         if (wantMatch)
             sendMsg({ type: 'findMatch' });
     });
@@ -591,6 +574,12 @@ function cancelSearch() {
 }
 function handleServerMessage(msg) {
     switch (msg.type) {
+        case 'welcome':
+            signedIn = true;
+            break;
+        case 'needAuth':
+            signedIn = false;
+            break;
         case 'party':
             party = msg;
             if (matchState === 'idle')
@@ -657,11 +646,11 @@ function handleServerMessage(msg) {
         case 'matchOver':
             scores = msg.scores;
             matchState = 'matchover';
-            showMatchOver(msg.youWon ? 'VICTORY' : 'DEFEAT', 'FINAL SCORE', msg.youWon ? 'win' : 'lose');
+            showMatchOver(msg.youWon ? 'VICTORY' : 'DEFEAT', 'FINAL SCORE', msg.youWon ? 'win' : 'lose', msg.gold);
             break;
         case 'opponentDisconnected':
             matchState = 'matchover';
-            showMatchOver('YOUR FOE FLED', 'VICTORY BY FORFEIT', 'win');
+            showMatchOver('YOUR FOE FLED', 'VICTORY BY FORFEIT', 'win', msg.gold);
             break;
     }
 }
@@ -769,10 +758,13 @@ function showRoundOver(youWon) {
         body: [tally(), label, bar],
     });
 }
-function showMatchOver(title, tag, tone) {
+function showMatchOver(title, tag, tone, gold) {
+    const purse = el('p', 'purse', signedIn
+        ? `+${gold || 0} gold for your purse.`
+        : 'Sign in at the hall to earn gold and a place among the legends.');
     showCard({
         title, tag, tone,
-        body: [tally()],
+        body: [tally(), purse],
         buttons: [[partyMates().length ? 'REMATCH' : 'SEEK ANOTHER', findMatch, true], ['THE HALL', goToLobby]],
     });
 }

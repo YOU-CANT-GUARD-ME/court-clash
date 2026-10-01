@@ -1,12 +1,13 @@
 {
   "name": "mercenary-showdown-server",
   "version": "1.0.0",
-  "description": "Matchmaking + round server for MERCENARY 1v1 Showdown",
+  "description": "Bloodsworn game server: accounts, warbands, Duel matchmaking, leaderboards",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
+    "pg": "^8.23.1",
     "ws": "^8.18.0"
   }
 }

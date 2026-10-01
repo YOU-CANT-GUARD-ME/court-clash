@@ -579,6 +579,189 @@ main {
   transform: translateY(2px);
   box-shadow: 0 2px 0 var(--blood-d);
 }
+/* ---- header buttons ---- */
+.top-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.hdr-btn {
+  border: 1px solid var(--gold-d);
+  border-radius: 4px;
+  padding: 10px 14px;
+  background: linear-gradient(180deg,var(--stone3),var(--stone2));
+  color: var(--gold);
+  font: 700 11px 'Cinzel',serif;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+}
+.hdr-btn:hover {
+  filter: brightness(1.2);
+}
+.hdr-btn:focus-visible,.tab:focus-visible,.close:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.hdr-btn.quiet {
+  border-color: var(--iron);
+  color: var(--bone);
+}
+/* ---- sign in / sign up ---- */
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 14px;
+  border: 1px solid var(--ink2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.tab {
+  border: 0;
+  padding: 9px 6px;
+  background: transparent;
+  color: var(--ink2);
+  font: 700 10px 'Cinzel',serif;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+}
+.tab.on {
+  background: var(--stone);
+  color: var(--gold);
+}
+.field {
+  display: block;
+  margin-bottom: 10px;
+  font: 700 9px 'Cinzel',serif;
+  letter-spacing: 2px;
+  color: var(--blood);
+}
+.field input {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  border: 2px solid var(--iron);
+  border-radius: 4px;
+  padding: 10px 12px;
+  background: var(--void);
+  color: var(--gold);
+  font: 500 18px 'EB Garamond',serif;
+  box-shadow: inset 0 0 10px #000;
+}
+.field input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+.btn.wide {
+  width: 100%;
+  padding: 13px;
+  font-size: 13px;
+}
+.btn.wide:disabled {
+  filter: grayscale(.6) brightness(.8);
+  cursor: wait;
+}
+/* ---- hall of legends ---- */
+.modal .legends-card {
+  width: min(660px,100%);
+}
+.close {
+  border: 1px solid var(--iron);
+  border-radius: 4px;
+  background: var(--stone);
+  color: var(--bone);
+  width: 34px;
+  height: 34px;
+  font-size: 15px;
+  cursor: pointer;
+}
+.ledger {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.ledger div {
+  padding: 8px 10px;
+  border: 1px solid rgba(90,70,48,.35);
+  border-radius: 4px;
+  background: rgba(255,255,255,.18);
+}
+.ledger small {
+  display: block;
+  font: 700 8px 'Cinzel',serif;
+  letter-spacing: 1.5px;
+  color: var(--blood);
+}
+.ledger b {
+  font: 700 20px 'Cinzel',serif;
+  color: var(--ink);
+}
+.boards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.boards h2 {
+  margin: 0 0 8px;
+  font: 900 13px 'Cinzel',serif;
+  letter-spacing: 2px;
+  color: var(--ink);
+  border-bottom: 2px solid var(--blood);
+  padding-bottom: 6px;
+}
+.boards ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.boards li {
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 0;
+  border-bottom: 1px dotted rgba(90,70,48,.4);
+  font: 500 16px 'EB Garamond',serif;
+  color: var(--ink);
+}
+.boards li.me {
+  background: rgba(201,162,74,.25);
+}
+.boards li i {
+  font: 700 11px 'Cinzel',serif;
+  font-style: normal;
+  color: var(--ink2);
+}
+.boards li span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.boards li b {
+  font: 700 13px 'Cinzel',serif;
+  color: var(--blood);
+}
+.boards li:first-child i {
+  color: var(--gold-d);
+}
+.boards .empty {
+  display: block;
+  font-style: italic;
+  color: var(--ink2);
+  border: 0;
+}
+@media(max-width:560px) {
+  .boards,.ledger {
+    grid-template-columns: 1fr 1fr;
+  }
+  .boards {
+    grid-template-columns: 1fr;
+  }
+  .hdr-btn {
+    padding: 8px 9px;
+    font-size: 9px;
+  }
+}
 /* ---- loading screen ---- */
 .loader {
   position: fixed;
@@ -721,7 +904,11 @@ main {
 
 <header class="top">
   <div class="brand"><svg class="emblem" aria-hidden="true"><use href="#crest"/></svg><div class="brand-text">Bloodsworn<small>MERCENARIES OF THE ASHEN REALM</small></div></div>
-  <div class="scoretile"><b>0000</b><span>GOLD</span></div>
+  <div class="top-right">
+    <button class="hdr-btn" id="legends-btn">LEGENDS</button>
+    <div class="scoretile" title="Gold earned in battle"><b id="gold">0000</b><span>GOLD</span></div>
+    <button class="hdr-btn quiet" id="logout" title="Log out of this account" hidden>LEAVE</button>
+  </div>
 </header>
 
 <main>
@@ -753,25 +940,33 @@ main {
 
 <div class="modal" id="signup" hidden>
   <form class="lobby" id="signup-form">
-    <div class="lobby-head"><h1>WHO GOES THERE?<small>NAME THYSELF, SELLSWORD</small></h1></div>
+    <div class="lobby-head"><h1>WHO GOES THERE?<small id="auth-sub">NAME THYSELF, SELLSWORD</small></h1></div>
     <div class="lobby-body">
-      <p>This is the name your warband will know you by. 3–16 letters, numbers or _.</p>
-      <div class="code"><input id="username" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Thy name" aria-label="Username"><button class="btn small">SWEAR IN</button></div>
+      <div class="tabs"><button type="button" class="tab on" data-auth="signup">NEW SELLSWORD</button><button type="button" class="tab" data-auth="login">RETURNING</button></div>
+      <label class="field">NAME<input id="username" maxlength="16" autocomplete="username" spellcheck="false" required placeholder="3–16 letters, numbers or _"></label>
+      <label class="field">PASSWORD<input id="password" type="password" minlength="6" maxlength="72" autocomplete="new-password" required placeholder="At least 6 characters"></label>
+      <button class="btn small wide" id="auth-submit">SWEAR IN</button>
       <div class="notice" id="signup-notice" role="status"></div>
     </div>
   </form>
 </div>
 
+<div class="modal" id="legends" hidden>
+  <div class="lobby legends-card" role="dialog" aria-labelledby="legends-title">
+    <div class="lobby-head"><h1 id="legends-title">HALL OF LEGENDS<small>THE REALM REMEMBERS</small></h1><button class="close" id="legends-close" aria-label="Close">✕</button></div>
+    <div class="lobby-body">
+      <div class="ledger" id="ledger"></div>
+      <div class="boards">
+        <section><h2>THE HUNT · BOUNTIES</h2><ol id="board-hunt"></ol></section>
+        <section><h2>THE DUEL · VICTORIES</h2><ol id="board-duel"></ol></section>
+      </div>
+      <div class="notice" id="legends-notice" role="status"></div>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
 <script>
-// Keep in sync with DEPLOYED_SERVER_HOST in showdown.html.
-const DEPLOYED_SERVER_HOST = "court-clash.onrender.com";
-const WS_URL = (() => {
-    const isLocal = ['localhost', '127.0.0.1', ''].includes(location.hostname);
-    if (isLocal)
-        return 'ws://localhost:8080';
-    return (location.protocol === 'https:' ? 'wss://' : 'ws://') + DEPLOYED_SERVER_HOST;
-})();
-const USER_KEY = 'courtclash.userId';
 const PARTY_SIZE = 4;
 const $ = sel => document.querySelector(sel);
 const code = $('#code');
@@ -783,13 +978,8 @@ let socket = null;
 let retries = 0;
 let replaced = false;
 let noticeTimer = null;
-
-function getUserId() {
-    try { return localStorage.getItem(USER_KEY); } catch { return null; }
-}
-function setUserId(id) {
-    try { localStorage.setItem(USER_KEY, id); } catch { }
-}
+let profile = null; // our gold and stats, from the server
+let authMode = 'signup'; // or 'login'
 function sendMsg(msg) {
     if (socket && socket.readyState === WebSocket.OPEN)
         socket.send(JSON.stringify(msg));
@@ -803,10 +993,10 @@ function notify(text, el = $('#notice')) {
 // ---- connection ----
 function connect() {
     $('#status').textContent = 'CONNECTING…';
-    socket = new WebSocket(WS_URL);
+    socket = new WebSocket(SERVER.ws);
     socket.onopen = () => {
         retries = 0;
-        sendMsg({ type: 'hello', userId: getUserId() });
+        sendMsg({ type: 'hello', token: getToken() });
     };
     socket.onmessage = e => {
         let msg;
@@ -823,22 +1013,41 @@ function connect() {
 
 function onMessage(msg) {
     switch (msg.type) {
-        case 'needUsername':
+        case 'needAuth':
+            // No token, or it was logged out / expired: show the sign-in screen.
             markServerReady();
+            setToken(null);
+            party = null;
+            profile = null;
+            showProfile();
+            $('#party').replaceChildren();
+            $('#status').textContent = 'NOT YET SWORN IN';
+            $('#logout').hidden = true;
+            $('#auth-submit').disabled = false;
             $('#signup').hidden = false;
             $('#username').focus();
             break;
         case 'welcome':
             markServerReady();
-            setUserId(msg.userId);
+            if (msg.token)
+                setToken(msg.token);
             $('#signup').hidden = true;
+            $('#password').value = '';
+            $('#logout').hidden = false;
             $('#status').textContent = 'SWORN AS ' + msg.username.toUpperCase();
+            profile = msg.profile;
+            showProfile();
+            break;
+        case 'profile':
+            profile = msg.profile;
+            showProfile();
             break;
         case 'party':
             party = msg;
             render();
             break;
         case 'lobbyError':
+            $('#auth-submit').disabled = false;
             notify(msg.message, $('#signup').hidden ? $('#notice') : $('#signup-notice'));
             break;
         case 'launch':
@@ -961,10 +1170,91 @@ copyBtn.onclick = async () => {
     setTimeout(() => { copyBtn.classList.remove('done'); updateCodeButton(); }, 1200);
 };
 
+// ---- sign up / log in ----
+const AUTH_COPY = {
+    signup: { sub: 'NAME THYSELF, SELLSWORD', button: 'SWEAR IN', autocomplete: 'new-password' },
+    login: { sub: 'WELCOME BACK, SELLSWORD', button: 'RETURN TO THE HALL', autocomplete: 'current-password' },
+};
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+    authMode = t.dataset.auth;
+    document.querySelectorAll('.tab').forEach(o => o.classList.toggle('on', o === t));
+    $('#auth-sub').textContent = AUTH_COPY[authMode].sub;
+    $('#auth-submit').textContent = AUTH_COPY[authMode].button;
+    $('#password').autocomplete = AUTH_COPY[authMode].autocomplete;
+    $('#signup-notice').textContent = '';
+});
 $('#signup-form').onsubmit = e => {
     e.preventDefault();
-    sendMsg({ type: 'setUsername', username: $('#username').value.trim() });
+    if (!socket || socket.readyState !== WebSocket.OPEN)
+        return notify('The hall is unreachable. Retrying…', $('#signup-notice'));
+    $('#auth-submit').disabled = true;
+    sendMsg({ type: authMode, username: $('#username').value.trim(), password: $('#password').value });
 };
+$('#logout').onclick = () => {
+    sendMsg({ type: 'logout' });
+    setToken(null);
+};
+
+// ---- gold + hall of legends ----
+function showProfile() {
+    $('#gold').textContent = String(profile ? profile.gold : 0).padStart(4, '0');
+}
+function boardRow(rank, name, value) {
+    const li = document.createElement('li');
+    li.append(Object.assign(document.createElement('i'), { textContent: rank }),
+        Object.assign(document.createElement('span'), { textContent: name }),
+        Object.assign(document.createElement('b'), { textContent: value }));
+    if (profile && name === profile.username)
+        li.className = 'me';
+    return li;
+}
+function emptyRow(text) {
+    return Object.assign(document.createElement('li'), { className: 'empty', textContent: text });
+}
+async function openLegends() {
+    $('#legends').hidden = false;
+    $('#legends-close').focus();
+    const ledger = $('#ledger');
+    ledger.replaceChildren();
+    if (profile) {
+        const stats = [['GOLD', profile.gold], ['BEST BOUNTY', profile.bestBounty], ['BEST WAVE', profile.bestWave],
+            ['KILLS', profile.totalKills], ['HUNTS', profile.huntRuns], ['DUELS', `${profile.duelWins}–${profile.duelLosses}`]];
+        for (const [label, value] of stats) {
+            const d = document.createElement('div');
+            d.append(Object.assign(document.createElement('small'), { textContent: label }),
+                Object.assign(document.createElement('b'), { textContent: value }));
+            ledger.append(d);
+        }
+    }
+    $('#legends-notice').textContent = 'Consulting the chronicles…';
+    try {
+        const res = await fetch(SERVER.api + '/api/leaderboard');
+        if (!res.ok)
+            throw new Error(res.status);
+        const board = await res.json();
+        $('#board-hunt').replaceChildren(...(board.hunt.length
+            ? board.hunt.map((r, i) => boardRow(i + 1, r.username, `${r.bestBounty} · W${r.bestWave}`))
+            : [emptyRow('No bounties claimed yet.')]));
+        $('#board-duel').replaceChildren(...(board.duel.length
+            ? board.duel.map((r, i) => boardRow(i + 1, r.username, `${r.wins}–${r.losses}`))
+            : [emptyRow('No duels fought yet.')]));
+        $('#legends-notice').textContent = '';
+    }
+    catch {
+        $('#legends-notice').textContent = 'The chronicles could not be reached. Try again shortly.';
+    }
+}
+function closeLegends() {
+    $('#legends').hidden = true;
+    $('#legends-btn').focus();
+}
+$('#legends-btn').onclick = openLegends;
+$('#legends-close').onclick = closeLegends;
+$('#legends').onclick = e => e.target === $('#legends') && closeLegends();
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !$('#legends').hidden)
+        closeLegends();
+});
 
 $('#play').onclick = () => {
     if (mode === 'hunt')

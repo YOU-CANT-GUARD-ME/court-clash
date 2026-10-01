@@ -1,112 +1,114 @@
-# MERCENARY — 1v1 Showdown (multiplayer add-on)
+# BLOODSWORN — Mercenaries of the Ashen Realm
+
+A dark medieval top-down shooter: survive **The Hunt** solo, or fight
+**The Duel** (online 1v1, best of 3) against strangers or your warband.
 
 ## What's here
-- `public/index.html` — home screen (Single Player / 1v1 Showdown)
-- `public/game.html` — your existing single-player game, unchanged
-- `public/showdown.html` — new online 1v1 client
-- `server/server.js` — matchmaking + best-of-3 round server (Node + `ws`)
+- `public/index.html` — loading screen + lobby (accounts, warbands, gold,
+  Hall of Legends)
+- `public/game.html` — The Hunt (single-player waves)
+- `public/showdown.html` — The Duel (online 1v1)
+- `public/config.js` — shared by all pages: server address + login token
+- `server/` — Node server: HTTP API + WebSockets on one port
+  - `server.js` — Duel matchmaking and authoritative round/score state
+  - `lobby.js` — sign up / log in, warbands (parties)
+  - `api.js` — leaderboard, profile, Hunt results
+  - `db.js` — Postgres access; creates its tables on startup
+  - `auth.js` — scrypt password hashing, session tokens
 
-## Running it
+## Database (Neon Postgres)
+All accounts, gold and stats live in Postgres. The server creates its tables
+the first time it starts, so a new database needs no manual setup.
+
+1. Create a free project at [neon.tech](https://neon.tech).
+2. Copy its connection string (Dashboard → Connect), which looks like
+   `postgresql://user:password@ep-something.neon.tech/neondb?sslmode=require`.
+3. Give it to the server as `DATABASE_URL` (Render: your web service →
+   Environment → add `DATABASE_URL`). Keep it secret: it's the database
+   password.
+
+The server refuses to start without `DATABASE_URL`.
+
+## Running it locally
 ```
 cd server
 npm install
-npm start          # starts the match server on ws://localhost:8080
+DATABASE_URL="postgresql://…your Neon string…" npm start   # http + ws on :8080
 ```
-Then serve `public/` with any static file server (e.g. `npx serve public`,
-or Python's `python3 -m http.server 5500 -d public`) and open `index.html`
-in two separate browser tabs/windows to test a match against yourself.
+Then serve `public/` with any static file server (e.g.
+`python3 -m http.server 5500 -d public`) and open
+`http://localhost:5500`. Pages opened from `localhost` talk to the server on
+`localhost:8080` automatically.
 
-If you deploy the server somewhere other than `localhost:8080`, update
-`WS_URL` near the top of `showdown.html`'s script.
+To test several players, use separate browsers or private windows: tabs in
+the same browser share one login, and the newest tab takes over.
 
-## Lobby: usernames and parties
-- `server/lobby.js` runs on the same WebSocket server as matches.
-- On first visit, `index.html` asks for a username (3–16 letters, numbers
-  or `_`, unique ignoring case). The server stores it in `server/users.json`
-  under a random user ID, which the browser keeps in localStorage, so you
-  are only asked once per browser.
-- Everyone starts in their own party. Type a friend's 6-letter code into the
-  party code box and press JOIN to take a slot in their party (max 4).
-- The **party leader** is whoever has been in the party longest. Only the
-  leader can change the game mode; if they leave, the next-longest member
-  takes over. A refresh keeps your slot for 15 seconds.
-- **Party 1v1s:** `showdown.html` says hello with the same user ID, so the
-  server knows your party. If your party has 2+ players, Find Match only
-  pairs you with party members (first two to search play each other);
-  solo players use the public queue. When the leader presses PLAY in 1v1
-  mode, everyone in the party is sent to `showdown.html#party`, which starts
-  searching automatically.
-- To test with several players locally, use separate browsers or private
-  windows (tabs in the same browser share one user, and the newest tab wins).
-- Render's free tier has no persistent disk, so `users.json` is wiped on
-  every redeploy or restart. Attach a Render disk and point `USERS_FILE`
-  at it if usernames need to survive.
+## Accounts, gold and legends
+- **Sign up** with a name (3–16 letters, numbers or `_`, unique ignoring
+  case) and a password (6+ characters). **Returning** logs in from any
+  device. Passwords are hashed with scrypt; the browser keeps a random
+  session token, and the server stores only its SHA-256 hash. LEAVE (top
+  right) logs out and deletes the session. 5 wrong passwords lock that name
+  for a minute.
+- **Gold:** the Hunt pays bounty ÷ 10 when you die (retreating forfeits the
+  run). A Duel pays 100 for a win and 25 for a loss; leaving mid-Duel
+  forfeits it and pays nothing.
+- **Hall of Legends** (LEGENDS in the lobby) shows your record and the top
+  10 Hunt bounties and Duel records.
 
-## How the match flow works
-1. Both clients hit "Find Match" → server pairs the first two waiting
-   sockets into a room.
-2. Server sends `roundStart` with each player's spawn point and resets
-   health to 100/100.
-3. Each client simulates its own player locally (movement, aiming,
-   shooting) — same approach as your single-player code, just without
-   AI enemies.
-4. Position updates are sent to the server ~20x/sec and relayed straight
-   to the opponent (`opponentState`), so each client always has a recent
-   snapshot of where the other player is.
-5. When your bullet visually overlaps the opponent's last known position,
-   your client reports `iHit` to the server. The server is the one source
-   of truth for health — it decrements it and broadcasts the new values
-   to both clients.
-6. First to 0 health loses the round. Server increments score, waits a
-   few seconds, and starts the next round. First to 2 round wins takes
-   the match.
+### API
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/` | Health check |
+| GET | `/api/leaderboard` | Top 10 Hunt bounties and Duel records |
+| GET | `/api/me` | Your profile (`Authorization: Bearer <token>`) |
+| POST | `/api/hunt` | `{ score, wave, kills }` for a finished Hunt (bearer token; one per 10s) |
 
-## Known limitations (intentional, for a fast v1)
-- **Hit detection is client-reported, not server-verified.** A modified
-  client could claim hits it didn't land. Hardening this means moving
-  hit detection fully server-side (server needs to know both players'
-  bullets and positions each tick) — a bigger lift, worth doing once the
-  core loop feels good.
-- **No lag compensation.** Because opponent position is just the last
-  packet received, there's inherent latency in what you're aiming at —
-  fine on a LAN or same-city connection, rougher over long distances.
-- **No reconnect handling.** If either player's socket drops mid-match,
-  the match ends (the other player wins by forfeit). No rejoin flow yet.
-- **No accounts, no persistence.** Matches are anonymous and in-memory —
-  by design, per your call to defer win/loss tracking and auth for now.
-- **Reload is currently instant/local** in showdown mode (press R) —
-  not networked, since ammo state isn't relayed. Fine for now, but worth
-  deciding whether ammo should be shared state before this goes further.
+Lobby and Duel traffic goes over the WebSocket: `hello {token}`,
+`signup`/`login {username, password}`, `logout`, warband messages, then
+`findMatch` and the match messages below.
 
-## Deploying to Render
-Render needs **two separate services** since one is a static site and the
-other is a long-running Node process:
+## Warbands (parties)
+- Everyone starts in their own warband. Enter a friend's 6-letter seal and
+  press JOIN to take a slot (max 4).
+- The **captain** is whoever has been in longest; only they choose the
+  contract (mode). If they leave, the next-longest member takes over. A
+  refresh keeps your slot for 15 seconds.
+- **Warband Duels:** if your warband has 2+ players, Find Match only pairs
+  you with them (first two to search fight). Solo players use the public
+  queue. When the captain presses TO BATTLE in Duel mode, everyone is sent
+  to `showdown.html#party`, which starts searching automatically.
 
-1. **Deploy the server first** — create a new "Web Service" on Render,
-   point it at the `server/` folder (or your repo root with a root
-   directory of `server`), build command `npm install`, start command
-   `npm start`. Once it deploys, Render gives you a URL like
-   `https://mercenary-showdown-server.onrender.com`.
-2. **Edit `public/showdown.html`** — near the top of the `NETWORKING`
-   section, set:
-   ```js
-   const DEPLOYED_SERVER_HOST = "mercenary-showdown-server.onrender.com";
-   ```
-   (your actual Render server hostname, no `https://`, no trailing slash).
-3. **Deploy the site** — create a new "Static Site" on Render pointing at
-   the `public/` folder. This serves `index.html`, `game.html`, and
-   `showdown.html`.
+## How a Duel works
+1. Both clients search → the server pairs them into a room.
+2. Server sends `roundStart` with spawn points and resets health to 100.
+3. Each client simulates its own player; positions are relayed ~20×/sec.
+4. When your bolt overlaps the opponent's last known position, your client
+   reports `iHit`. The server owns health and broadcasts it.
+5. First to 0 health loses the round; first to 2 rounds wins. The server
+   records the result and pays gold.
 
-While `DEPLOYED_SERVER_HOST` is still the placeholder text, the game
-automatically falls back to `localhost:8080` whenever it's opened from
-`localhost` — so local testing keeps working with zero edits, and you
-only touch that one line right before deploying.
+## Known limitations
+- **Hunt results are client-reported.** The Hunt runs in the browser, so a
+  modified client could submit a fake run. The server rejects impossible
+  numbers (kills per wave, points per kill, one result per 10s) but can't
+  catch a careful cheat. Duel results are decided by the server.
+- **Duel hits are client-reported**, so a modified client could claim hits.
+  Fixing this means simulating bolts on the server.
+- **No lag compensation**, and no rejoin if a socket drops mid-Duel (the
+  other player wins by forfeit).
+- **Gold has nothing to spend it on yet.**
 
-Note: Render's free tier spins services down after inactivity, so the
-first "Find Match" after some idle time may take 10–30 seconds while the
-server wakes back up. Not a bug — just something to expect on the free tier.
+## Deploying
+Two services: the Node server on Render, and the static `public/` site on
+Vercel (or a Render static site).
 
-## Natural next steps, whenever you're ready
-- Move bullet simulation server-side for real anti-cheat
-- Add a round-intermission screen showing hit stats
-- Persist match history once you're ready to take on accounts/auth
+1. **Server (Render Web Service):** root directory `server`, build
+   `npm install`, start `npm start`, and set `DATABASE_URL` (see above).
+2. **Point the pages at it:** set `DEPLOYED_SERVER_HOST` in
+   `public/config.js` to the Render hostname (no `https://`, no trailing
+   slash).
+3. **Site:** deploy `public/`.
+
+Render's free tier sleeps when idle, so the first visit after a while can
+take 10–30 seconds; the loading screen says the gatekeeper is slow to wake.
