@@ -133,7 +133,7 @@ function handleMessage(ws, msg) {
       }
       const lower = name.toLowerCase();
       if (Object.values(users).some((u) => u.username.toLowerCase() === lower)) {
-        error(ws, 'That username is taken');
+        error(ws, 'That name is already sworn');
         return true;
       }
       const userId = crypto.randomUUID();
@@ -146,9 +146,9 @@ function handleMessage(ws, msg) {
     case 'joinParty': {
       if (!me) return true;
       const target = parties.get(String(msg.code || '').trim().toUpperCase());
-      if (!target) return error(ws, 'No party with that code'), true;
+      if (!target) return error(ws, 'No warband bears that seal'), true;
       if (target === party) return true;
-      if (target.members.length >= PARTY_SIZE) return error(ws, 'That party is full'), true;
+      if (target.members.length >= PARTY_SIZE) return error(ws, 'That warband is full'), true;
       removeFromParty(me);
       addToParty(target, me);
       return true;
@@ -168,7 +168,7 @@ function handleMessage(ws, msg) {
 
     case 'setMode':
       if (!party) return true;
-      if (party.members[0] !== me) return error(ws, 'Only the party leader can change the mode'), true;
+      if (party.members[0] !== me) return error(ws, 'Only the captain can choose the contract'), true;
       if (!MODES.includes(msg.mode)) return true;
       party.mode = msg.mode;
       broadcast(party);

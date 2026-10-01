@@ -1,97 +1,114 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>COURT CLASH</title>
+<title>BLOODSWORN</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Rubik:wght@500;700;900&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=EB+Garamond:ital,wght@0,500;0,700;1,500&family=Pirata+One&display=swap" rel="stylesheet">
 <style>
 :root {
-  --court1: #c9803f;
-  --court2: #a8642b;
-  --paint: #9c4a26;
-  --line: #f4e6c8;
-  --ink: #1a0f06;
-  --navy: #0e1a34;
-  --navy2: #1c3260;
-  --navy3: #0a1226;
-  --orange: #e8622c;
-  --orange-d: #b8451a;
-  --gold: #f4b93c;
-  --gold-d: #c98f18;
-  --paper: #fff3d8;
+  --void: #070605;
+  --stone: #14110f;
+  --stone2: #221d19;
+  --stone3: #2f2822;
+  --iron: #3d352e;
+  --blood: #8e1c1c;
+  --blood-d: #4a0d0d;
+  --ember: #d6402b;
+  --gold: #c9a24a;
+  --gold-d: #7a5a1e;
+  --parch: #e6d8b8;
+  --parch2: #d4c299;
+  --ink: #2a1d12;
+  --ink2: #5a4630;
+  --bone: #b8a888;
   padding-top: env(safe-area-inset-top,0px);
   padding-bottom: env(safe-area-inset-bottom,0px);
 }
 * {
   box-sizing: border-box;
 }
-html {
-  scroll-padding-top: env(safe-area-inset-top,0px);
-}
 body {
   margin: 0;
   min-height: 100vh;
   overflow: hidden;
-  color: var(--ink);
-  font-family: 'Rubik',Arial,sans-serif;
-  background: var(--navy3);
+  color: var(--parch);
+  font-family: 'EB Garamond',Georgia,serif;
+  background: var(--void);
 }
-/* ---- court floor ---- */
-.floor {
+/* ---- the hall: dark stone, torchlight, drifting embers ---- */
+.hall {
   position: fixed;
   inset: 0;
   z-index: 0;
   background:
-  repeating-linear-gradient(90deg,rgba(0,0,0,.06) 0 2px,transparent 2px 94px),
-  radial-gradient(circle at 50% 100%,#00000000 0,#00000055 100%),
-  linear-gradient(180deg,var(--court1) 0 58%,var(--court2) 58%);
+  radial-gradient(ellipse at 50% 120%,rgba(142,28,28,.22),transparent 55%),
+  linear-gradient(rgba(0,0,0,.45) 3px,transparent 3px) 0 0/120px 60px,
+  linear-gradient(90deg,rgba(0,0,0,.45) 3px,transparent 3px) 0 0/120px 120px,
+  linear-gradient(90deg,rgba(0,0,0,.45) 3px,transparent 3px) 60px 60px/120px 120px,
+  linear-gradient(180deg,#1b1714,#0d0b09);
 }
-.floor .halfline {
+.hall:after {
+  content: '';
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 58%;
-  height: 3px;
-  background: var(--line);
-  opacity: .6;
+  inset: 0;
+  background: radial-gradient(ellipse at center,transparent 35%,rgba(0,0,0,.85) 100%);
 }
-.floor .circle {
+.torch {
   position: absolute;
-  left: 50%;
-  top: 58%;
-  transform: translate(-50%,-50%);
-  width: min(260px,34vw);
-  height: min(260px,34vw);
-  border: 4px solid var(--line);
+  top: 18%;
+  width: 60vmin;
+  height: 60vmin;
   border-radius: 50%;
-  opacity: .6;
+  background: radial-gradient(circle,rgba(214,110,40,.35),rgba(214,64,43,.12) 35%,transparent 65%);
+  animation: flicker 3.2s ease-in-out infinite;
 }
-.floor .paint {
+.torch.l {
+  left: -22vmin;
+}
+.torch.r {
+  right: -22vmin;
+  animation-delay: -1.4s;
+}
+@keyframes flicker {
+  0%,100% { opacity: .85; transform: scale(1); }
+  20% { opacity: 1; transform: scale(1.04); }
+  45% { opacity: .7; transform: scale(.97); }
+  70% { opacity: .95; transform: scale(1.02); }
+}
+.embers i {
   position: absolute;
-  left: 50%;
-  bottom: -2px;
-  transform: translateX(-50%);
-  width: min(230px,42vw);
-  height: 120px;
-  border: 4px solid var(--line);
-  border-bottom: 0;
-  background: var(--paint);
-  opacity: .85;
+  bottom: -10px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #ff8a3a;
+  box-shadow: 0 0 6px #ff6a20;
+  opacity: 0;
+  animation: rise-ember 9s linear infinite;
 }
-.floor .arc {
-  position: absolute;
-  left: 50%;
-  bottom: -2px;
-  transform: translateX(-50%);
-  width: min(560px,78vw);
-  height: 280px;
-  border: 4px solid var(--line);
-  border-bottom: 0;
-  border-radius: 50% 50% 0 0;
-  opacity: .55;
+.embers i:nth-child(1) { left: 8%; animation-delay: 0s; }
+.embers i:nth-child(2) { left: 19%; animation-delay: -2s; animation-duration: 11s; }
+.embers i:nth-child(3) { left: 31%; animation-delay: -5s; }
+.embers i:nth-child(4) { left: 44%; animation-delay: -7s; animation-duration: 12s; }
+.embers i:nth-child(5) { left: 57%; animation-delay: -3s; }
+.embers i:nth-child(6) { left: 68%; animation-delay: -8s; animation-duration: 10s; }
+.embers i:nth-child(7) { left: 79%; animation-delay: -1s; }
+.embers i:nth-child(8) { left: 91%; animation-delay: -6s; animation-duration: 13s; }
+@keyframes rise-ember {
+  0% { transform: translate(0,0); opacity: 0; }
+  10% { opacity: .9; }
+  100% { transform: translate(40px,-105vh); opacity: 0; }
 }
-/* ---- scoreboard header ---- */
+/* ---- emblem (crossed swords over a shield) ---- */
+.emblem {
+  width: 46px;
+  height: 46px;
+  flex: none;
+  color: var(--gold);
+  filter: drop-shadow(0 2px 0 #000);
+}
+/* ---- header ---- */
 .top {
   position: relative;
   z-index: 2;
@@ -100,80 +117,51 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(180deg,var(--navy) 0,var(--navy3) 100%);
-  border-bottom: 4px solid var(--orange);
-  box-shadow: 0 6px 14px #0007;
+  background: linear-gradient(180deg,#1a1512,#0b0908);
+  border-bottom: 2px solid var(--gold-d);
+  box-shadow: 0 1px 0 #000,0 8px 20px #000a;
 }
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-.logo {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  background: var(--orange);
-  position: relative;
-  box-shadow: inset -6px -6px 0 var(--orange-d),0 0 0 3px var(--paper);
-}
-.logo:before,.logo:after {
-  content: '';
-  position: absolute;
-  background: var(--ink);
-}
-.logo:before {
-  left: 0;
-  right: 0;
-  top: 19px;
-  height: 2px;
-}
-.logo:after {
-  top: 0;
-  bottom: 0;
-  left: 19px;
-  width: 2px;
+  gap: 12px;
 }
 .brand-text {
-  font-family: 'Anton',sans-serif;
-  color: var(--paper);
-  font-size: clamp(20px,3vw,32px);
-  letter-spacing: .5px;
-  line-height: 1;
-  font-style: italic;
-  text-shadow: 2px 2px 0 var(--orange-d);
+  font-family: 'Pirata One',serif;
+  color: var(--parch);
+  font-size: clamp(26px,3.6vw,40px);
+  letter-spacing: 1px;
+  line-height: .9;
+  text-shadow: 0 2px 0 var(--blood-d),0 0 18px rgba(142,28,28,.6);
 }
 .brand-text small {
   display: block;
-  font-family: 'Oswald',sans-serif;
-  font-size: 9px;
-  font-style: normal;
-  font-weight: 600;
+  margin-top: 4px;
+  font: 700 9px 'Cinzel',serif;
   letter-spacing: 3px;
   color: var(--gold);
+  text-shadow: none;
 }
 .scoretile {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--navy3);
-  border: 2px solid var(--gold-d);
-  border-radius: 8px;
+  background: var(--void);
+  border: 1px solid var(--gold-d);
+  border-radius: 4px;
   padding: 8px 14px;
-  box-shadow: inset 0 0 8px #000;
+  box-shadow: inset 0 0 10px #000;
 }
 .scoretile b {
-  font-family: 'Oswald',monospace;
-  font-size: 20px;
+  font: 700 18px 'Cinzel',serif;
   color: var(--gold);
   letter-spacing: 2px;
-  text-shadow: 0 0 6px #f4b93c66;
+  text-shadow: 0 0 8px rgba(201,162,74,.4);
 }
 .scoretile span {
-  font-size: 9px;
-  font-weight: 700;
+  font: 700 9px 'Cinzel',serif;
   letter-spacing: 2px;
-  color: #8ea0c8;
+  color: var(--bone);
 }
 main {
   position: relative;
@@ -184,18 +172,19 @@ main {
   display: grid;
   place-items: center;
 }
-/* ---- lobby ---- */
+/* ---- warband panel: dark iron frame, parchment inside ---- */
 .lobby {
   width: min(560px,100%);
-  background: var(--paper);
-  border-radius: 18px;
-  box-shadow: 0 10px 0 var(--navy2),0 16px 30px #0007;
+  background: linear-gradient(170deg,var(--parch),var(--parch2));
+  border-radius: 6px;
+  border: 3px solid var(--iron);
+  box-shadow: 0 0 0 1px #000,0 0 0 4px var(--stone2),0 0 0 5px #000,0 24px 50px #000c;
   position: relative;
   overflow: hidden;
-  animation: rise .45s cubic-bezier(.2,.9,.3,1.2) both;
+  animation: rise .5s cubic-bezier(.2,.9,.3,1.1) both;
 }
 @keyframes rise {
-  from { opacity: 0; transform: translateY(18px) scale(.98); }
+  from { opacity: 0; transform: translateY(18px); }
 }
 .lobby-head {
   display: flex;
@@ -203,24 +192,21 @@ main {
   align-items: center;
   gap: 12px;
   padding: 14px 20px;
-  background: linear-gradient(180deg,var(--navy2),var(--navy));
-  border-bottom: 4px solid var(--orange);
+  background: linear-gradient(180deg,var(--stone3),var(--stone));
+  border-bottom: 3px solid var(--blood);
 }
 .lobby h1 {
-  font-family: 'Anton',sans-serif;
-  font-size: 24px;
-  font-style: italic;
-  letter-spacing: .5px;
+  font: 900 22px/1 'Cinzel',serif;
+  letter-spacing: 2px;
   margin: 0;
-  line-height: 1;
-  color: var(--paper);
-  text-shadow: 2px 2px 0 var(--orange-d);
+  color: var(--parch);
+  text-shadow: 0 2px 0 #000;
 }
 .lobby h1 small {
   display: block;
-  margin-top: 5px;
-  font: 600 9px 'Oswald',sans-serif;
-  letter-spacing: 3px;
+  margin-top: 6px;
+  font: 700 9px 'Cinzel',serif;
+  letter-spacing: 2px;
   color: var(--gold);
   text-shadow: none;
 }
@@ -229,16 +215,15 @@ main {
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  border-radius: 8px;
-  background: var(--navy3);
-  border: 2px solid var(--gold-d);
+  border-radius: 4px;
+  background: var(--void);
+  border: 1px solid var(--gold-d);
   box-shadow: inset 0 0 8px #000;
 }
 .count b {
-  font: 700 16px 'Oswald',monospace;
+  font: 700 15px 'Cinzel',serif;
   color: var(--gold);
   letter-spacing: 1px;
-  text-shadow: 0 0 6px #f4b93c66;
 }
 .pips {
   display: flex;
@@ -247,12 +232,12 @@ main {
 .pips i {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
-  background: #2a3a5e;
+  transform: rotate(45deg);
+  background: #3a302a;
 }
 .pips i.on {
-  background: var(--gold);
-  box-shadow: 0 0 6px var(--gold);
+  background: var(--ember);
+  box-shadow: 0 0 6px var(--ember);
 }
 .lobby-body {
   padding: 18px 20px 20px;
@@ -268,36 +253,36 @@ main {
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  border-radius: 12px;
-  background: linear-gradient(160deg,#fff4dc,#fbdca6);
-  border: 2px solid var(--orange);
-  box-shadow: 0 3px 0 var(--orange-d);
+  border-radius: 4px;
+  background: linear-gradient(170deg,#f0e4c6,#dccb9f);
+  border: 1px solid var(--ink2);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.25),0 2px 0 rgba(42,29,18,.35);
   position: relative;
   text-align: left;
   font: inherit;
 }
 .slot.empty {
-  background: #0000000a;
-  border: 2px dashed #c9a877;
+  background: rgba(42,29,18,.06);
+  border: 1px dashed #a08a62;
   box-shadow: none;
 }
 .slot.away {
   opacity: .55;
 }
+/* shield-shaped badge */
 .num {
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 46px;
   flex: none;
-  border-radius: 12px 12px 8px 8px;
-  background: var(--orange);
-  color: var(--paper);
-  font-family: 'Anton',sans-serif;
-  font-size: 20px;
+  clip-path: polygon(0 0,100% 0,100% 55%,50% 100%,0 55%);
+  background: linear-gradient(160deg,#b52828,var(--blood) 55%,var(--blood-d));
+  color: var(--parch);
+  font: 900 18px 'Cinzel',serif;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid var(--paper);
-  box-shadow: 0 3px 0 var(--orange-d),0 0 0 2px var(--orange-d);
+  padding-bottom: 8px;
+  text-shadow: 0 1px 0 #000;
 }
 .slot-info {
   min-width: 0;
@@ -306,76 +291,68 @@ main {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 13px;
-  font-weight: 900;
-  color: var(--navy3);
+  font: 700 15px 'Cinzel',serif;
+  color: var(--ink);
 }
 .slot-info small {
   display: block;
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--orange-d);
-  letter-spacing: 1px;
-}
-.host {
-  color: var(--gold-d);
-  font-size: 12px;
-}
-.tag {
-  position: absolute;
-  top: -8px;
-  right: 8px;
-  padding: 2px 7px;
-  border-radius: 20px;
-  background: var(--navy2);
-  color: var(--gold);
-  font: 700 8px 'Rubik',sans-serif;
-  letter-spacing: 1px;
-  box-shadow: 0 2px 0 var(--navy3);
+  font: 700 9px 'Cinzel',serif;
+  color: var(--blood);
+  letter-spacing: 1.5px;
 }
 .slot-info .name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.host {
+  color: var(--gold-d);
+  font-size: 13px;
+}
+.tag {
+  position: absolute;
+  top: -8px;
+  right: 8px;
+  padding: 2px 7px;
+  border-radius: 2px;
+  background: var(--stone);
+  border: 1px solid var(--gold-d);
+  color: var(--gold);
+  font: 700 8px 'Cinzel',serif;
+  letter-spacing: 1.5px;
+}
 .plus {
-  background: transparent;
-  border: 2px dashed #c9a877;
-  box-shadow: none;
-  color: #c9a877;
-  font-family: 'Rubik',sans-serif;
-  font-size: 24px;
-  font-weight: 500;
+  background: rgba(42,29,18,.12);
+  color: #a08a62;
+  font: 500 22px 'Cinzel',serif;
+  text-shadow: none;
 }
 .empty-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .5px;
-  color: #9c8459;
+  font: 700 11px 'Cinzel',serif;
+  letter-spacing: 1px;
+  color: #7a6648;
 }
 .empty-label small {
   display: block;
-  font-size: 9px;
-  font-weight: 500;
+  font: italic 500 12px 'EB Garamond',serif;
   letter-spacing: 0;
-  color: #b39a6e;
+  color: #8a7656;
 }
 .code-wrap {
   margin-top: 18px;
   padding-top: 16px;
-  border-top: 2px dashed #e2c898;
+  border-top: 1px solid rgba(90,70,48,.35);
 }
 .code-label {
   display: flex;
   justify-content: space-between;
   margin-bottom: 7px;
-  font-size: 9px;
-  font-weight: 700;
+  font: 700 9px 'Cinzel',serif;
   letter-spacing: 2px;
-  color: var(--orange-d);
+  color: var(--blood);
 }
 .code-label span {
-  color: #9c8459;
+  color: var(--ink2);
   letter-spacing: 1px;
 }
 .code {
@@ -385,18 +362,21 @@ main {
 .code input {
   min-width: 0;
   flex: 1;
-  border: 2px solid var(--navy2);
-  border-radius: 10px;
+  border: 2px solid var(--iron);
+  border-radius: 4px;
   padding: 11px 10px;
   color: var(--gold);
-  font: 700 22px 'Oswald',monospace;
+  font: 700 22px 'Cinzel',serif;
   letter-spacing: 8px;
   text-indent: 8px;
   text-align: center;
   text-transform: uppercase;
-  background: var(--navy3);
-  box-shadow: inset 0 0 10px #000;
-  text-shadow: 0 0 8px #f4b93c66;
+  background: var(--void);
+  box-shadow: inset 0 0 12px #000;
+  text-shadow: 0 0 8px rgba(201,162,74,.4);
+}
+.code input::placeholder {
+  color: #4a3e30;
 }
 .code input:focus {
   outline: none;
@@ -404,72 +384,78 @@ main {
 }
 .btn {
   border: 0;
-  color: #fff;
+  color: var(--parch);
   font: inherit;
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: 4px;
 }
 .btn:focus-visible,.mode:focus-visible {
-  outline: 3px solid var(--gold);
+  outline: 2px solid var(--gold);
   outline-offset: 2px;
 }
 .small {
-  background: var(--orange);
+  background: linear-gradient(180deg,#a82424,var(--blood));
   padding: 0 16px;
   min-width: 92px;
-  font-weight: 900;
-  font-size: 12px;
-  letter-spacing: 1px;
-  border-radius: 10px;
-  box-shadow: 0 4px 0 var(--orange-d);
-  transition: background .15s;
+  font: 700 12px 'Cinzel',serif;
+  letter-spacing: 1.5px;
+  border: 1px solid #000;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.15),0 3px 0 var(--blood-d);
+  transition: filter .15s;
+}
+.small:hover {
+  filter: brightness(1.15);
 }
 .small:active {
   transform: translateY(2px);
-  box-shadow: 0 2px 0 var(--orange-d);
+  box-shadow: 0 1px 0 var(--blood-d);
 }
 .small.done {
-  background: #2f9e55;
-  box-shadow: 0 4px 0 #1d6b38;
+  background: linear-gradient(180deg,#8a7a2a,#5a4e14);
+  box-shadow: 0 3px 0 #2a240a;
 }
 .picked {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 6px 8px;
   margin-top: 14px;
-  font-size: 10px;
-  font-weight: 700;
+  font: 700 10px 'Cinzel',serif;
   letter-spacing: 1px;
-  color: #9c8459;
+  color: var(--ink2);
 }
 .picked b {
   padding: 3px 8px;
-  border-radius: 6px;
-  background: var(--navy2);
+  border-radius: 2px;
+  background: var(--stone);
   color: var(--gold);
-  font-family: 'Anton',sans-serif;
-  font-weight: 400;
-  font-size: 12px;
+  font: 700 11px 'Cinzel',serif;
+  letter-spacing: 1px;
+}
+.picked b,.picked #picked-sub {
+  white-space: nowrap;
+}
+.picked #picked-sub {
+  font: italic 500 13px 'EB Garamond',serif;
+  letter-spacing: 0;
 }
 .picked .who {
   margin-left: auto;
-  color: #b39a6e;
+  color: #7a6648;
 }
 .notice {
-  min-height: 14px;
+  min-height: 16px;
   margin-top: 8px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .5px;
-  color: #c0392b;
+  font: italic 700 13px 'EB Garamond',serif;
+  color: var(--blood);
 }
 .leave {
   background: none;
   border: 0;
   padding: 0;
-  font: 700 9px 'Rubik',sans-serif;
+  font: 700 9px 'Cinzel',serif;
   letter-spacing: 1px;
-  color: var(--orange-d);
+  color: var(--blood);
   cursor: pointer;
   text-decoration: underline;
 }
@@ -481,7 +467,7 @@ main {
   display: grid;
   place-items: center;
   padding: 16px;
-  background: #0a1226cc;
+  background: rgba(7,6,5,.82);
   backdrop-filter: blur(3px);
 }
 .modal[hidden] {
@@ -492,18 +478,15 @@ main {
 }
 .modal p {
   margin: 0 0 12px;
-  font-size: 12px;
-  font-weight: 500;
-  color: #6b5a3c;
+  font-size: 16px;
+  font-style: italic;
+  color: var(--ink2);
 }
 .modal .code input {
   font-size: 18px;
   letter-spacing: 2px;
   text-indent: 0;
   text-transform: none;
-}
-@media (prefers-reduced-motion: reduce) {
-  .lobby { animation: none; }
 }
 /* ---- mode select ---- */
 .modes {
@@ -513,8 +496,9 @@ main {
   left: 0;
   right: 0;
   padding: 12px max(16px,5vw) calc(14px + env(safe-area-inset-bottom,0px));
-  background: linear-gradient(180deg,var(--navy) 0,var(--navy3) 100%);
-  border-top: 4px solid var(--orange);
+  background: linear-gradient(180deg,#1a1512,#0b0908);
+  border-top: 2px solid var(--gold-d);
+  box-shadow: 0 -1px 0 #000,0 -8px 20px #000a;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -526,69 +510,164 @@ main {
   overflow: auto;
 }
 .mode {
-  min-width: 158px;
+  min-width: 170px;
   padding: 9px 12px 9px 40px;
-  border: 2px solid var(--navy2);
-  border-radius: 10px;
-  background: var(--navy2);
-  color: #cfe0ff;
+  border: 1px solid var(--iron);
+  border-radius: 4px;
+  background: linear-gradient(180deg,var(--stone3),var(--stone2));
+  color: var(--bone);
   cursor: pointer;
   text-align: left;
-  font: 11px 'Rubik',sans-serif;
-  font-weight: 700;
+  font: italic 500 13px 'EB Garamond',serif;
   position: relative;
 }
 .mode:before {
   content: '';
   position: absolute;
-  left: 12px;
+  left: 14px;
   top: 50%;
-  transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--orange);
+  width: 12px;
+  height: 12px;
+  transform: translateY(-50%) rotate(45deg);
+  background: var(--blood);
+  box-shadow: 0 0 6px rgba(214,64,43,.6);
 }
 .mode[data-mode="duo"]:before {
-  background: #5b6a8c;
+  background: #4a4038;
+  box-shadow: none;
 }
 .mode b {
   display: block;
-  font-family: 'Anton',sans-serif;
-  font-size: 14px;
-  color: #fff;
-  letter-spacing: .5px;
+  font: 700 13px 'Cinzel',serif;
+  font-style: normal;
+  color: var(--parch);
+  letter-spacing: 1px;
 }
 .mode.selected {
-  background: var(--gold);
+  background: linear-gradient(180deg,#d8b45a,#a8802e);
   border-color: var(--gold);
-  color: var(--navy3);
+  color: var(--ink);
 }
 .mode.selected:before {
-  background: var(--navy3);
+  background: var(--ink);
+  box-shadow: none;
 }
 .mode.selected b {
-  color: var(--navy3);
+  color: var(--ink);
 }
 .mode.nolead {
   cursor: not-allowed;
 }
 .mode.locked {
-  opacity: .5;
+  opacity: .45;
   cursor: not-allowed;
 }
 .play {
-  background: linear-gradient(180deg,var(--orange),var(--orange-d));
-  font-family: 'Anton',sans-serif;
-  letter-spacing: 1px;
-  font-size: 17px;
+  background: linear-gradient(180deg,#b52828,var(--blood) 60%,#6a1414);
+  font: 900 17px 'Cinzel',serif;
+  letter-spacing: 2px;
   padding: 14px 26px;
   white-space: nowrap;
-  box-shadow: 0 4px 0 #7c2e10;
+  border: 1px solid #000;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18),0 4px 0 var(--blood-d),0 0 18px rgba(142,28,28,.45);
+  text-shadow: 0 1px 0 #000;
+}
+.play:hover {
+  filter: brightness(1.12);
 }
 .play:active {
   transform: translateY(2px);
-  box-shadow: 0 2px 0 #7c2e10;
+  box-shadow: 0 2px 0 var(--blood-d);
+}
+/* ---- loading screen ---- */
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 18px;
+  padding: 24px;
+  text-align: center;
+  background: radial-gradient(ellipse at 50% 60%,#2a1210 0%,#0d0807 55%,#000 100%);
+  transition: opacity .8s ease,visibility .8s;
+}
+.loader.done {
+  opacity: 0;
+  visibility: hidden;
+}
+.loader[hidden] {
+  display: none;
+}
+.loader .glow {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 70vmin;
+  height: 70vmin;
+  transform: translate(-50%,-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle,rgba(214,90,40,.25),transparent 60%);
+  animation: flicker 2.6s ease-in-out infinite;
+}
+.loader .emblem {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  animation: breathe 3s ease-in-out infinite;
+}
+@keyframes breathe {
+  50% { filter: drop-shadow(0 0 14px rgba(214,64,43,.7)); }
+}
+.loader h1 {
+  position: relative;
+  margin: 0;
+  font: 400 clamp(56px,13vw,120px)/.85 'Pirata One',serif;
+  letter-spacing: 3px;
+  color: var(--parch);
+  text-shadow: 0 4px 0 var(--blood-d),0 0 40px rgba(142,28,28,.8);
+}
+.loader .sub {
+  position: relative;
+  font: 700 11px 'Cinzel',serif;
+  letter-spacing: 6px;
+  color: var(--gold);
+}
+.loadbar {
+  position: relative;
+  width: min(360px,80vw);
+  height: 10px;
+  margin-top: 26px;
+  border: 1px solid var(--gold-d);
+  background: #000;
+  box-shadow: 0 0 0 3px #000;
+}
+.loadbar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg,var(--blood-d),var(--blood),var(--ember));
+  box-shadow: 0 0 10px var(--ember);
+  transition: width .5s ease;
+}
+.loadtext {
+  position: relative;
+  min-height: 20px;
+  font: italic 500 16px 'EB Garamond',serif;
+  color: var(--bone);
+}
+.lore {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 36px;
+  font: italic 500 15px 'EB Garamond',serif;
+  color: #6a5a48;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lobby,.torch,.embers i,.loader .glow,.loader .emblem { animation: none; }
+  .embers { display: none; }
 }
 @media(max-width:650px) {
   main {
@@ -601,7 +680,7 @@ main {
     padding: 9px max(12px,4vw);
   }
   .mode {
-    min-width: 130px;
+    min-width: 140px;
   }
   .play {
     padding: 12px 16px;
@@ -610,48 +689,74 @@ main {
   .top {
     height: 66px;
   }
+  .scoretile span {
+    display: none;
+  }
 }
 </style></head><body>
-<div class="floor" aria-hidden="true"><div class="halfline"></div><div class="circle"></div><div class="arc"></div><div class="paint"></div></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="crest" viewBox="0 0 64 64">
+    <path d="M32 6 L54 13 V31 C54 45 44 54 32 59 C20 54 10 45 10 31 V13 Z" fill="#2a0808" stroke="currentColor" stroke-width="3"/>
+    <path d="M32 13 L47 18 V31 C47 41 40 47 32 51 C24 47 17 41 17 31 V18 Z" fill="#8e1c1c"/>
+    <g stroke="currentColor" stroke-width="3.5" stroke-linecap="round">
+      <path d="M12 52 L50 10"/><path d="M52 52 L14 10"/>
+    </g>
+    <g stroke="currentColor" stroke-width="3" stroke-linecap="round">
+      <path d="M8 46 L18 56"/><path d="M56 46 L46 56"/>
+    </g>
+  </symbol>
+</svg>
+
+<div class="loader" id="loader" role="status" aria-live="polite">
+  <div class="glow"></div>
+  <svg class="emblem" aria-hidden="true"><use href="#crest"/></svg>
+  <h1>Bloodsworn</h1>
+  <div class="sub">MERCENARIES OF THE ASHEN REALM</div>
+  <div class="loadbar"><i id="loadbar"></i></div>
+  <div class="loadtext" id="loadtext">Kindling the torches…</div>
+  <div class="lore" id="lore"></div>
+</div>
+
+<div class="hall" aria-hidden="true"><div class="torch l"></div><div class="torch r"></div><div class="embers"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
 
 <header class="top">
-  <div class="brand"><div class="logo"></div><div class="brand-text">COURT CLASH<small>SEASON 01 · PLAY TO WIN</small></div></div>
-  <div class="scoretile"><b>0000</b><span>COINS</span></div>
+  <div class="brand"><svg class="emblem" aria-hidden="true"><use href="#crest"/></svg><div class="brand-text">Bloodsworn<small>MERCENARIES OF THE ASHEN REALM</small></div></div>
+  <div class="scoretile"><b>0000</b><span>GOLD</span></div>
 </header>
 
 <main>
   <section class="lobby" aria-labelledby="lobby-title">
     <div class="lobby-head">
-      <h1 id="lobby-title">YOUR PARTY<small id="status">CONNECTING…</small></h1>
+      <h1 id="lobby-title">YOUR WARBAND<small id="status">CONNECTING…</small></h1>
       <div class="count" id="count"><div class="pips"><i></i><i></i><i></i><i></i></div><b>0/4</b></div>
     </div>
     <div class="lobby-body">
       <div class="party" id="party"></div>
       <div class="code-wrap">
-        <label class="code-label" for="code">PARTY CODE <span>SHARE YOURS, OR ENTER A FRIEND'S</span></label>
+        <label class="code-label" for="code">WARBAND SEAL <span>SHARE YOURS, OR ENTER AN ALLY'S</span></label>
         <div class="code"><input id="code" maxlength="6" autocomplete="off" spellcheck="false" placeholder="······"><button class="btn small" id="copy">COPY</button></div>
         <div class="notice" id="notice" role="status"></div>
       </div>
-      <div class="picked">MODE <b id="picked">HUNT</b><span id="picked-sub">Solo survival</span><span class="who" id="who"></span></div>
+      <div class="picked">CONTRACT <b id="picked">THE HUNT</b><span id="picked-sub">Survive the horde</span><span class="who" id="who"></span></div>
     </div>
   </section>
 </main>
 
 <nav class="modes">
   <div class="list">
-    <button class="mode selected" data-mode="hunt"><b>HUNT</b>Solo survival</button>
-    <button class="mode" data-mode="showdown"><b>1V1 SHOWDOWN</b>Best of 3</button>
-    <button class="mode locked" data-mode="duo"><b>2V2 SHOWDOWN</b>Coming soon</button>
+    <button class="mode selected" data-mode="hunt"><b>THE HUNT</b>Survive the horde</button>
+    <button class="mode" data-mode="showdown"><b>THE DUEL</b>Best of three</button>
+    <button class="mode locked" data-mode="duo"><b>SKIRMISH 2V2</b>Coming soon</button>
   </div>
-  <button class="btn play" id="play">PLAY</button>
+  <button class="btn play" id="play">TO BATTLE</button>
 </nav>
 
 <div class="modal" id="signup" hidden>
   <form class="lobby" id="signup-form">
-    <div class="lobby-head"><h1>WELCOME, ROOKIE<small>PICK YOUR USERNAME</small></h1></div>
+    <div class="lobby-head"><h1>WHO GOES THERE?<small>NAME THYSELF, SELLSWORD</small></h1></div>
     <div class="lobby-body">
-      <p>This is how your party will see you. 3–16 letters, numbers or _.</p>
-      <div class="code"><input id="username" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Username" aria-label="Username"><button class="btn small">GO</button></div>
+      <p>This is the name your warband will know you by. 3–16 letters, numbers or _.</p>
+      <div class="code"><input id="username" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Thy name" aria-label="Username"><button class="btn small">SWEAR IN</button></div>
       <div class="notice" id="signup-notice" role="status"></div>
     </div>
   </form>
@@ -719,13 +824,15 @@ function connect() {
 function onMessage(msg) {
     switch (msg.type) {
         case 'needUsername':
+            markServerReady();
             $('#signup').hidden = false;
             $('#username').focus();
             break;
         case 'welcome':
+            markServerReady();
             setUserId(msg.userId);
             $('#signup').hidden = true;
-            $('#status').textContent = 'SIGNED IN AS ' + msg.username.toUpperCase();
+            $('#status').textContent = 'SWORN AS ' + msg.username.toUpperCase();
             break;
         case 'party':
             party = msg;
@@ -751,7 +858,7 @@ function slotEl(member) {
     const slot = document.createElement('div');
     if (!member) {
         slot.className = 'slot empty';
-        slot.innerHTML = '<div class="num plus">+</div><span class="empty-label">OPEN SLOT<small>Waiting for player</small></span>';
+        slot.innerHTML = '<div class="num plus">+</div><span class="empty-label">UNCLAIMED<small>Awaiting a sellsword</small></span>';
         return slot;
     }
     slot.className = 'slot' + (member.online ? '' : ' away');
@@ -759,8 +866,8 @@ function slotEl(member) {
     slot.querySelector('.num').textContent = member.username[0].toUpperCase();
     slot.querySelector('.name').textContent = member.username;
     if (member.leader)
-        slot.querySelector('b').insertAdjacentHTML('beforeend', '<span class="host" title="Party leader">♛</span>');
-    slot.querySelector('small').textContent = !member.online ? 'RECONNECTING…' : member.leader ? 'PARTY LEADER' : 'MEMBER';
+        slot.querySelector('b').insertAdjacentHTML('beforeend', '<span class="host" title="Captain">♛</span>');
+    slot.querySelector('small').textContent = !member.online ? 'RECONNECTING…' : member.leader ? 'CAPTAIN' : 'SELLSWORD';
     if (member.you)
         slot.insertAdjacentHTML('afterbegin', '<span class="tag">YOU</span>');
     return slot;
@@ -781,14 +888,14 @@ function render() {
     const who = $('#who');
     who.replaceChildren();
     if (party.youAreLeader) {
-        who.textContent = 'YOU PICK THE MODE';
+        who.textContent = 'YOU CHOOSE THE CONTRACT';
     } else {
-        who.textContent = leaderName.toUpperCase() + ' PICKS · ';
+        who.textContent = leaderName.toUpperCase() + ' CHOOSES · ';
     }
     if (members.length > 1) {
         const leave = document.createElement('button');
         leave.className = 'leave';
-        leave.textContent = 'LEAVE PARTY';
+        leave.textContent = 'LEAVE WARBAND';
         leave.onclick = () => sendMsg({ type: 'leaveParty' });
         if (party.youAreLeader)
             who.append(' · ');
@@ -816,7 +923,7 @@ modeButtons.forEach(b => b.onclick = () => {
     if (!party)
         return showMode(b.dataset.mode); // offline: pick locally
     if (!party.youAreLeader)
-        return notify('Only the party leader can change the mode');
+        return notify('Only the captain can choose the contract');
     sendMsg({ type: 'setMode', mode: b.dataset.mode });
 });
 
@@ -870,6 +977,58 @@ $('#play').onclick = () => {
     // Give the launch message a moment to leave before the page unloads.
     setTimeout(() => location.href = 'showdown.html' + (withParty ? '#party' : ''), withParty ? 150 : 0);
 };
+
+// ---- loading screen ----
+// Shown once per browser session. Waits for the fonts and the server (Render's
+// free tier can take a while to wake up), but never blocks for more than ~6s.
+const LORE = [
+    'Gold buys steel. Steel buys gold.',
+    'A sellsword\u2019s oath lasts exactly as long as his pay.',
+    'The Ashen Realm remembers every debt.',
+    'Fight for coin. Die for nothing.',
+    'No banner flies over the Bloodsworn.',
+];
+let serverReady = false;
+function markServerReady() {
+    if (serverReady)
+        return;
+    serverReady = true;
+    $('#loadbar').style.width = '80%';
+    $('#loadtext').textContent = 'Rousing the sellswords\u2026';
+}
+(function runLoader() {
+    const loader = $('#loader');
+    let seen = false;
+    try {
+        seen = sessionStorage.getItem('bloodsworn.loaded') === '1';
+        sessionStorage.setItem('bloodsworn.loaded', '1');
+    } catch { }
+    if (seen) {
+        loader.hidden = true;
+        return;
+    }
+    $('#lore').textContent = '\u201c' + LORE[Math.floor(Math.random() * LORE.length)] + '\u201d';
+    const bar = $('#loadbar'), text = $('#loadtext');
+    requestAnimationFrame(() => bar.style.width = '15%');
+    const fonts = (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => {
+        if (!serverReady) {
+            bar.style.width = '45%';
+            text.textContent = 'Sharpening steel\u2026';
+        }
+    });
+    const server = new Promise(resolve => {
+        const poll = setInterval(() => serverReady && done(), 100);
+        const done = () => { clearInterval(poll); resolve(); };
+        setTimeout(done, 6000);
+    });
+    const slow = setTimeout(() => serverReady || (text.textContent = 'The gatekeeper is slow to wake\u2026'), 2500);
+    Promise.all([fonts, server, new Promise(r => setTimeout(r, 1800))]).then(() => {
+        clearTimeout(slow);
+        bar.style.width = '100%';
+        text.textContent = 'The gates open.';
+        setTimeout(() => loader.classList.add('done'), 500);
+    });
+})();
 
 connect();
 </script>
