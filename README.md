@@ -106,10 +106,19 @@ work with a Korean keyboard input method switched on.
 - The **captain** is whoever has been in longest; only they choose the
   contract (mode). If they leave, the next-longest member takes over. A
   refresh keeps your slot for 15 seconds.
-- **Warband Duels:** if your warband has 2+ players, Find Match only pairs
-  you with them (first two to search fight). Solo players use the public
-  queue. When the captain presses TO BATTLE in Duel mode, everyone is sent
-  to `showdown.html#party`, which starts searching automatically.
+- **The Hunt is solo**, but you keep your warband slot (and captaincy) while
+  you play: the Hunt page stays connected to the server just to hold it.
+- **Warband Duels (winner stays on):** if your warband has 2+ players, Find
+  Match only pairs you with them. Each warband has one line: the front two
+  fight, and after a duel (and a 5-second pause to read the result) the
+  winner rejoins at the front and the loser at the back. A winner meets
+  someone fresh rather than the foe they just beat, unless nobody else is
+  waiting (a warband of two simply rematches). A warband of four runs two
+  duels at once, then winners meet winners. Waiting players see the duels in
+  progress, the live score and their place in line, and anyone can WITHDRAW
+  to leave the line. Solo players use the public queue. When the captain
+  presses TO BATTLE in Duel mode, everyone is sent to `showdown.html#party`,
+  which joins the line automatically.
 
 ## How a Duel works
 1. Both clients search → the server pairs them into a room.

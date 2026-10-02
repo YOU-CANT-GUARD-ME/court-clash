@@ -2011,6 +2011,32 @@ let spawnCountdown = 0;
 const keys = {};
 let mouseX = W / 2, mouseY = H / 2, mouseDown = false;
 loadArmory();
+// Stay connected to the lobby server while hunting. Without this the server
+// sees us leave and drops us from our warband after its 15s grace period.
+// Nothing here affects the run; it only says hello and reconnects if needed.
+(function keepWarbandSlot() {
+    const token = getToken();
+    if (!token)
+        return;
+    let retries = 0, replaced = false;
+    (function connect() {
+        const ws = new WebSocket(SERVER.ws);
+        ws.onopen = () => {
+            retries = 0;
+            ws.send(JSON.stringify({ type: 'hello', token }));
+        };
+        ws.onmessage = e => {
+            let msg;
+            try { msg = JSON.parse(e.data); } catch { return; }
+            if (msg.type === 'replaced' || msg.type === 'needAuth')
+                replaced = true; // the account moved to another tab, or logged out
+        };
+        ws.onclose = () => {
+            if (!replaced)
+                setTimeout(connect, Math.min(1000 * 2 ** retries++, 10000));
+        };
+    })();
+})();
 function newGame() {
     grenades.length = 0;
     particles.length = 0;

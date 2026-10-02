@@ -13,6 +13,8 @@ const lobby = require('./lobby');
 const PORT = process.env.PORT || 8080;
 const WINS_NEEDED = 2; // best of 3
 const DUEL_GOLD = { win: 100, loss: 25 };
+// Time to read the result before a warband's next duel starts.
+const NEXT_DUEL_DELAY_MS = 5000;
 
 // Two spawn points, kept far apart on opposite corners. Both clients use the
 // SAME arena layout (see RAW_MAP in showdown.html) so these must stay in sync
@@ -26,7 +28,10 @@ const server = http.createServer(api.handle);
 const wss = new WebSocketServer({ server });
 
 let waitingPlayer = null; // a socket waiting for a public opponent
-const partyWaiting = new Map(); // party code -> socket waiting for a party member
+// Warband Duels are "winner stays on". Each warband has one line of sockets
+// waiting to fight; the front of the line is matched first. After a duel the
+// winner rejoins at the front and the loser at the back.
+const lines = new Map(); // party code -> [socket, ...] in line order
 const rooms = new Map();  // roomId -> room state
 let nextRoomId = 1;
 
@@ -52,8 +57,11 @@ function makeRoom(playerA, playerB) {
   return room;
 }
 
-function startMatch(playerA, playerB) {
+function startMatch(playerA, playerB, partyCode = null) {
   const room = makeRoom(playerA, playerB);
+  room.partyCode = partyCode;
+  playerA.lastFoe = playerB;
+  playerB.lastFoe = playerA;
   room.players.forEach((sock, i) => {
     send(sock, {
       type: 'matchFound', playerNum: i, roomId: room.id,
@@ -62,12 +70,93 @@ function startMatch(playerA, playerB) {
     });
   });
   startRound(room);
+  if (partyCode) broadcastLine(partyCode);
 }
 
 function dequeue(ws) {
   if (waitingPlayer === ws) waitingPlayer = null;
-  if (ws.partyQueue && partyWaiting.get(ws.partyQueue) === ws) partyWaiting.delete(ws.partyQueue);
+  ws.requeue = null; // cancels a pending return to the line after a duel
+  const code = ws.partyQueue;
   ws.partyQueue = null;
+  const line = code && lines.get(code);
+  if (!line || !line.includes(ws)) return;
+  line.splice(line.indexOf(ws), 1);
+  if (!line.length) lines.delete(code);
+  broadcastLine(code);
+}
+
+// ---- warband line (winner stays on) ----
+
+function joinLine(ws, code, where) {
+  if (!lines.has(code)) lines.set(code, []);
+  const line = lines.get(code);
+  if (where === 'front') line.unshift(ws);
+  else line.push(ws);
+  ws.partyQueue = code;
+  send(ws, { type: 'queued', party: true });
+}
+
+function partyIsFighting(code) {
+  for (const room of rooms.values()) if (room.partyCode === code) return true;
+  return false;
+}
+
+// Starts every duel the line allows. The front of the line fights the next
+// person who isn't the foe they just faced, so a winner meets someone fresh;
+// a straight rematch only happens when nobody else is coming (e.g. a warband
+// of two).
+function pumpLine(code) {
+  const line = lines.get(code);
+  if (!line) return;
+  // Anyone who closed the page or left the warband while waiting goes back
+  // through normal matchmaking instead.
+  for (const ws of [...line]) {
+    if (ws.readyState === ws.OPEN && lobby.matchPartyOf(ws) === code) continue;
+    dequeue(ws);
+    if (ws.readyState === ws.OPEN) findMatch(ws);
+  }
+  while (line.length >= 2) {
+    const first = line[0];
+    let j = line.findIndex((ws, i) => i > 0 && ws !== first.lastFoe);
+    if (j < 0) {
+      if (partyIsFighting(code)) break; // wait for someone fresh
+      j = 1;
+    }
+    const second = line[j];
+    line.splice(j, 1);
+    line.shift();
+    first.partyQueue = second.partyQueue = null;
+    startMatch(first, second, code);
+  }
+  if (!line.length) lines.delete(code);
+  broadcastLine(code);
+}
+
+// Tells everyone waiting in a warband's line who is fighting and where they stand.
+function broadcastLine(code) {
+  const line = lines.get(code) || [];
+  const fights = [...rooms.values()].filter((r) => r.partyCode === code).map((r) => ({
+    names: r.players.map(lobby.usernameOf), scores: r.scores, round: r.round,
+  }));
+  line.forEach((ws, i) => send(ws, { type: 'warbandLine', fights, position: i, waiting: line.length }));
+}
+
+// After a warband duel: the winner stays on (front of the line), the loser
+// goes to the back. Waits a moment so both can read the result, and skips
+// anyone who withdrew, left, or changed warband in the meantime.
+function requeueAfterDuel(code, winner, loser) {
+  const players = [[winner, 'front'], [loser, 'back']].filter(([ws]) => ws);
+  for (const [ws, where] of players) ws.requeue = where;
+  setTimeout(() => {
+    for (const [ws, where] of players) {
+      if (ws.requeue !== where) continue; // withdrew or already searching again
+      ws.requeue = null;
+      if (ws.readyState !== ws.OPEN) continue;
+      if (lobby.matchPartyOf(ws) === code) joinLine(ws, code, where);
+      else send(ws, { type: 'lineClosed' }); // warband changed: back to the menu
+    }
+    pumpLine(code);
+  }, NEXT_DUEL_DELAY_MS);
 }
 
 // Players in a party (2+ members) are only matched with each other;
@@ -77,15 +166,8 @@ function findMatch(ws) {
   dequeue(ws);
   const partyCode = lobby.matchPartyOf(ws);
   if (partyCode) {
-    const other = partyWaiting.get(partyCode);
-    if (other && other !== ws && other.readyState === ws.OPEN) {
-      dequeue(other);
-      startMatch(other, ws);
-    } else {
-      partyWaiting.set(partyCode, ws);
-      ws.partyQueue = partyCode;
-      send(ws, { type: 'queued', party: true });
-    }
+    joinLine(ws, partyCode, 'back');
+    pumpLine(partyCode);
     return;
   }
   if (waitingPlayer && waitingPlayer !== ws && waitingPlayer.readyState === ws.OPEN) {
@@ -134,6 +216,7 @@ function recordDuel(room, winnerIdx, forfeit) {
 }
 
 function endMatch(room, winnerIdx) {
+  if (!rooms.has(room.id)) return; // someone left after the last round: already settled as a forfeit
   room.state = 'matchover';
   const gold = recordDuel(room, winnerIdx, false);
   room.players.forEach((ws, i) => {
@@ -142,9 +225,15 @@ function endMatch(room, winnerIdx) {
       youWon: i === winnerIdx,
       scores: room.scores,
       gold: gold.get(ws) || 0,
+      // In a warband: where you rejoin the line ('front' = you stay on).
+      line: room.partyCode ? (i === winnerIdx ? 'front' : 'back') : null,
     });
   });
   rooms.delete(room.id);
+  if (room.partyCode) {
+    requeueAfterDuel(room.partyCode, room.players[winnerIdx], room.players[1 - winnerIdx]);
+    broadcastLine(room.partyCode);
+  }
 }
 
 function endRound(room, winnerIdx) {
@@ -158,6 +247,7 @@ function endRound(room, winnerIdx) {
       round: room.round,
     });
   });
+  if (room.partyCode) broadcastLine(room.partyCode);
 
   if (room.scores[winnerIdx] >= WINS_NEEDED) {
     setTimeout(() => endMatch(room, winnerIdx), 2500);
@@ -196,8 +286,12 @@ wss.on('connection', (ws) => {
       const opp = opponentOf(room, ws);
       // Leaving mid-match forfeits it.
       const gold = recordDuel(room, room.players.indexOf(opp), true);
-      send(opp, { type: 'opponentDisconnected', gold: gold.get(opp) || 0 });
+      send(opp, { type: 'opponentDisconnected', gold: gold.get(opp) || 0, line: room.partyCode ? 'front' : null });
       rooms.delete(room.id);
+      if (room.partyCode) {
+        requeueAfterDuel(room.partyCode, opp, null);
+        broadcastLine(room.partyCode);
+      }
     }
   });
 });

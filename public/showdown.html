@@ -31,6 +31,7 @@
     animation: rise .4s cubic-bezier(.2,.9,.3,1.1) both;
   }
   @keyframes rise { from { opacity: 0; transform: translateY(18px); } }
+  .card.still { animation: none; } /* an update to the card already on screen */
   .card-head {
     display: flex; align-items: center; gap: 14px; padding: 18px 22px;
     background: linear-gradient(180deg, var(--stone3), var(--stone)); border-bottom: 3px solid var(--blood);
@@ -69,6 +70,11 @@
   .progress i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--blood-d), var(--blood), var(--ember)); transform-origin: left; animation: fill 3s linear both; }
   @keyframes fill { from { transform: scaleX(0); } }
   .progress-label { display: flex; justify-content: space-between; font: 700 9px 'Cinzel', 'Noto Serif KR', serif; letter-spacing: 2px; color: var(--ink2); }
+  .fights { display: grid; gap: 8px; }
+  .fight { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 9px 12px; border: 1px solid rgba(90,70,48,.35); border-radius: 4px; background: rgba(255,255,255,.18); }
+  .fight b { font: 700 14px 'Cinzel', 'Noto Serif KR', serif; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fight small { flex: none; font: 700 10px 'Cinzel', 'Noto Serif KR', serif; letter-spacing: 1.5px; color: var(--blood); }
+  .place { font: 700 11px 'Cinzel', 'Noto Serif KR', serif; letter-spacing: 2px; color: var(--blood); text-align: center; }
   .keys { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
   .keys div { display: flex; align-items: center; gap: 9px; font-size: 16px; color: var(--ink); }
   kbd {
@@ -522,6 +528,7 @@ let wantMatch = false; // should we be in the matchmaking queue?
 let party = null; // our lobby party, once the server recognises us
 let oppName = null;
 let signedIn = false; // only signed-in players earn gold and records
+let line = null; // our warband's duel line: who's fighting and our place in it
 function partyMates() { return party ? party.members.filter(m => !m.you) : []; }
 function oppLabel() { return (oppName || tr('duel.foe')).toUpperCase(); }
 function sendMsg(msg) {
@@ -601,7 +608,18 @@ function handleServerMessage(msg) {
                 buttons: [[tr('btn.hall'), goToLobby, true]] });
             break;
         case 'queued':
+            matchState = 'queued';
             showSearching();
+            break;
+        case 'warbandLine':
+            line = msg;
+            if (matchState === 'queued')
+                showSearching();
+            break;
+        case 'lineClosed':
+            // Our warband changed while we waited to rejoin the line.
+            matchState = 'idle';
+            showIntro();
             break;
         case 'matchFound':
             myPlayerNum = msg.playerNum;
@@ -649,11 +667,11 @@ function handleServerMessage(msg) {
         case 'matchOver':
             scores = msg.scores;
             matchState = 'matchover';
-            showMatchOver(tr(msg.youWon ? 'duel.victory' : 'duel.defeat'), tr('duel.finalScore'), msg.youWon ? 'win' : 'lose', msg.gold);
+            showMatchOver(tr(msg.youWon ? 'duel.victory' : 'duel.defeat'), tr('duel.finalScore'), msg.youWon ? 'win' : 'lose', msg.gold, msg.line);
             break;
         case 'opponentDisconnected':
             matchState = 'matchover';
-            showMatchOver(tr('duel.fled'), tr('duel.forfeit'), 'win', msg.gold);
+            showMatchOver(tr('duel.fled'), tr('duel.forfeit'), 'win', msg.gold, msg.line);
             break;
     }
 }
@@ -669,8 +687,12 @@ function el(tag, cls, text) {
     return n;
 }
 // Builds a lobby-style card: navy header (title + tag), then body content.
-function showCard({ title, tag, tone, spinner, body = [], buttons = [] }) {
-    const card = el('div', 'card' + (tone ? ' ' + tone : ''));
+function showCard({ title, tag, tone, spinner, view, body = [], buttons = [] }) {
+    // Redrawing the same view (e.g. a live score update) shouldn't replay the entrance.
+    const same = view && overlay.style.display !== 'none' && overlay.firstChild?.dataset.view === view;
+    const card = el('div', 'card' + (tone ? ' ' + tone : '') + (same ? ' still' : ''));
+    if (view)
+        card.dataset.view = view;
     const head = el('div', 'card-head');
     if (spinner)
         head.append(el('div', 'spinner'));
@@ -742,11 +764,33 @@ function showIntro() {
 }
 function showSearching() {
     const mates = partyMates();
+    if (!mates.length) {
+        showCard({
+            title: tr('duel.seeking'), tag: tr('duel.awaitFoe'), spinner: true, view: 'search',
+            body: [el('p', null, tr('duel.awaitFoeText'))],
+            buttons: [[tr('duel.withdraw'), cancelSearch]],
+        });
+        return;
+    }
+    // Warband: winner stays on. Show the duels in progress and our place in line.
+    const fights = line ? line.fights : [];
+    const body = [];
+    if (fights.length) {
+        const list = el('div', 'fights');
+        for (const f of fights) {
+            const row = el('div', 'fight');
+            row.append(el('b', null, `${f.names[0]} ${tr('duel.vs')} ${f.names[1]}`),
+                el('small', null, tr('duel.fightRow', { round: f.round, a: f.scores[0], b: f.scores[1] })));
+            list.append(row);
+        }
+        body.push(el('p', null, tr('duel.lineRule')), list,
+            el('div', 'place', line.position === 0 ? tr('duel.lineNext') : tr('duel.linePos', { n: line.position + 1 })));
+    }
+    else
+        body.push(el('p', null, tr('duel.awaitPartyText', { names: namesList(mates) })));
     showCard({
-        title: tr('duel.seeking'), tag: tr(mates.length ? 'duel.awaitParty' : 'duel.awaitFoe'), spinner: true,
-        body: [el('p', null, mates.length
-            ? tr('duel.awaitPartyText', { names: namesList(mates) })
-            : tr('duel.awaitFoeText'))],
+        title: tr('duel.seeking'), tag: tr('duel.lineTag'), spinner: true, view: 'search',
+        body,
         buttons: [[tr('duel.withdraw'), cancelSearch]],
     });
 }
@@ -761,10 +805,20 @@ function showRoundOver(youWon) {
         body: [tally(), label, bar],
     });
 }
-function showMatchOver(title, tag, tone, gold) {
+// `lineSpot` is set in a warband duel: 'front' if we won and stay on, 'back'
+// if we go to the end of the line. The server puts us back in line shortly.
+function showMatchOver(title, tag, tone, gold, lineSpot) {
     const purse = el('p', 'purse', signedIn
         ? tr('duel.purse', { n: gold || 0 })
         : tr('duel.purseGuest'));
+    if (lineSpot) {
+        showCard({
+            title, tag, tone,
+            body: [tally(), purse, el('div', 'place', tr(lineSpot === 'front' ? 'duel.holdField' : 'duel.toBack'))],
+            buttons: [[tr('duel.withdraw'), cancelSearch], [tr('btn.hall'), goToLobby]],
+        });
+        return;
+    }
     showCard({
         title, tag, tone,
         body: [tally(), purse],

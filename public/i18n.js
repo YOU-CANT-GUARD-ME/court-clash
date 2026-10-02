@@ -142,6 +142,12 @@ const STRINGS = {
         'duel.server': 'MATCH SERVER', 'duel.retry': 'TRY AGAIN',
         'duel.round': 'ROUND {n}', 'duel.fight': 'FIGHT!',
         'duel.deciding': 'DECIDING ROUND', 'duel.matchPoint': 'MATCH POINT', 'duel.bestOf3': 'BEST OF THREE',
+        'duel.lineTag': 'WINNER STAYS ON',
+        'duel.lineRule': 'Winner stays on: the victor faces the next in line, and the loser goes to the back.',
+        'duel.fightRow': 'ROUND {round} · {a}–{b}',
+        'duel.lineNext': 'YOU ARE NEXT IN LINE', 'duel.linePos': 'YOU ARE #{n} IN LINE',
+        'duel.holdField': 'YOU HOLD THE FIELD · YOUR NEXT FOE STEPS UP SHORTLY',
+        'duel.toBack': 'TO THE BACK OF THE LINE · YOUR TURN WILL COME AGAIN',
     },
 
     ko: {
@@ -275,6 +281,12 @@ const STRINGS = {
         'duel.server': '대전 서버', 'duel.retry': '다시 시도',
         'duel.round': '{n}라운드', 'duel.fight': '싸워라!',
         'duel.deciding': '결승 라운드', 'duel.matchPoint': '매치 포인트', 'duel.bestOf3': '3판 2선승',
+        'duel.lineTag': '승자 잔류',
+        'duel.lineRule': '승자 잔류: 이긴 쪽은 다음 차례와 싸우고, 진 쪽은 줄 맨 뒤로 갑니다.',
+        'duel.fightRow': '{round}라운드 · {a}–{b}',
+        'duel.lineNext': '다음 차례입니다', 'duel.linePos': '대기 순서 {n}번째',
+        'duel.holdField': '전장을 지켰습니다 · 곧 다음 상대가 나섭니다',
+        'duel.toBack': '줄 맨 뒤로 갑니다 · 곧 다시 차례가 옵니다',
     },
 };
 
