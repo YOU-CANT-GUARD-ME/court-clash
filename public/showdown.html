@@ -616,6 +616,7 @@ function handleServerMessage(msg) {
             opponent.targetY = opponent.y;
             opponent.targetAngle = opponent.angle;
             matchState = 'playing';
+            mouseDown = false; // a new round needs a fresh click to fire
             roundBannerStart = performance.now();
             hideOverlay();
             break;
@@ -641,6 +642,7 @@ function handleServerMessage(msg) {
         case 'roundOver':
             scores = msg.scores;
             matchState = 'roundover';
+            mouseDown = false;
             showRoundOver(msg.youWon);
             break;
         case 'matchOver':
@@ -825,8 +827,11 @@ canvas.addEventListener('mousemove', e => {
 });
 canvas.addEventListener('mousedown', e => { if (e.button === 0)
     mouseDown = true; });
-canvas.addEventListener('mouseup', e => { if (e.button === 0)
+// Listen on the window, not the canvas: a release over the round-over card (or
+// outside the page) would otherwise be missed and leave the bow firing.
+window.addEventListener('mouseup', e => { if (e.button === 0)
     mouseDown = false; });
+window.addEventListener('blur', () => { mouseDown = false; });
 // ── GAME STATE ────────────────────────────────────────────────────────────────
 let player = makePlayer({ x: 2.5 * TILE, y: 2.5 * TILE });
 let opponent = makePlayer({ x: 31.5 * TILE, y: 17.5 * TILE });
