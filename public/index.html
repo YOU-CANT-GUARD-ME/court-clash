@@ -4,7 +4,7 @@
 <title>BLOODSWORN</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=EB+Garamond:ital,wght@0,500;0,700;1,500&family=Pirata+One&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=EB+Garamond:ital,wght@0,500;0,700;1,500&family=Pirata+One&family=Noto+Serif+KR:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
 :root {
   --void: #070605;
@@ -33,7 +33,7 @@ body {
   min-height: 100vh;
   overflow: hidden;
   color: var(--parch);
-  font-family: 'EB Garamond',Georgia,serif;
+  font-family: 'EB Garamond', 'Noto Serif KR', Georgia,serif;
   background: var(--void);
 }
 /* ---- the hall: dark stone, torchlight, drifting embers ---- */
@@ -127,7 +127,7 @@ body {
   gap: 12px;
 }
 .brand-text {
-  font-family: 'Pirata One',serif;
+  font-family: 'Pirata One', 'Noto Serif KR', serif;
   color: var(--parch);
   font-size: clamp(26px,3.6vw,40px);
   letter-spacing: 1px;
@@ -137,7 +137,7 @@ body {
 .brand-text small {
   display: block;
   margin-top: 4px;
-  font: 700 9px 'Cinzel',serif;
+  font: 700 9px 'Cinzel', 'Noto Serif KR', serif;
   letter-spacing: 3px;
   color: var(--gold);
   text-shadow: none;
@@ -153,13 +153,13 @@ body {
   box-shadow: inset 0 0 10px #000;
 }
 .scoretile b {
-  font: 700 18px 'Cinzel',serif;
+  font: 700 18px 'Cinzel', 'Noto Serif KR', serif;
   color: var(--gold);
   letter-spacing: 2px;
   text-shadow: 0 0 8px rgba(201,162,74,.4);
 }
 .scoretile span {
-  font: 700 9px 'Cinzel',serif;
+  font: 700 9px 'Cinzel', 'Noto Serif KR', serif;
   letter-spacing: 2px;
   color: var(--bone);
 }
@@ -196,7 +196,7 @@ main {
   border-bottom: 3px solid var(--blood);
 }
 .lobby h1 {
-  font: 900 22px/1 'Cinzel',serif;
+  font: 900 22px/1 'Cinzel', 'Noto Serif KR', serif;
   letter-spacing: 2px;
   margin: 0;
   color: var(--parch);
@@ -205,7 +205,7 @@ main {
 .lobby h1 small {
   display: block;
   margin-top: 6px;
-  font: 700 9px 'Cinzel',serif;
+  font: 700 9px 'Cinzel', 'Noto Serif KR', serif;
   letter-spacing: 2px;
   color: var(--gold);
   text-shadow: none;
@@ -221,7 +221,7 @@ main {
   box-shadow: inset 0 0 8px #000;
 }
 .count b {
-  font: 700 15px 'Cinzel',serif;
+  font: 700 15px 'Cinzel', 'Noto Serif KR', serif;
   color: var(--gold);
   letter-spacing: 1px;
 }
@@ -277,7 +277,7 @@ main {
   clip-path: polygon(0 0,100% 0,100% 55%,50% 100%,0 55%);
   background: linear-gradient(160deg,#b52828,var(--blood) 55%,var(--blood-d));
   color: var(--parch);
-  font: 900 18px 'Cinzel',serif;
+  font: 900 18px 'Cinzel', 'Noto Serif KR', serif;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -291,12 +291,12 @@ main {
   display: flex;
   align-items: center;
   gap: 5px;
-  font: 700 15px 'Cinzel',serif;
+  font: 700 15px 'Cinzel', 'Noto Serif KR', serif;
   color: var(--ink);
 }
 .slot-info small {
   display: block;
-  font: 700 9px 'Cinzel',serif;
+  font: 700 9px 'Cinzel', 'Noto Serif KR', serif;
   color: var(--blood);
   letter-spacing: 1.5px;
 }
@@ -318,23 +318,23 @@ main {
   background: var(--stone);
   border: 1px solid var(--gold-d);
   color: var(--gold);
-  font: 700 8px 'Cinzel',serif;
+  font: 700 8px 'Cinzel', 'Noto Serif KR', serif;
   letter-spacing: 1.5px;
 }
 .plus {
   background: rgba(42,29,18,.12);
   color: #a08a62;
-  font: 500 22px 'Cinzel',serif;
+  font: 500 22px 'Cinzel', 'Noto Serif KR', serif;
   text-shadow: none;
 }
 .empty-label {
-  font: 700 11px 'Cinzel',serif;
+  font: 700 11px 'Cinzel', 'Noto Serif KR', serif;
   letter-spacing: 1px;
   color: #7a6648;
 }
 .empty-label small {
   display: block;
-  font: italic 500 12px 'EB Garamond',serif;
+  font: italic 500 12px 'EB Garamond', 'Noto Serif KR', serif;
   letter-spacing: 0;
   color: #8a7656;
 }
@@ -347,7 +347,7 @@ main {
   display: flex;
   justify-content: space-between;
   margin-bottom: 7px;
-  font: 700 9px 'Cinzel',serif;
+  font: 700 9px 'Cinzel', 'Noto Serif KR', serif;
   letter-spacing: 2px;
   color: var(--blood);
 }
@@ -366,7 +366,7 @@ main {
   border-radius: 4px;
   padding: 11px 10px;
   color: var(--gold);
-  font: 700 22px 'Cinzel',serif;
+  font: 700 22px 'Cinzel', 'Noto Serif KR', serif;
   letter-spacing: 8px;
   text-indent: 8px;
   text-align: center;
@@ -397,7 +397,7 @@ main {
   background: linear-gradient(180deg,#a82424,var(--blood));
   padding: 0 16px;
   min-width: 92px;
-  font: 700 12px 'Cinzel',serif;
+  font: 700 12px 'Cinzel', 'Noto Serif KR', serif;
   letter-spacing: 1.5px;
   border: 1px solid #000;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.15),0 3px 0 var(--blood-d);
@@ -420,7 +420,7 @@ main {
   align-items: center;
   gap: 6px 8px;
   margin-top: 14px;
-  font: 700 10px 'Cinzel',serif;
+  font: 700 10px 'Cinzel', 'Noto Serif KR', serif;
   letter-spacing: 1px;
   color: var(--ink2);
 }
@@ -429,14 +429,14 @@ main {
   border-radius: 2px;
   background: var(--stone);
   color: var(--gold);
-  font: 700 11px 'Cinzel',serif;
+  font: 700 11px 'Cinzel', 'Noto Serif KR', serif;
   letter-spacing: 1px;
 }
 .picked b,.picked #picked-sub {
   white-space: nowrap;
 }
 .picked #picked-sub {
-  font: italic 500 13px 'EB Garamond',serif;
+  font: italic 500 13px 'EB Garamond', 'Noto Serif KR', serif;
   letter-spacing: 0;
 }
 .picked .who {
@@ -446,14 +446,14 @@ main {
 .notice {
   min-height: 16px;
   margin-top: 8px;
-  font: italic 700 13px 'EB Garamond',serif;
+  font: italic 700 13px 'EB Garamond', 'Noto Serif KR', serif;
   color: var(--blood);
 }
 .leave {
   background: none;
   border: 0;
   padding: 0;
-  font: 700 9px 'Cinzel',serif;
+  font: 700 9px 'Cinzel', 'Noto Serif KR', serif;
   letter-spacing: 1px;
   color: var(--blood);
   cursor: pointer;
@@ -518,7 +518,7 @@ main {
   color: var(--bone);
   cursor: pointer;
   text-align: left;
-  font: italic 500 13px 'EB Garamond',serif;
+  font: italic 500 13px 'EB Garamond', 'Noto Serif KR', serif;
   position: relative;
 }
 .mode:before {
@@ -538,7 +538,7 @@ main {
 }
 .mode b {
   display: block;
-  font: 700 13px 'Cinzel',serif;
+  font: 700 13px 'Cinzel', 'Noto Serif KR', serif;
   font-style: normal;
   color: var(--parch);
   letter-spacing: 1px;
@@ -564,7 +564,7 @@ main {
 }
 .play {
   background: linear-gradient(180deg,#b52828,var(--blood) 60%,#6a1414);
-  font: 900 17px 'Cinzel',serif;
+  font: 900 17px 'Cinzel', 'Noto Serif KR', serif;
   letter-spacing: 2px;
   padding: 14px 26px;
   white-space: nowrap;
@@ -591,7 +591,7 @@ main {
   padding: 10px 14px;
   background: linear-gradient(180deg,var(--stone3),var(--stone2));
   color: var(--gold);
-  font: 700 11px 'Cinzel',serif;
+  font: 700 11px 'Cinzel', 'Noto Serif KR', serif;
   letter-spacing: 1.5px;
   cursor: pointer;
 }
@@ -620,7 +620,7 @@ main {
   padding: 9px 6px;
   background: transparent;
   color: var(--ink2);
-  font: 700 10px 'Cinzel',serif;
+  font: 700 10px 'Cinzel', 'Noto Serif KR', serif;
   letter-spacing: 1.5px;
   cursor: pointer;
 }
@@ -631,7 +631,7 @@ main {
 .field {
   display: block;
   margin-bottom: 10px;
-  font: 700 9px 'Cinzel',serif;
+  font: 700 9px 'Cinzel', 'Noto Serif KR', serif;
   letter-spacing: 2px;
   color: var(--blood);
 }
@@ -644,7 +644,7 @@ main {
   padding: 10px 12px;
   background: var(--void);
   color: var(--gold);
-  font: 500 18px 'EB Garamond',serif;
+  font: 500 18px 'EB Garamond', 'Noto Serif KR', serif;
   box-shadow: inset 0 0 10px #000;
 }
 .field input:focus {
@@ -688,12 +688,12 @@ main {
 }
 .ledger small {
   display: block;
-  font: 700 8px 'Cinzel',serif;
+  font: 700 8px 'Cinzel', 'Noto Serif KR', serif;
   letter-spacing: 1.5px;
   color: var(--blood);
 }
 .ledger b {
-  font: 700 20px 'Cinzel',serif;
+  font: 700 20px 'Cinzel', 'Noto Serif KR', serif;
   color: var(--ink);
 }
 .boards {
@@ -703,7 +703,7 @@ main {
 }
 .boards h2 {
   margin: 0 0 8px;
-  font: 900 13px 'Cinzel',serif;
+  font: 900 13px 'Cinzel', 'Noto Serif KR', serif;
   letter-spacing: 2px;
   color: var(--ink);
   border-bottom: 2px solid var(--blood);
@@ -721,14 +721,14 @@ main {
   gap: 6px;
   padding: 5px 0;
   border-bottom: 1px dotted rgba(90,70,48,.4);
-  font: 500 16px 'EB Garamond',serif;
+  font: 500 16px 'EB Garamond', 'Noto Serif KR', serif;
   color: var(--ink);
 }
 .boards li.me {
   background: rgba(201,162,74,.25);
 }
 .boards li i {
-  font: 700 11px 'Cinzel',serif;
+  font: 700 11px 'Cinzel', 'Noto Serif KR', serif;
   font-style: normal;
   color: var(--ink2);
 }
@@ -738,7 +738,7 @@ main {
   white-space: nowrap;
 }
 .boards li b {
-  font: 700 13px 'Cinzel',serif;
+  font: 700 13px 'Cinzel', 'Noto Serif KR', serif;
   color: var(--blood);
 }
 .boards li:first-child i {
@@ -750,6 +750,20 @@ main {
   color: var(--ink2);
   border: 0;
 }
+/* ---- settings ---- */
+.hdr-btn.gear {
+  font-size: 16px;
+  line-height: 1;
+}
+.modal .settings-card {
+  width: min(360px,100%);
+}
+.setting-label {
+  margin-bottom: 8px;
+  font: 700 10px 'Cinzel', 'Noto Serif KR', serif;
+  letter-spacing: 2px;
+  color: var(--blood);
+}
 /* ---- armory ---- */
 .modal .armory-card {
   width: min(700px,100%);
@@ -758,11 +772,11 @@ main {
 }
 .purse {
   margin: -4px 0 14px;
-  font: italic 500 16px 'EB Garamond',serif;
+  font: italic 500 16px 'EB Garamond', 'Noto Serif KR', serif;
   color: var(--ink2);
 }
 .purse b {
-  font: 700 16px 'Cinzel',serif;
+  font: 700 16px 'Cinzel', 'Noto Serif KR', serif;
   font-style: normal;
   color: var(--gold-d);
 }
@@ -784,7 +798,7 @@ main {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font: 900 13px 'Cinzel',serif;
+  font: 900 13px 'Cinzel', 'Noto Serif KR', serif;
   letter-spacing: 1.5px;
   color: var(--ink);
 }
@@ -808,7 +822,7 @@ main {
   background: var(--blood);
 }
 .ware .effect {
-  font: 700 11px 'Cinzel',serif;
+  font: 700 11px 'Cinzel', 'Noto Serif KR', serif;
   letter-spacing: 1px;
   color: var(--blood);
 }
@@ -879,14 +893,14 @@ main {
 .loader h1 {
   position: relative;
   margin: 0;
-  font: 400 clamp(56px,13vw,120px)/.85 'Pirata One',serif;
+  font: 400 clamp(56px,13vw,120px)/.85 'Pirata One', 'Noto Serif KR', serif;
   letter-spacing: 3px;
   color: var(--parch);
   text-shadow: 0 4px 0 var(--blood-d),0 0 40px rgba(142,28,28,.8);
 }
 .loader .sub {
   position: relative;
-  font: 700 11px 'Cinzel',serif;
+  font: 700 11px 'Cinzel', 'Noto Serif KR', serif;
   letter-spacing: 6px;
   color: var(--gold);
 }
@@ -910,7 +924,7 @@ main {
 .loadtext {
   position: relative;
   min-height: 20px;
-  font: italic 500 16px 'EB Garamond',serif;
+  font: italic 500 16px 'EB Garamond', 'Noto Serif KR', serif;
   color: var(--bone);
 }
 .lore {
@@ -918,8 +932,29 @@ main {
   left: 24px;
   right: 24px;
   bottom: 36px;
-  font: italic 500 15px 'EB Garamond',serif;
+  font: italic 500 15px 'EB Garamond', 'Noto Serif KR', serif;
   color: #6a5a48;
+}
+/* Phones: drop the wordmark so the header buttons fit beside the crest. */
+@media(max-width:600px) {
+  .brand-text {
+    display: none;
+  }
+  .top-right {
+    gap: 6px;
+  }
+  .scoretile {
+    padding: 8px 10px;
+  }
+  .scoretile b {
+    font-size: 15px;
+    letter-spacing: 1px;
+  }
+}
+@media(max-width:400px) {
+  .top .emblem {
+    display: none;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .lobby,.torch,.embers i,.loader .glow,.loader .emblem { animation: none; }
@@ -967,58 +1002,59 @@ main {
   <div class="glow"></div>
   <svg class="emblem" aria-hidden="true"><use href="#crest"/></svg>
   <h1>Bloodsworn</h1>
-  <div class="sub">MERCENARIES OF THE ASHEN REALM</div>
+  <div class="sub" data-i18n="brand.sub">MERCENARIES OF THE ASHEN REALM</div>
   <div class="loadbar"><i id="loadbar"></i></div>
-  <div class="loadtext" id="loadtext">Kindling the torches…</div>
+  <div class="loadtext" id="loadtext" data-i18n="load.kindle">Kindling the torches…</div>
   <div class="lore" id="lore"></div>
 </div>
 
 <div class="hall" aria-hidden="true"><div class="torch l"></div><div class="torch r"></div><div class="embers"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
 
 <header class="top">
-  <div class="brand"><svg class="emblem" aria-hidden="true"><use href="#crest"/></svg><div class="brand-text">Bloodsworn<small>MERCENARIES OF THE ASHEN REALM</small></div></div>
+  <div class="brand"><svg class="emblem" aria-hidden="true"><use href="#crest"/></svg><div class="brand-text">Bloodsworn<small data-i18n="brand.sub">MERCENARIES OF THE ASHEN REALM</small></div></div>
   <div class="top-right">
-    <button class="hdr-btn" id="armory-btn">ARMORY</button>
-    <button class="hdr-btn" id="legends-btn">LEGENDS</button>
-    <div class="scoretile" title="Gold earned in battle"><b id="gold">0000</b><span>GOLD</span></div>
-    <button class="hdr-btn quiet" id="logout" title="Log out of this account" hidden>LEAVE</button>
+    <button class="hdr-btn" id="armory-btn" data-i18n="hdr.armory">ARMORY</button>
+    <button class="hdr-btn" id="legends-btn" data-i18n="hdr.legends">LEGENDS</button>
+    <div class="scoretile" title="Gold earned in battle" data-i18n-title="hdr.goldTitle"><b id="gold">0000</b><span data-i18n="hdr.gold">GOLD</span></div>
+    <button class="hdr-btn quiet" id="logout" title="Log out of this account" data-i18n-title="hdr.leaveTitle" data-i18n="hdr.leave" hidden>LEAVE</button>
+    <button class="hdr-btn quiet gear" id="settings-btn" title="Settings" aria-label="Settings" data-i18n-title="hdr.settings" data-i18n-aria="hdr.settings">⚙</button>
   </div>
 </header>
 
 <main>
   <section class="lobby" aria-labelledby="lobby-title">
     <div class="lobby-head">
-      <h1 id="lobby-title">YOUR WARBAND<small id="status">CONNECTING…</small></h1>
+      <h1 id="lobby-title"><span data-i18n="lobby.title">YOUR WARBAND</span><small id="status">CONNECTING…</small></h1>
       <div class="count" id="count"><div class="pips"><i></i><i></i><i></i><i></i></div><b>0/4</b></div>
     </div>
     <div class="lobby-body">
       <div class="party" id="party"></div>
       <div class="code-wrap">
-        <label class="code-label" for="code">WARBAND SEAL <span>SHARE YOURS, OR ENTER AN ALLY'S</span></label>
+        <label class="code-label" for="code"><span data-i18n="seal.label">WARBAND SEAL</span> <span data-i18n="seal.hint">SHARE YOURS, OR ENTER AN ALLY'S</span></label>
         <div class="code"><input id="code" maxlength="6" autocomplete="off" spellcheck="false" placeholder="······"><button class="btn small" id="copy">COPY</button></div>
         <div class="notice" id="notice" role="status"></div>
       </div>
-      <div class="picked">CONTRACT <b id="picked">THE HUNT</b><span id="picked-sub">Survive the horde</span><span class="who" id="who"></span></div>
+      <div class="picked"><span data-i18n="picked.label">CONTRACT</span> <b id="picked">THE HUNT</b><span id="picked-sub">Survive the horde</span><span class="who" id="who"></span></div>
     </div>
   </section>
 </main>
 
 <nav class="modes">
   <div class="list">
-    <button class="mode selected" data-mode="hunt"><b>THE HUNT</b>Survive the horde</button>
-    <button class="mode" data-mode="showdown"><b>THE DUEL</b>Best of three</button>
-    <button class="mode locked" data-mode="duo"><b>SKIRMISH 2V2</b>Coming soon</button>
+    <button class="mode selected" data-mode="hunt"><b data-i18n="mode.hunt">THE HUNT</b><span data-i18n="mode.huntSub">Survive the horde</span></button>
+    <button class="mode" data-mode="showdown"><b data-i18n="mode.duel">THE DUEL</b><span data-i18n="mode.duelSub">Best of three</span></button>
+    <button class="mode locked" data-mode="duo"><b data-i18n="mode.duo">SKIRMISH 2V2</b><span data-i18n="mode.duoSub">Coming soon</span></button>
   </div>
-  <button class="btn play" id="play">TO BATTLE</button>
+  <button class="btn play" id="play" data-i18n="play">TO BATTLE</button>
 </nav>
 
 <div class="modal" id="signup" hidden>
   <form class="lobby" id="signup-form">
-    <div class="lobby-head"><h1>WHO GOES THERE?<small id="auth-sub">NAME THYSELF, SELLSWORD</small></h1></div>
+    <div class="lobby-head"><h1><span data-i18n="auth.title">WHO GOES THERE?</span><small id="auth-sub">NAME THYSELF, SELLSWORD</small></h1></div>
     <div class="lobby-body">
-      <div class="tabs"><button type="button" class="tab on" data-auth="signup">NEW SELLSWORD</button><button type="button" class="tab" data-auth="login">RETURNING</button></div>
-      <label class="field">NAME<input id="username" maxlength="16" autocomplete="username" spellcheck="false" required placeholder="3–16 letters, numbers or _"></label>
-      <label class="field">PASSWORD<input id="password" type="password" minlength="6" maxlength="72" autocomplete="new-password" required placeholder="At least 6 characters"></label>
+      <div class="tabs"><button type="button" class="tab on" data-auth="signup" data-i18n="auth.tabSignup">NEW SELLSWORD</button><button type="button" class="tab" data-auth="login" data-i18n="auth.tabLogin">RETURNING</button></div>
+      <label class="field"><span data-i18n="auth.name">NAME</span><input id="username" maxlength="16" autocomplete="username" spellcheck="false" required placeholder="3–16 letters, numbers or _" data-i18n-placeholder="auth.namePh"></label>
+      <label class="field"><span data-i18n="auth.password">PASSWORD</span><input id="password" type="password" minlength="6" maxlength="72" autocomplete="new-password" required placeholder="At least 6 characters" data-i18n-placeholder="auth.passwordPh"></label>
       <button class="btn small wide" id="auth-submit">SWEAR IN</button>
       <div class="notice" id="signup-notice" role="status"></div>
     </div>
@@ -1027,12 +1063,12 @@ main {
 
 <div class="modal" id="legends" hidden>
   <div class="lobby legends-card" role="dialog" aria-labelledby="legends-title">
-    <div class="lobby-head"><h1 id="legends-title">HALL OF LEGENDS<small>THE REALM REMEMBERS</small></h1><button class="close" id="legends-close" aria-label="Close">✕</button></div>
+    <div class="lobby-head"><h1 id="legends-title"><span data-i18n="legends.title">HALL OF LEGENDS</span><small data-i18n="legends.sub">THE REALM REMEMBERS</small></h1><button class="close" id="legends-close" aria-label="Close" data-i18n-aria="close">✕</button></div>
     <div class="lobby-body">
       <div class="ledger" id="ledger"></div>
       <div class="boards">
-        <section><h2>THE HUNT · BOUNTIES</h2><ol id="board-hunt"></ol></section>
-        <section><h2>THE DUEL · VICTORIES</h2><ol id="board-duel"></ol></section>
+        <section><h2 data-i18n="legends.hunt">THE HUNT · BOUNTIES</h2><ol id="board-hunt"></ol></section>
+        <section><h2 data-i18n="legends.duel">THE DUEL · VICTORIES</h2><ol id="board-duel"></ol></section>
       </div>
       <div class="notice" id="legends-notice" role="status"></div>
     </div>
@@ -1041,16 +1077,27 @@ main {
 
 <div class="modal" id="armory" hidden>
   <div class="lobby armory-card" role="dialog" aria-labelledby="armory-title">
-    <div class="lobby-head"><h1 id="armory-title">THE ARMORY<small>STEEL FOR THE HUNT</small></h1><button class="close" id="armory-close" aria-label="Close">✕</button></div>
+    <div class="lobby-head"><h1 id="armory-title"><span data-i18n="armory.title">THE ARMORY</span><small data-i18n="armory.sub">STEEL FOR THE HUNT</small></h1><button class="close" id="armory-close" aria-label="Close" data-i18n-aria="close">✕</button></div>
     <div class="lobby-body">
-      <div class="purse">Your purse holds <b id="purse">0</b> gold. Every upgrade lasts for good and is ready on your next Hunt.</div>
+      <div class="purse"><span data-i18n="armory.purseBefore">Your purse holds </span><b id="purse">0</b><span data-i18n="armory.purseAfter"> gold. Every upgrade lasts for good and is ready on your next Hunt.</span></div>
       <div class="wares" id="wares"></div>
       <div class="notice" id="armory-notice" role="status"></div>
     </div>
   </div>
 </div>
 
+<div class="modal" id="settings" hidden>
+  <div class="lobby settings-card" role="dialog" aria-labelledby="settings-title">
+    <div class="lobby-head"><h1 id="settings-title"><span data-i18n="settings.title">SETTINGS</span><small data-i18n="settings.sub">SET YOUR TERMS</small></h1><button class="close" id="settings-close" aria-label="Close" data-i18n-aria="close">✕</button></div>
+    <div class="lobby-body">
+      <div class="setting-label" id="lang-label" data-i18n="settings.language">LANGUAGE</div>
+      <div class="tabs" role="radiogroup" aria-labelledby="lang-label" id="lang-choices"></div>
+    </div>
+  </div>
+</div>
+
 <script src="config.js"></script>
+<script src="i18n.js"></script>
 <script>
 const PARTY_SIZE = 4;
 const $ = sel => document.querySelector(sel);
@@ -1066,6 +1113,11 @@ let noticeTimer = null;
 let profile = null; // our gold and stats, from the server
 let armory = []; // the upgrade catalog, from the server
 let authMode = 'signup'; // or 'login'
+let status = ['status.connecting']; // translation key + values for the line under YOUR WARBAND
+function setStatus(key, vars) {
+    status = [key, vars];
+    $('#status').textContent = tr(key, vars);
+}
 function sendMsg(msg) {
     if (socket && socket.readyState === WebSocket.OPEN)
         socket.send(JSON.stringify(msg));
@@ -1078,7 +1130,7 @@ function notify(text, el = $('#notice')) {
 
 // ---- connection ----
 function connect() {
-    $('#status').textContent = 'CONNECTING…';
+    setStatus('status.connecting');
     socket = new WebSocket(SERVER.ws);
     socket.onopen = () => {
         retries = 0;
@@ -1092,7 +1144,7 @@ function connect() {
     socket.onclose = () => {
         if (replaced)
             return;
-        $('#status').textContent = 'OFFLINE · RECONNECTING…';
+        setStatus('status.offline');
         setTimeout(connect, Math.min(1000 * 2 ** retries++, 10000));
     };
 }
@@ -1107,7 +1159,7 @@ function onMessage(msg) {
             profile = null;
             showProfile();
             $('#party').replaceChildren();
-            $('#status').textContent = 'NOT YET SWORN IN';
+            setStatus('status.notSworn');
             $('#logout').hidden = true;
             $('#auth-submit').disabled = false;
             $('#signup').hidden = false;
@@ -1120,7 +1172,7 @@ function onMessage(msg) {
             $('#signup').hidden = true;
             $('#password').value = '';
             $('#logout').hidden = false;
-            $('#status').textContent = 'SWORN AS ' + msg.username.toUpperCase();
+            setStatus('status.sworn', { name: msg.username.toUpperCase() });
             profile = msg.profile;
             armory = msg.armory || [];
             showProfile();
@@ -1135,7 +1187,7 @@ function onMessage(msg) {
             break;
         case 'lobbyError':
             $('#auth-submit').disabled = false;
-            notify(msg.message, !$('#signup').hidden ? $('#signup-notice') : !$('#armory').hidden ? $('#armory-notice') : $('#notice'));
+            notify(trServer(msg.message), !$('#signup').hidden ? $('#signup-notice') : !$('#armory').hidden ? $('#armory-notice') : $('#notice'));
             if (!$('#armory').hidden)
                 renderArmory();
             break;
@@ -1146,7 +1198,7 @@ function onMessage(msg) {
             break;
         case 'replaced':
             replaced = true;
-            $('#status').textContent = 'OPENED IN ANOTHER TAB';
+            setStatus('status.replaced');
             break;
     }
 }
@@ -1156,7 +1208,9 @@ function slotEl(member) {
     const slot = document.createElement('div');
     if (!member) {
         slot.className = 'slot empty';
-        slot.innerHTML = '<div class="num plus">+</div><span class="empty-label">UNCLAIMED<small>Awaiting a sellsword</small></span>';
+        slot.innerHTML = '<div class="num plus">+</div><span class="empty-label"><span></span><small></small></span>';
+        slot.querySelector('.empty-label span').textContent = tr('slot.empty');
+        slot.querySelector('.empty-label small').textContent = tr('slot.emptySub');
         return slot;
     }
     slot.className = 'slot' + (member.online ? '' : ' away');
@@ -1164,10 +1218,10 @@ function slotEl(member) {
     slot.querySelector('.num').textContent = member.username[0].toUpperCase();
     slot.querySelector('.name').textContent = member.username;
     if (member.leader)
-        slot.querySelector('b').insertAdjacentHTML('beforeend', '<span class="host" title="Captain">♛</span>');
-    slot.querySelector('small').textContent = !member.online ? 'RECONNECTING…' : member.leader ? 'CAPTAIN' : 'SELLSWORD';
+        slot.querySelector('b').append(Object.assign(document.createElement('span'), { className: 'host', title: tr('slot.captainTitle'), textContent: '♛' }));
+    slot.querySelector('small').textContent = tr(!member.online ? 'slot.reconnecting' : member.leader ? 'slot.captain' : 'slot.sellsword');
     if (member.you)
-        slot.insertAdjacentHTML('afterbegin', '<span class="tag">YOU</span>');
+        slot.prepend(Object.assign(document.createElement('span'), { className: 'tag', textContent: tr('slot.you') }));
     return slot;
 }
 
@@ -1177,7 +1231,7 @@ function render() {
     list.replaceChildren(...Array.from({ length: PARTY_SIZE }, (_, i) => slotEl(members[i])));
     document.querySelectorAll('.pips i').forEach((pip, i) => pip.classList.toggle('on', i < members.length));
     $('#count b').textContent = `${members.length}/${PARTY_SIZE}`;
-    $('#count').setAttribute('aria-label', `${members.length} of ${PARTY_SIZE} players`);
+    $('#count').setAttribute('aria-label', tr('count.aria', { n: members.length, max: PARTY_SIZE }));
     if (document.activeElement !== code)
         code.value = party.code;
     updateCodeButton();
@@ -1186,14 +1240,14 @@ function render() {
     const who = $('#who');
     who.replaceChildren();
     if (party.youAreLeader) {
-        who.textContent = 'YOU CHOOSE THE CONTRACT';
+        who.textContent = tr('who.you');
     } else {
-        who.textContent = leaderName.toUpperCase() + ' CHOOSES · ';
+        who.textContent = tr('who.leader', { name: leaderName.toUpperCase() });
     }
     if (members.length > 1) {
         const leave = document.createElement('button');
         leave.className = 'leave';
-        leave.textContent = 'LEAVE WARBAND';
+        leave.textContent = tr('leaveWarband');
         leave.onclick = () => sendMsg({ type: 'leaveParty' });
         if (party.youAreLeader)
             who.append(' · ');
@@ -1221,7 +1275,7 @@ modeButtons.forEach(b => b.onclick = () => {
     if (!party)
         return showMode(b.dataset.mode); // offline: pick locally
     if (!party.youAreLeader)
-        return notify('Only the captain can choose the contract');
+        return notify(trServer('Only the captain can choose the contract'));
     sendMsg({ type: 'setMode', mode: b.dataset.mode });
 });
 
@@ -1231,7 +1285,7 @@ function wantsJoin() {
     return party && typed.length === 6 && typed !== party.code;
 }
 function updateCodeButton() {
-    copyBtn.textContent = wantsJoin() ? 'JOIN' : 'COPY';
+    copyBtn.textContent = tr(wantsJoin() ? 'seal.join' : 'seal.copy');
 }
 code.oninput = updateCodeButton;
 code.onblur = () => {
@@ -1254,28 +1308,31 @@ copyBtn.onclick = async () => {
         await navigator.clipboard.writeText(code.value);
     }
     catch { }
-    copyBtn.textContent = 'COPIED!';
+    copyBtn.textContent = tr('seal.copied');
     copyBtn.classList.add('done');
     setTimeout(() => { copyBtn.classList.remove('done'); updateCodeButton(); }, 1200);
 };
 
 // ---- sign up / log in ----
 const AUTH_COPY = {
-    signup: { sub: 'NAME THYSELF, SELLSWORD', button: 'SWEAR IN', autocomplete: 'new-password' },
-    login: { sub: 'WELCOME BACK, SELLSWORD', button: 'RETURN TO THE HALL', autocomplete: 'current-password' },
+    signup: { sub: 'auth.subSignup', button: 'auth.btnSignup', autocomplete: 'new-password' },
+    login: { sub: 'auth.subLogin', button: 'auth.btnLogin', autocomplete: 'current-password' },
 };
-document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
-    authMode = t.dataset.auth;
-    document.querySelectorAll('.tab').forEach(o => o.classList.toggle('on', o === t));
-    $('#auth-sub').textContent = AUTH_COPY[authMode].sub;
-    $('#auth-submit').textContent = AUTH_COPY[authMode].button;
+function setAuthMode(next) {
+    authMode = next;
+    document.querySelectorAll('[data-auth]').forEach(o => o.classList.toggle('on', o.dataset.auth === next));
+    $('#auth-sub').textContent = tr(AUTH_COPY[authMode].sub);
+    $('#auth-submit').textContent = tr(AUTH_COPY[authMode].button);
     $('#password').autocomplete = AUTH_COPY[authMode].autocomplete;
+}
+document.querySelectorAll('[data-auth]').forEach(t => t.onclick = () => {
+    setAuthMode(t.dataset.auth);
     $('#signup-notice').textContent = '';
 });
 $('#signup-form').onsubmit = e => {
     e.preventDefault();
     if (!socket || socket.readyState !== WebSocket.OPEN)
-        return notify('The hall is unreachable. Retrying…', $('#signup-notice'));
+        return notify(tr('auth.unreachable'), $('#signup-notice'));
     $('#auth-submit').disabled = true;
     sendMsg({ type: authMode, username: $('#username').value.trim(), password: $('#password').value });
 };
@@ -1308,31 +1365,32 @@ async function openLegends() {
     const ledger = $('#ledger');
     ledger.replaceChildren();
     if (profile) {
-        const stats = [['GOLD', profile.gold], ['BEST BOUNTY', profile.bestBounty], ['BEST WAVE', profile.bestWave],
-            ['KILLS', profile.totalKills], ['HUNTS', profile.huntRuns], ['DUELS', `${profile.duelWins}–${profile.duelLosses}`]];
-        for (const [label, value] of stats) {
+        const stats = [['stat.gold', profile.gold], ['stat.bestBounty', profile.bestBounty], ['stat.bestWave', profile.bestWave],
+            ['stat.kills', profile.totalKills], ['stat.hunts', profile.huntRuns], ['stat.duels', `${profile.duelWins}–${profile.duelLosses}`]];
+        for (const [key, value] of stats) {
+            const label = tr(key);
             const d = document.createElement('div');
             d.append(Object.assign(document.createElement('small'), { textContent: label }),
                 Object.assign(document.createElement('b'), { textContent: value }));
             ledger.append(d);
         }
     }
-    $('#legends-notice').textContent = 'Consulting the chronicles…';
+    $('#legends-notice').textContent = tr('legends.loading');
     try {
         const res = await fetch(SERVER.api + '/api/leaderboard');
         if (!res.ok)
             throw new Error(res.status);
         const board = await res.json();
         $('#board-hunt').replaceChildren(...(board.hunt.length
-            ? board.hunt.map((r, i) => boardRow(i + 1, r.username, `${r.bestBounty} · W${r.bestWave}`))
-            : [emptyRow('No bounties claimed yet.')]));
+            ? board.hunt.map((r, i) => boardRow(i + 1, r.username, tr('legends.bountyRow', { bounty: r.bestBounty, wave: r.bestWave })))
+            : [emptyRow(tr('legends.noHunt'))]));
         $('#board-duel').replaceChildren(...(board.duel.length
             ? board.duel.map((r, i) => boardRow(i + 1, r.username, `${r.wins}–${r.losses}`))
-            : [emptyRow('No duels fought yet.')]));
+            : [emptyRow(tr('legends.noDuel'))]));
         $('#legends-notice').textContent = '';
     }
     catch {
-        $('#legends-notice').textContent = 'The chronicles could not be reached. Try again shortly.';
+        $('#legends-notice').textContent = tr('legends.failed');
     }
 }
 // ---- armory ----
@@ -1345,34 +1403,35 @@ function renderArmory() {
         const card = Object.assign(document.createElement('div'), { className: 'ware' });
         const h = document.createElement('h3');
         const pips = Object.assign(document.createElement('span'), { className: 'pips' });
-        pips.setAttribute('aria-label', `Level ${level} of ${u.costs.length}`);
+        pips.setAttribute('aria-label', tr('armory.level', { n: level, max: u.costs.length }));
         for (let i = 0; i < u.costs.length; i++)
             pips.append(Object.assign(document.createElement('i'), { className: i < level ? 'on' : '' }));
-        h.append(u.name, pips);
+        const text = trUpgrade(u);
+        h.append(text.name, pips);
         const btn = Object.assign(document.createElement('button'), { className: 'btn small' });
         if (maxed) {
-            btn.textContent = 'MASTERED';
+            btn.textContent = tr('armory.mastered');
             btn.disabled = true;
         }
         else {
-            btn.textContent = `FORGE · ${cost} GOLD`;
+            btn.textContent = tr('armory.forge', { cost });
             btn.disabled = !profile || gold < cost;
             btn.onclick = () => {
                 btn.disabled = true; // until the server answers with a new profile
                 sendMsg({ type: 'buyUpgrade', id: u.id });
             };
         }
-        card.append(h, Object.assign(document.createElement('p'), { textContent: u.desc }),
+        card.append(h, Object.assign(document.createElement('p'), { textContent: text.desc }),
             Object.assign(document.createElement('div'), {
                 className: 'effect',
-                textContent: maxed ? u.labels[level] : `${u.labels[level]} → ${u.labels[level + 1]}`,
+                textContent: maxed ? trLabel(u.labels[level]) : `${trLabel(u.labels[level])} → ${trLabel(u.labels[level + 1])}`,
             }), btn);
         return card;
     }));
 }
 function openArmory() {
     $('#armory').hidden = false;
-    $('#armory-notice').textContent = profile ? '' : 'Swear in before you visit the smith.';
+    $('#armory-notice').textContent = profile ? '' : tr('armory.signIn');
     renderArmory();
     $('#armory-close').focus();
 }
@@ -1413,20 +1472,14 @@ $('#play').onclick = () => {
 // ---- loading screen ----
 // Shown once per browser session. Waits for the fonts and the server (Render's
 // free tier can take a while to wake up), but never blocks for more than ~6s.
-const LORE = [
-    'Gold buys steel. Steel buys gold.',
-    'A sellsword\u2019s oath lasts exactly as long as his pay.',
-    'The Ashen Realm remembers every debt.',
-    'Fight for coin. Die for nothing.',
-    'No banner flies over the Bloodsworn.',
-];
+const LORE_COUNT = 5; // lore.0 … lore.4 in i18n.js
 let serverReady = false;
 function markServerReady() {
     if (serverReady)
         return;
     serverReady = true;
     $('#loadbar').style.width = '80%';
-    $('#loadtext').textContent = 'Rousing the sellswords\u2026';
+    $('#loadtext').textContent = tr('load.rouse');
 }
 (function runLoader() {
     const loader = $('#loader');
@@ -1439,13 +1492,13 @@ function markServerReady() {
         loader.hidden = true;
         return;
     }
-    $('#lore').textContent = '\u201c' + LORE[Math.floor(Math.random() * LORE.length)] + '\u201d';
+    $('#lore').textContent = '\u201c' + tr('lore.' + Math.floor(Math.random() * LORE_COUNT)) + '\u201d';
     const bar = $('#loadbar'), text = $('#loadtext');
     requestAnimationFrame(() => bar.style.width = '15%');
     const fonts = (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => {
         if (!serverReady) {
             bar.style.width = '45%';
-            text.textContent = 'Sharpening steel\u2026';
+            text.textContent = tr('load.sharpen');
         }
     });
     const server = new Promise(resolve => {
@@ -1453,15 +1506,59 @@ function markServerReady() {
         const done = () => { clearInterval(poll); resolve(); };
         setTimeout(done, 6000);
     });
-    const slow = setTimeout(() => serverReady || (text.textContent = 'The gatekeeper is slow to wake\u2026'), 2500);
+    const slow = setTimeout(() => serverReady || (text.textContent = tr('load.slow')), 2500);
     Promise.all([fonts, server, new Promise(r => setTimeout(r, 1800))]).then(() => {
         clearTimeout(slow);
         bar.style.width = '100%';
-        text.textContent = 'The gates open.';
+        text.textContent = tr('load.open');
         setTimeout(() => loader.classList.add('done'), 500);
     });
 })();
 
+// ---- settings ----
+function renderLangChoices() {
+    $('#lang-choices').replaceChildren(...Object.entries(LANGS).map(([code, name]) => {
+        const b = Object.assign(document.createElement('button'), { type: 'button', className: 'tab' + (code === LANG ? ' on' : ''), textContent: name });
+        b.lang = code;
+        b.setAttribute('role', 'radio');
+        b.setAttribute('aria-checked', String(code === LANG));
+        b.onclick = () => setLang(code);
+        return b;
+    }));
+}
+function openSettings() {
+    renderLangChoices();
+    $('#settings').hidden = false;
+    $('#settings-close').focus();
+}
+function closeSettings() {
+    $('#settings').hidden = true;
+    $('#settings-btn').focus();
+}
+$('#settings-btn').onclick = openSettings;
+$('#settings-close').onclick = closeSettings;
+$('#settings').onclick = e => e.target === $('#settings') && closeSettings();
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !$('#settings').hidden)
+        closeSettings();
+});
+// Redraw everything built in code when the language changes.
+window.addEventListener('langchange', () => {
+    setStatus(...status);
+    setAuthMode(authMode);
+    updateCodeButton();
+    showMode(mode);
+    if (party)
+        render();
+    renderLangChoices();
+    if (!$('#armory').hidden)
+        renderArmory();
+    if (!$('#legends').hidden)
+        openLegends();
+});
+
+applyI18n();
+window.dispatchEvent(new Event('langchange')); // fill in the text built in code, too
 connect();
 </script>
 </body></html>

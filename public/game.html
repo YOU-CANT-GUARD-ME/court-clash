@@ -6,7 +6,7 @@
 <title>BLOODSWORN — THE HUNT</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=EB+Garamond:wght@500;700&family=Pirata+One&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=EB+Garamond:wght@500;700&family=Pirata+One&family=Noto+Serif+KR:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
 * {
   margin: 0;
@@ -30,6 +30,7 @@ canvas {
 <body>
 <canvas id="c"></canvas>
 <script src="config.js"></script>
+<script src="i18n.js"></script>
 <script>
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
@@ -595,7 +596,7 @@ function drawBrute(e, camX, camY) {
         ctx.fillRect(-r * 0.32, -r * 0.05, r * 0.64, r * 0.1);
         ctx.restore();
     });
-    foeLabel('DREAD KNIGHT', sx, sy - r - 15, '#c8b48a');
+    foeLabel(tr('foe.knight'), sx, sy - r - 15, '#c8b48a');
     drawHealthBar(e, sx, sy);
     for (const b of e.bullets)
         drawBolt(b, camX, camY, '#2a2a2a', '#d0d4da', '#ff5020', 18);
@@ -643,7 +644,7 @@ function drawBomber(e, camX, camY) {
         ctx.arc(fx, fy, 5 + pulse * 3, 0, Math.PI * 2);
         ctx.fill();
     });
-    foeLabel('SAPPER', sx, sy - r - 15, '#ffb050');
+    foeLabel(tr('foe.sapper'), sx, sy - r - 15, '#ffb050');
     drawHealthBar(e, sx, sy);
 }
 // Warlord: cape, black-and-gold armour, horned helm, greatsword (aflame when berserk).
@@ -750,7 +751,7 @@ function drawBoss(e, camX, camY) {
         ctx.restore();
     });
     const tierStr = e.tier <= 4 ? 'I'.repeat(e.tier) : `T${e.tier}`;
-    drawText(`WARLORD ${tierStr}`, sx, sy - r - 16, { size: 12, family: 'display', align: 'center', color: berserk ? '#ff6a3a' : '#c9a24a',
+    drawText(tr('foe.warlord', { tier: tierStr }), sx, sy - r - 16, { size: 12, family: 'display', align: 'center', color: berserk ? '#ff6a3a' : '#c9a24a',
         spacing: 1.5, shadow: 'rgba(0,0,0,0.9)', shadowOffset: 1 });
     const bw = 64, bh = 6, frac = Math.max(0, e.health / e.maxHealth), hy = sy - r - 11;
     ctx.fillStyle = 'rgba(0,0,0,0.85)';
@@ -1235,10 +1236,11 @@ function spawnEnemies(wave) {
 const UI = { navy: '#14110f', navy2: '#3d352e', navy3: '#070605', orange: '#8e1c1c', orangeD: '#3a0808',
     gold: '#c9a24a', goldD: '#7a5a1e', paper: '#e6d8b8', ink: '#2a1d12', brown: '#5a4630', muted: '#9a8b74',
     red: '#e0503a', cyan: '#a8cce4' };
-const FONTS = { display: ["'Cinzel', Georgia, serif", 900], num: ["'Cinzel', Georgia, serif", 700],
-    ui: ["'Cinzel', Georgia, serif", 700], body: ["'EB Garamond', Georgia, serif", 500],
-    title: ["'Pirata One', Georgia, serif", 400] };
-const CONTROLS = [['WASD', 'Move'], ['CLICK', 'Fire'], ['SPACE', 'Roll'], ['G', 'Firepot'], ['R', 'Reload'], ['P', 'Pause'], ['F', 'Fullscreen']];
+const FONTS = { display: ["'Cinzel', 'Noto Serif KR', Georgia, serif", 900], num: ["'Cinzel', 'Noto Serif KR', Georgia, serif", 700],
+    ui: ["'Cinzel', 'Noto Serif KR', Georgia, serif", 700], body: ["'EB Garamond', 'Noto Serif KR', Georgia, serif", 500],
+    title: ["'Pirata One', 'Noto Serif KR', Georgia, serif", 400] };
+const CONTROLS = [['WASD', 'ctl.move'], ['key.click', 'ctl.fire'], ['key.space', 'ctl.roll'], ['G', 'ctl.firepot'], ['R', 'ctl.reload'], ['P', 'ctl.pause'], ['F', 'ctl.fullscreen']];
+function controls() { return CONTROLS.map(([k, label]) => [k.includes('.') ? tr(k) : k, tr(label)]); }
 const BEST_KEY = 'bloodsworn.hunt.best';
 const popups = []; // floating "+100" score text, in world coordinates
 let uiButtons = []; // clickable canvas buttons, rebuilt every frame
@@ -1513,15 +1515,15 @@ function drawHUD(player, enemies) {
     // Scoreboard (top-centre, clear of the top-left spawn corner)
     const sbx = W / 2 - 118, sby = 16;
     panel(sbx, sby, 236, 72, { accent: UI.orange });
-    drawText('BOUNTY', sbx + 16, sby + 22, { size: 9, color: UI.muted, spacing: 2 });
+    drawText(tr('hud.bounty'), sbx + 16, sby + 22, { size: 9, color: UI.muted, spacing: 2 });
     drawText(String(shownScore).padStart(6, '0'), sbx + 16, sby + 56, { size: 24, family: 'num', color: counting ? '#fff2c8' : UI.gold, spacing: 1 });
     ctx.fillStyle = UI.navy2;
     ctx.fillRect(sbx + 156, sby + 14, 2, 46);
-    drawText('WAVE', sbx + 170, sby + 22, { size: 9, color: UI.muted, spacing: 2 });
+    drawText(tr('hud.wave'), sbx + 170, sby + 22, { size: 9, color: UI.muted, spacing: 2 });
     drawText(String(player.wave).padStart(2, '0'), sbx + 170, sby + 56, { size: 24, family: 'num', color: UI.paper, spacing: 1 });
     // Opponents left
     const alive = enemies.filter(e => e.alive).length;
-    const status = spawnCountdown > 0 ? 'THE NEXT WAVE GATHERS' : alive ? `${alive} FOE${alive === 1 ? '' : 'S'} REMAIN${alive === 1 ? 'S' : ''}` : 'THE FIELD IS CLEAR';
+    const status = spawnCountdown > 0 ? tr('hud.gathers') : alive ? tr(alive === 1 ? 'hud.foe' : 'hud.foes', { n: alive }) : tr('hud.clear');
     const stw = textWidth(status, 10, 'ui', 1) + 38;
     const stx = W / 2 - stw / 2;
     panel(stx, sby + 84, stw, 26, { r: 13, shadow: false });
@@ -1536,10 +1538,10 @@ function drawHUD(player, enemies) {
     drawCrest(px + 41, py + 43, 26);
     const hp = Math.max(0, player.health);
     const [hA, hB] = healthColors(hp / player.maxHealth * 100);
-    drawText('HEALTH', px + 82, py + 27, { size: 9, color: UI.muted, spacing: 2 });
+    drawText(tr('hud.health'), px + 82, py + 27, { size: 9, color: UI.muted, spacing: 2 });
     drawText(String(Math.ceil(hp)), px + pw - 16, py + 29, { size: 18, family: 'num', align: 'right', color: hA });
     meter(px + 82, py + 35, pw - 98, 14, hp / player.maxHealth, hA, hB);
-    drawText('FIREPOTS', px + 82, py + 70, { size: 9, color: UI.muted, spacing: 2 });
+    drawText(tr('hud.firepots'), px + 82, py + 70, { size: 9, color: UI.muted, spacing: 2 });
     const shownBalls = Math.min(5, Math.max(3, player.grenades));
     for (let i = 0; i < shownBalls; i++)
         drawFirepot(px + 166 + i * 18, py + 66, 6, i < player.grenades);
@@ -1548,14 +1550,14 @@ function drawHUD(player, enemies) {
     // Status chips above the player panel
     const chips = [];
     if (player.spawnImmunity > 0)
-        chips.push({ text: 'WARDED', color: UI.cyan, frac: player.spawnImmunity / 180 });
+        chips.push({ text: tr('chip.warded'), color: UI.cyan, frac: player.spawnImmunity / 180 });
     const dmg = player.bulletDamage * player.damageMult;
     if (dmg > 1)
-        chips.push({ text: `DMG ×${+dmg.toFixed(1)}`, color: UI.gold });
+        chips.push({ text: tr('chip.dmg', { n: +dmg.toFixed(1) }), color: UI.gold });
     if (player.speed > BASE_SPEED)
-        chips.push({ text: `SPEED ${player.speed.toFixed(1)}`, color: UI.gold });
+        chips.push({ text: tr('chip.speed', { n: player.speed.toFixed(1) }), color: UI.gold });
     if (player.damageReduction > 0)
-        chips.push({ text: `ARMOR ${Math.round(player.damageReduction * 100)}%`, color: UI.gold });
+        chips.push({ text: tr('chip.armor', { n: Math.round(player.damageReduction * 100) }), color: UI.gold });
     let cx = px;
     for (const c of chips) {
         const w = textWidth(c.text, 10, 'ui', 1) + 22 + (c.frac != null ? 50 : 0);
@@ -1568,7 +1570,7 @@ function drawHUD(player, enemies) {
     // Ammo panel (bottom-right)
     const aw = 214, ax = W - aw - 16, ay = py;
     panel(ax, ay, aw, ph, { accent: player.ammo ? UI.orange : UI.red });
-    drawText('BOLTS', ax + 16, ay + 27, { size: 9, color: UI.muted, spacing: 2 });
+    drawText(tr('hud.bolts'), ax + 16, ay + 27, { size: 9, color: UI.muted, spacing: 2 });
     const ammoCol = player.ammo === 0 ? UI.red : player.ammo <= 5 ? '#ffc24a' : UI.paper;
     drawText(String(player.ammo), ax + 16, ay + 68, { size: 32, family: 'num', color: ammoCol });
     const pipX = ax + aw - 16 - 100;
@@ -1580,10 +1582,10 @@ function drawHUD(player, enemies) {
         ctx.fill();
     }
     if (player.ammo > player.magSize)
-        drawText(`+${player.ammo - player.magSize} RESERVE`, ax + aw - 16, ay + 68, { size: 9, color: UI.muted, align: 'right', spacing: 1 });
+        drawText(tr('hud.reserve', { n: player.ammo - player.magSize }), ax + aw - 16, ay + 68, { size: 9, color: UI.muted, align: 'right', spacing: 1 });
     else if (player.ammo === 0) {
         const kw = keycap('R', pipX, ay + 52);
-        drawText('RELOAD', pipX + kw + 8, ay + 66, { size: 11, color: UI.red, spacing: 1, alpha: 0.6 + Math.abs(Math.sin(Date.now() * 0.008)) * 0.4 });
+        drawText(tr('hud.reload'), pipX + kw + 8, ay + 66, { size: 11, color: UI.red, spacing: 1, alpha: 0.6 + Math.abs(Math.sin(Date.now() * 0.008)) * 0.4 });
     }
     // Controls reminder for the first few seconds of a run
     const hintAlpha = hudTime < 420 ? 1 : Math.max(0, 1 - (hudTime - 420) / 60);
@@ -1600,7 +1602,7 @@ function drawHUD(player, enemies) {
         const berserk = boss.phase === 2;
         const tierStr = boss.tier <= 4 ? 'I'.repeat(boss.tier) : `T${boss.tier}`;
         panel(bx, by, bw, 60, { fill: 'rgba(24,6,5,0.92)', stroke: berserk ? '#e0503a' : '#5a1410' });
-        const nw = drawText(`WARLORD ${tierStr}`, bx + 16, by + 27, { size: 17, family: 'display', color: berserk ? '#ff6a3a' : '#ff9a60', spacing: 1 });
+        const nw = drawText(tr('foe.warlord', { tier: tierStr }), bx + 16, by + 27, { size: 17, family: 'display', color: berserk ? '#ff6a3a' : '#ff9a60', spacing: 1 });
         if (berserk) {
             const a = 0.6 + Math.abs(Math.sin(Date.now() * 0.01)) * 0.4;
             ctx.save();
@@ -1609,14 +1611,14 @@ function drawHUD(player, enemies) {
             ctx.fillStyle = '#ff3c14';
             ctx.fill();
             ctx.restore();
-            drawText('BERSERK', bx + 61 + nw, by + 22, { size: 9, align: 'center', baseline: 'middle', spacing: 1 });
+            drawText(tr('hud.berserk'), bx + 61 + nw, by + 22, { size: 9, align: 'center', baseline: 'middle', spacing: 1 });
         }
         drawText(`${Math.ceil(Math.max(0, boss.health))} / ${boss.maxHealth}`, bx + bw - 16, by + 26, { size: 14, family: 'num', align: 'right' });
         meter(bx + 16, by + 36, bw - 32, 12, boss.health / boss.maxHealth, berserk ? '#ff8a3a' : '#ff6a2a', '#b01808');
     }
 }
 function drawControls(cx, y) {
-    const items = CONTROLS.map(([k, label]) => ({ k, label, w: Math.max(22, textWidth(k, 10) + 12) + 6 + textWidth(label, 11) }));
+    const items = controls().map(([k, label]) => ({ k, label, w: Math.max(22, textWidth(k, 10) + 12) + 6 + textWidth(label, 11) }));
     const total = items.reduce((s, i) => s + i.w, 0) + (items.length - 1) * 18 + 32;
     panel(cx - total / 2, y - 8, total, 36, { r: 18, shadow: false });
     let x = cx - total / 2 + 16;
@@ -1674,7 +1676,7 @@ function drawMinimap(player, enemies, camX, camY) {
     const s = MM_SCALE, mw = MAP_W * s, mh = MAP_H * s, pad = 10;
     const x = W - mw - pad * 2 - 16, y = 16;
     panel(x, y, mw + pad * 2, mh + pad + 30, { accent: UI.orange });
-    drawText('WAR MAP', x + pad, y + 19, { size: 9, color: UI.muted, spacing: 2 });
+    drawText(tr('hud.warMap'), x + pad, y + 19, { size: 9, color: UI.muted, spacing: 2 });
     const ox = x + pad, oy = y + 27;
     ctx.save();
     roundRect(ox, oy, mw, mh, 6);
@@ -1709,12 +1711,13 @@ function drawMinimap(player, enemies, camX, camY) {
 }
 // ── POWERUP SCREEN ────────────────────────────────────────────────────────────
 const POWERUPS = [
-    { id: 'heal', name: "HEALER'S DRAUGHT", desc: 'Restore your health in full', icon: 'heal' },
-    { id: 'ammo', name: 'BOLT QUIVER', desc: 'More bolts, grows each wave', icon: 'ammo' },
-    { id: 'speed', name: 'FLEET BOOTS', desc: 'Move faster, a modest gain', icon: 'speed' },
-    { id: 'damage', name: 'HEAVY BOLTS', desc: 'Bolt damage up, scales per wave', icon: 'damage' },
-    { id: 'firepot', name: 'FIREPOT SATCHEL', desc: 'More firepots, more per wave', icon: 'boost' },
-    { id: 'armor', name: 'IRON SKIN', desc: 'Damage reduction, stacks to 95%', icon: 'armor' },
+    // Names and descriptions are pu.<id> and pu.<id>Desc in i18n.js.
+    { id: 'heal', icon: 'heal' },
+    { id: 'ammo', icon: 'ammo' },
+    { id: 'speed', icon: 'speed' },
+    { id: 'damage', icon: 'damage' },
+    { id: 'firepot', icon: 'boost' },
+    { id: 'armor', icon: 'armor' },
 ];
 function applyPowerup(player, p) {
     const w = player.wave;
@@ -1735,11 +1738,11 @@ function applyPowerup(player, p) {
 function powerupEffect(player, p) {
     const w = player.wave;
     switch (p.id) {
-        case 'heal': return `${Math.ceil(player.health)} → ${player.maxHealth} HP`;
-        case 'ammo': return `+${100 + w * 50} BOLTS`;
+        case 'heal': return tr('pu.effHeal', { from: Math.ceil(player.health), to: player.maxHealth });
+        case 'ammo': return tr('pu.effAmmo', { n: 100 + w * 50 });
         case 'speed': return `${player.speed.toFixed(1)} → ${Math.min(player.speed + 0.35 + w * 0.05, MAX_SPEED).toFixed(1)}`;
-        case 'damage': return `DMG ${player.bulletDamage} → ${player.bulletDamage + 1 + Math.floor(w / 2)}`;
-        case 'firepot': return `+${Math.min(99, player.grenades + 5 + w * 3) - player.grenades} FIREPOTS`;
+        case 'damage': return tr('pu.effDamage', { from: player.bulletDamage, to: player.bulletDamage + 1 + Math.floor(w / 2) });
+        case 'firepot': return tr('pu.effFirepot', { n: Math.min(99, player.grenades + 5 + w * 3) - player.grenades });
         case 'armor': {
             const dr = player.damageReduction || 0;
             return `${Math.round(dr * 100)}% → ${Math.round(Math.min(0.95, dr + 0.22 + w * 0.06) * 100)}%`;
@@ -1809,8 +1812,8 @@ function drawPowerupScreen(options, hovered, player) {
     backdrop();
     const rects = powerupLayout(options.length);
     const top = rects[0].y;
-    drawText('CLAIM YOUR SPOILS', W / 2, top - 62, { size: Math.min(46, W / 15), family: 'display', align: 'center', shadow: UI.orangeD, shadowOffset: 3, spacing: 1 });
-    drawText(`WAVE ${player.wave - 1} REPELLED  ·  CHOOSE ONE`, W / 2, top - 30, { size: 12, align: 'center', color: UI.gold, spacing: 3 });
+    drawText(tr('spoils.title'), W / 2, top - 62, { size: Math.min(46, W / 15), family: 'display', align: 'center', shadow: UI.orangeD, shadowOffset: 3, spacing: 1 });
+    drawText(tr('spoils.sub', { n: player.wave - 1 }), W / 2, top - 30, { size: 12, align: 'center', color: UI.gold, spacing: 3 });
     for (let i = 0; i < options.length; i++) {
         const p = options[i], r = rects[i], hov = i === hovered;
         const y = r.y + (hov ? -8 : 0);
@@ -1839,7 +1842,7 @@ function drawPowerupScreen(options, hovered, player) {
             ctx.restore();
         }
         keycap(String(i + 1), r.x + 14, y + 12, 11);
-        drawText('BOON', r.x + r.w - 14, y + 28, { size: 9, align: 'right', color: UI.gold, spacing: 2 });
+        drawText(tr('spoils.boon'), r.x + r.w - 14, y + 28, { size: 9, align: 'right', color: UI.gold, spacing: 2 });
         const icx = r.x + r.w / 2, icy = y + 94;
         ctx.save();
         const ig = ctx.createRadialGradient(icx - 8, icy - 10, 4, icx, icy, 32);
@@ -1855,8 +1858,8 @@ function drawPowerupScreen(options, hovered, player) {
         ctx.stroke();
         ctx.restore();
         drawPowerupIcon(p.icon, icx, icy);
-        drawText(p.name, icx, y + 157, { size: Math.min(17, r.w / 12), family: 'display', align: 'center', color: UI.ink, spacing: 0.5 });
-        drawText(p.desc, icx, y + 179, { size: 14, family: 'body', align: 'center', color: UI.brown });
+        drawText(tr('pu.' + p.id), icx, y + 157, { size: Math.min(17, r.w / 12), family: 'display', align: 'center', color: UI.ink, spacing: 0.5 });
+        drawText(tr('pu.' + p.id + 'Desc'), icx, y + 179, { size: 14, family: 'body', align: 'center', color: UI.brown });
         const eff = powerupEffect(player, p);
         const ew = textWidth(eff, 12, 'num', 1) + 24;
         ctx.save();
@@ -1866,14 +1869,15 @@ function drawPowerupScreen(options, hovered, player) {
         ctx.restore();
         drawText(eff, icx, y + 209, { size: 12, family: 'num', align: 'center', baseline: 'middle', color: UI.gold, spacing: 1 });
     }
-    drawText('CLICK A CARD  OR  PRESS 1–3', W / 2, Math.min(H - 30, top + rects[0].h + 60), { size: 11, align: 'center', color: UI.muted, spacing: 2 });
+    drawText(tr('spoils.hint'), W / 2, Math.min(H - 30, top + rects[0].h + 60), { size: 11, align: 'center', color: UI.muted, spacing: 2 });
 }
 // ── SCREENS ───────────────────────────────────────────────────────────────────
 function drawGameOver(player) {
     backdrop('#3a0c0a');
     const cy = H / 2;
-    drawText('SLAIN', W / 2, cy - 112, { size: Math.min(120, W / 6), family: 'title', align: 'center', color: '#c4281e', shadow: '#000', shadowOffset: 5, spacing: 4 });
-    drawText('YOUR CONTRACT ENDS IN BLOOD', W / 2, cy - 82, { size: 12, align: 'center', color: UI.gold, spacing: 4 });
+    // Hangul fills the whole em, so it needs a smaller size than the Latin title font.
+    drawText(tr('over.slain'), W / 2, cy - 112, { size: Math.min(LANG === 'ko' ? 84 : 120, W / 6), family: 'title', align: 'center', color: '#c4281e', shadow: '#000', shadowOffset: 5, spacing: 4 });
+    drawText(tr('over.sub'), W / 2, cy - 82, { size: 12, align: 'center', color: UI.gold, spacing: 4 });
     const cw = Math.min(560, W - 32), ch = 104, cx = W / 2 - cw / 2, cardY = cy - 50;
     ctx.save();
     roundRect(cx, cardY + 8, cw, ch, 16);
@@ -1883,8 +1887,8 @@ function drawGameOver(player) {
     ctx.fillStyle = UI.paper;
     ctx.fill();
     ctx.restore();
-    const stats = [['BOUNTY', String(player.score).padStart(6, '0')], ['WAVE', String(player.wave).padStart(2, '0')],
-        ['KILLS', String(player.kills)], ['BEST', String(bestScore).padStart(6, '0')]];
+    const stats = [[tr('over.bounty'), String(player.score).padStart(6, '0')], [tr('over.wave'), String(player.wave).padStart(2, '0')],
+        [tr('over.kills'), String(player.kills)], [tr('over.best'), String(bestScore).padStart(6, '0')]];
     const colW = cw / stats.length;
     stats.forEach(([label, value], i) => {
         const x = cx + colW * i + colW / 2;
@@ -1896,7 +1900,7 @@ function drawGameOver(player) {
         drawText(value, x, cardY + 76, { size: Math.min(26, colW / 5), family: 'num', align: 'center', color: UI.ink, spacing: 1 });
     });
     if (newBest) {
-        const t = 'A NEW LEGEND!';
+        const t = tr('over.newBest');
         const tw = textWidth(t, 11, 'ui', 2) + 28;
         const bob = Math.sin(Date.now() * 0.005) * 2;
         ctx.save();
@@ -1907,16 +1911,16 @@ function drawGameOver(player) {
         drawText(t, W / 2, cardY + bob, { size: 11, align: 'center', baseline: 'middle', color: UI.navy3, spacing: 2 });
     }
     const reward = {
-        saving: ['ENTERING YOUR BOUNTY IN THE LEDGER…', UI.muted],
-        saved: [`+${huntReward?.gold ?? 0} GOLD FOR YOUR PURSE`, UI.gold],
-        guest: ['SIGN IN AT THE HALL TO EARN GOLD', UI.muted],
-        failed: ['THE LEDGER COULD NOT BE REACHED. THIS BOUNTY IS LOST', UI.red],
+        saving: [tr('reward.saving'), UI.muted],
+        saved: [tr('reward.saved', { n: huntReward?.gold ?? 0 }), UI.gold],
+        guest: [tr('reward.guest'), UI.muted],
+        failed: [tr('reward.failed'), UI.red],
     }[huntReward?.state];
     if (reward)
         drawText(reward[0], W / 2, cardY + ch + 34, { size: 12, align: 'center', color: reward[1], spacing: 2 });
     const bw = Math.min(210, (cw - 16) / 2), by = cardY + ch + 60;
-    button('RISE AGAIN', 'R', W / 2 - bw - 8, by, bw, 52, newGame, true);
-    button('RETREAT', 'Q', W / 2 + 8, by, bw, 52, goToLobby, false);
+    button(tr('btn.riseAgain'), 'R', W / 2 - bw - 8, by, bw, 52, newGame, true);
+    button(tr('btn.retreat'), 'Q', W / 2 + 8, by, bw, 52, goToLobby, false);
 }
 function drawWaveClear(player) {
     const t = (60 - waveClearTimer) / 60;
@@ -1930,8 +1934,8 @@ function drawWaveClear(player) {
     ctx.fillRect(0, by, W, 4);
     ctx.fillRect(0, by + bh - 4, W, 4);
     const slide = (1 - ease) * 80;
-    drawText(`WAVE ${player.wave} REPELLED`, W / 2 - slide, by + 62, { size: 40, family: 'display', align: 'center', shadow: UI.orangeD, shadowOffset: 3, spacing: 1 });
-    drawText('+500 GOLD  ·  SPOILS AWAIT', W / 2 + slide, by + 90, { size: 11, align: 'center', color: UI.gold, spacing: 3 });
+    drawText(tr('clear.title', { n: player.wave }), W / 2 - slide, by + 62, { size: 40, family: 'display', align: 'center', shadow: UI.orangeD, shadowOffset: 3, spacing: 1 });
+    drawText(tr('clear.sub'), W / 2 + slide, by + 90, { size: 11, align: 'center', color: UI.gold, spacing: 3 });
     ctx.restore();
 }
 function drawSpawnCountdown(player, spawnCountdown) {
@@ -1959,9 +1963,9 @@ function drawSpawnCountdown(player, spawnCountdown) {
     ctx.restore();
     const inSec = (spawnCountdown % 60) / 60;
     drawText(String(secs), cx, cy + 3, { size: 48 + Math.max(0, inSec - 0.75) * 50, family: 'display', align: 'center', baseline: 'middle' });
-    drawText(boss ? 'A WARLORD COMES' : `WAVE ${player.wave}`, cx, cy - 86, { size: boss ? 46 : 40, family: 'display', align: 'center',
+    drawText(boss ? tr('count.boss') : tr('count.wave', { n: player.wave }), cx, cy - 86, { size: boss ? 46 : 40, family: 'display', align: 'center',
         color: boss ? accent : UI.paper, shadow: boss ? '#3a0804' : UI.orangeD, shadowOffset: 3, spacing: 1 });
-    const sub = boss ? 'SURVIVE THE ONSLAUGHT' : 'STEEL YOURSELF';
+    const sub = boss ? tr('count.bossSub') : tr('count.waveSub');
     const sw = textWidth(sub, 12, 'ui', 4) + 32;
     panel(cx - sw / 2, cy + 78, sw, 30, { r: 15, shadow: false, stroke: boss ? '#782010' : UI.navy2 });
     drawText(sub, cx + 2, cy + 98, { size: 12, align: 'center', color: accent, spacing: 4 });
@@ -1986,18 +1990,18 @@ function drawPauseOverlay() {
     ctx.fillStyle = UI.orange;
     ctx.fillRect(px, py + 70, pw, 4);
     ctx.restore();
-    drawText('RESPITE', px + 24, py + 44, { size: 28, family: 'display', shadow: UI.orangeD, spacing: 1 });
-    drawText('THE BATTLE WAITS', px + 26, py + 60, { size: 9, color: UI.gold, spacing: 3 });
-    drawText('CONTROLS', px + 24, py + 102, { size: 9, color: UI.orangeD, spacing: 2 });
+    drawText(tr('pause.title'), px + 24, py + 44, { size: 28, family: 'display', shadow: UI.orangeD, spacing: 1 });
+    drawText(tr('pause.sub'), px + 26, py + 60, { size: 9, color: UI.gold, spacing: 3 });
+    drawText(tr('pause.controls'), px + 24, py + 102, { size: 9, color: UI.orangeD, spacing: 2 });
     const colW = (pw - 48) / 2;
-    CONTROLS.forEach(([k, label], i) => {
+    controls().forEach(([k, label], i) => {
         const x = px + 24 + (i % 2) * colW, y = py + 116 + Math.floor(i / 2) * 34;
         const kw = keycap(k, x, y, 11);
         drawText(label, x + kw + 10, y + 16, { size: 16, family: 'body', color: UI.ink });
     });
     const bw = (pw - 60) / 2, by = py + ph - 76;
-    button('RESUME', 'P', px + 24, by, bw, 50, () => { paused = false; }, true);
-    button('RETREAT', 'Q', px + 36 + bw, by, bw, 50, goToLobby, false);
+    button(tr('btn.resume'), 'P', px + 24, by, bw, 50, () => { paused = false; }, true);
+    button(tr('btn.retreat'), 'Q', px + 36 + bw, by, bw, 50, goToLobby, false);
 }
 // ── GAME STATE ────────────────────────────────────────────────────────────────
 let player = makePlayer(), enemies = spawnEnemies(1);
@@ -2023,46 +2027,58 @@ function newGame() {
     showingPowerup = false;
     spawnCountdown = 0;
 }
+// Physical keys, so the controls work on any keyboard layout. With a Korean
+// IME on, W types ㅈ, so e.key alone would leave the hunter frozen.
+function keyOf(e) {
+    if (/^Key[A-Z]$/.test(e.code))
+        return e.code.slice(3).toLowerCase();
+    if (/^(Digit|Numpad)\d$/.test(e.code))
+        return e.code.slice(-1);
+    if (e.code === 'Space')
+        return ' ';
+    return e.key.toLowerCase();
+}
 document.addEventListener('keydown', e => {
-    keys[e.key.toLowerCase()] = true;
+    const k = keyOf(e);
+    keys[k] = true;
     if (gameOver) {
-        if (e.key === 'r' || e.key === 'R')
+        if (k === 'r')
             newGame();
-        if (e.key === 'q' || e.key === 'Q')
+        if (k === 'q')
             goToLobby();
         return;
     }
     if (paused) {
-        if (e.key === 'p' || e.key === 'P' || e.key === 'Escape')
+        if (k === 'p' || e.key === 'Escape')
             paused = false;
-        if (e.key === 'q' || e.key === 'Q')
+        if (k === 'q')
             goToLobby();
         return;
     }
     if (e.key === 'Escape' && !showingPowerup)
         paused = true;
-    if (e.key === 'p' || e.key === 'P') {
+    if (k === 'p') {
         if (!showingPowerup)
             paused = true;
     }
-    if (e.key === 'g' || e.key === 'G')
+    if (k === 'g')
         throwGrenade(player);
-    if (e.key === ' ') {
+    if (k === ' ') {
         e.preventDefault();
         if (player.rollTimer <= 0)
             player.rollTimer = 15;
     }
-    if (e.key === 'r' || e.key === 'R')
+    if (k === 'r')
         player.ammo = player.magSize;
-    if (showingPowerup && ['1', '2', '3'].includes(e.key)) {
-        const idx = parseInt(e.key) - 1;
+    if (showingPowerup && ['1', '2', '3'].includes(k)) {
+        const idx = parseInt(k) - 1;
         if (idx < powerupOptions.length) {
             applyPowerup(player, powerupOptions[idx]);
             startNextWave();
         }
     }
 });
-document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+document.addEventListener('keyup', e => { keys[keyOf(e)] = false; });
 canvas.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
 canvas.addEventListener('mousedown', e => {
     if (e.button !== 0)
@@ -2101,7 +2117,7 @@ function exitFullscreen() {
 }
 let autoFullscreenDone = false;
 function onFirstGesture(e) {
-    if (autoFullscreenDone || (e.type === 'keydown' && (e.key === 'f' || e.key === 'F')))
+    if (autoFullscreenDone || (e.type === 'keydown' && keyOf(e) === 'f'))
         return;
     autoFullscreenDone = true;
     enterFullscreen();
@@ -2109,7 +2125,7 @@ function onFirstGesture(e) {
 document.addEventListener('mousedown', onFirstGesture);
 document.addEventListener('keydown', onFirstGesture);
 document.addEventListener('keydown', e => {
-    if ((e.key === 'f' || e.key === 'F') && !e.repeat) {
+    if (keyOf(e) === 'f' && !e.repeat) {
         autoFullscreenDone = true;
         isFullscreen() ? exitFullscreen() : enterFullscreen();
     }

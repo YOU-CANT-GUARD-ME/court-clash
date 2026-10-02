@@ -9,6 +9,7 @@ A dark medieval top-down shooter: survive **The Hunt** solo, or fight
 - `public/game.html` — The Hunt (single-player waves)
 - `public/showdown.html` — The Duel (online 1v1)
 - `public/config.js` — shared by all pages: server address + login token
+- `public/i18n.js` — English and Korean text for every page (see Languages)
 - `server/` — Node server: HTTP API + WebSockets on one port
   - `server.js` — Duel matchmaking and authoritative round/score state
   - `lobby.js` — sign up / log in, warbands (parties)
@@ -84,6 +85,20 @@ the same browser share one login, and the newest tab takes over.
 Lobby and Duel traffic goes over the WebSocket: `hello {token}`,
 `signup`/`login {username, password}`, `logout`, `buyUpgrade {id}`, warband messages, then
 `findMatch` and the match messages below.
+
+## Languages
+The game is in English and Korean. The ⚙ button in the lobby header opens
+Settings, where players pick a language; it's saved in the browser and used
+by all three pages. A first visit follows the browser's language.
+
+All text lives in `public/i18n.js`: `STRINGS.en` and `STRINGS.ko` hold the
+same keys, and `tr('key', { n: 3 })` fills in `{placeholders}`. The server
+still sends English, so its error messages and Armory upgrade names are
+translated in that file too (`SERVER_MESSAGES`, `ARMORY_TEXT`). If you add a
+server message, add its Korean there or players will see it in English.
+
+Movement and hotkeys in both games use physical keys (`event.code`), so they
+work with a Korean keyboard input method switched on.
 
 ## Warbands (parties)
 - Everyone starts in their own warband. Enter a friend's 6-letter seal and
