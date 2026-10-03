@@ -69,6 +69,8 @@ function startMatch(playerA, playerB, partyCode = null) {
       type: 'matchFound', playerNum: i, roomId: room.id,
       yourName: lobby.usernameOf(sock),
       opponentName: lobby.usernameOf(room.players[1 - i]),
+      yourLook: lobby.lookOf(sock),
+      opponentLook: lobby.lookOf(room.players[1 - i]),
     });
   });
   startRound(room);

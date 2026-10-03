@@ -31,6 +31,7 @@ canvas {
 <canvas id="c"></canvas>
 <script src="config.js"></script>
 <script src="i18n.js"></script>
+<script src="mercenary.js"></script>
 <script>
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
@@ -882,80 +883,6 @@ function paintDungeon(g, size) {
             }
         }
 }
-const MERC_SELF = { cloak: '#3a2a1e', cloakDark: '#0e0a07', trim: '#c9a24a', helm: '#9aa0a8' };
-// A hooded mercenary seen from above, crossbow aimed along `angle`.
-function drawMercenary(sx, sy, r, angle, pal) {
-    const ca = Math.cos(angle), sa = Math.sin(angle);
-    ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
-    ctx.beginPath();
-    ctx.ellipse(sx, sy + r, r * 1.2, r * 0.42, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // Crossbow: stock, steel limbs, string.
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = '#2a1a0e';
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.lineTo(sx + ca * (r + 13), sy + sa * (r + 13));
-    ctx.stroke();
-    ctx.strokeStyle = '#6a4a2a';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    const lx = sx + ca * (r + 5), ly = sy + sa * (r + 5), span = 1.05, lr = 10;
-    ctx.strokeStyle = '#b8bec6';
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.arc(lx, ly, lr, angle - span, angle + span);
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(230,216,184,0.8)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(lx + Math.cos(angle - span) * lr, ly + Math.sin(angle - span) * lr);
-    ctx.lineTo(sx + ca * (r + 1), sy + sa * (r + 1));
-    ctx.lineTo(lx + Math.cos(angle + span) * lr, ly + Math.sin(angle + span) * lr);
-    ctx.stroke();
-    // Cloak with a trimmed hem.
-    ctx.fillStyle = pal.cloakDark;
-    ctx.beginPath();
-    ctx.arc(sx, sy, r + 2, 0, Math.PI * 2);
-    ctx.fill();
-    const cg = ctx.createRadialGradient(sx - ca * 3, sy - sa * 3, 2, sx, sy, r);
-    cg.addColorStop(0, pal.cloak);
-    cg.addColorStop(1, pal.cloakDark);
-    ctx.fillStyle = cg;
-    ctx.beginPath();
-    ctx.arc(sx, sy, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = pal.trim;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.arc(sx, sy, r - 1, 0, Math.PI * 2);
-    ctx.stroke();
-    // Pauldrons either side.
-    ctx.fillStyle = pal.helm;
-    for (const side of [-1, 1]) {
-        ctx.beginPath();
-        ctx.arc(sx - sa * side * (r - 3), sy + ca * side * (r - 3), 3.5, 0, Math.PI * 2);
-        ctx.fill();
-    }
-    // Helm with a visor slit facing the aim.
-    const hx = sx + ca * 2, hy = sy + sa * 2, hr = r * 0.5;
-    const hg = ctx.createRadialGradient(hx - 2, hy - 2, 1, hx, hy, hr);
-    hg.addColorStop(0, '#e0e4ea');
-    hg.addColorStop(1, pal.helm);
-    ctx.fillStyle = hg;
-    ctx.beginPath();
-    ctx.arc(hx, hy, hr, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#0a0807';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(hx + ca * hr * 0.4 - sa * hr * 0.6, hy + sa * hr * 0.4 + ca * hr * 0.6);
-    ctx.lineTo(hx + ca * hr * 0.4 + sa * hr * 0.6, hy + sa * hr * 0.4 - ca * hr * 0.6);
-    ctx.stroke();
-    ctx.restore();
-}
 // A bolt or arrow pointing along its velocity.
 function drawBolt(b, camX, camY, shaft, head, glow, len = 14) {
     const sp = Math.hypot(b.vx, b.vy) || 1, ux = b.vx / sp, uy = b.vy / sp;
@@ -1018,6 +945,7 @@ function drawTorchlight(px, py) {
 // Starting stats from Armory upgrades. These are the no-upgrade values; signed-in
 // players get theirs from the server (loadArmory) before or just after the run starts.
 let loadout = { maxHealth: 100, magSize: 30, damageMult: 1, speed: BASE_SPEED, firepots: 3, waveHeal: 0 };
+let myLook = DEFAULT_LOOK; // our wardrobe look, also from the server
 function applyLoadout(p) {
     p.maxHealth = p.health = loadout.maxHealth;
     p.magSize = p.ammo = loadout.magSize;
@@ -1042,6 +970,8 @@ async function loadArmory() {
         if (!res.ok)
             return;
         const me = await res.json();
+        if (me.appearance)
+            myLook = me.appearance;
         if (!me.loadout)
             return;
         loadout = me.loadout;
@@ -1149,7 +1079,7 @@ function drawPlayer(player, camX, camY) {
         ctx.arc(sx, sy, 26, 0, Math.PI * 2);
         ctx.fill();
     }
-    drawMercenary(sx, sy, r, player.angle, MERC_SELF);
+    drawMercenary(sx, sy, r, player.angle, myLook);
     if (player.shootTimer > 4) {
         const fx = sx + Math.cos(player.angle) * (r + 12), fy = sy + Math.sin(player.angle) * (r + 12);
         const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, 10);
@@ -1164,7 +1094,7 @@ function drawPlayer(player, camX, camY) {
         for (let i = 0; i < 3; i++) {
             const ox = -Math.cos(player.angle) * (i + 1) * 5, oy = -Math.sin(player.angle) * (i + 1) * 5;
             ctx.globalAlpha = 0.25 * (1 - i * 0.3);
-            ctx.fillStyle = MERC_SELF.cloak;
+            ctx.fillStyle = myLook.cloak;
             ctx.beginPath();
             ctx.arc(sx + ox, sy + oy, r, 0, Math.PI * 2);
             ctx.fill();
@@ -1172,7 +1102,7 @@ function drawPlayer(player, camX, camY) {
         ctx.globalAlpha = 1;
     }
     for (const b of player.bullets)
-        drawBolt(b, camX, camY, '#c8b48a', '#eef0f2', 'rgba(201,162,74,1)');
+        drawBolt(b, camX, camY, '#c8b48a', '#eef0f2', trailOf(myLook));
     ctx.restore();
 }
 // ── SPAWN ────────────────────────────────────────────────────────────────────

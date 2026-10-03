@@ -123,7 +123,7 @@ function startMatch(sides) {
     state: 'starting', // playing | roundover | matchover
   };
   rooms.set(room.id, room);
-  const roster = room.players.map((ws, i) => ({ name: lobby.usernameOf(ws), team: teamOf(i) }));
+  const roster = room.players.map((ws, i) => ({ name: lobby.usernameOf(ws), team: teamOf(i), look: lobby.lookOf(ws) }));
   room.players.forEach((ws, i) => {
     ws.skRoom = room.id;
     ws.skIndex = i;

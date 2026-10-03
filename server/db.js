@@ -4,6 +4,7 @@
 
 const { Pool } = require('pg');
 const armory = require('./armory');
+const wardrobe = require('./wardrobe');
 
 // Forgive the usual copy-paste extras (spaces, surrounding quotes), then make
 // sure it's a full URL. Anything else gets parsed as a relative address and
@@ -48,6 +49,10 @@ CREATE TABLE IF NOT EXISTS sessions (
 ALTER TABLE players ADD COLUMN IF NOT EXISTS upgrades jsonb NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE players ADD COLUMN IF NOT EXISTS skirmish_wins integer NOT NULL DEFAULT 0;
 ALTER TABLE players ADD COLUMN IF NOT EXISTS skirmish_losses integer NOT NULL DEFAULT 0;
+-- Wardrobe: items bought (e.g. ["cloak:wine"]) and the look worn
+-- (e.g. {"cloak": "wine", "helm": "hood", "title": "butcher"}).
+ALTER TABLE players ADD COLUMN IF NOT EXISTS owned jsonb NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE players ADD COLUMN IF NOT EXISTS look jsonb NOT NULL DEFAULT '{}'::jsonb;
 CREATE INDEX IF NOT EXISTS sessions_player_idx ON sessions (player_id);
 CREATE INDEX IF NOT EXISTS players_bounty_idx ON players (best_bounty DESC);
 CREATE INDEX IF NOT EXISTS players_duel_idx ON players (duel_wins DESC);
@@ -71,6 +76,10 @@ function profileOf(row) {
     duelLosses: row.duel_losses,
     skirmishWins: row.skirmish_wins || 0,
     skirmishLosses: row.skirmish_losses || 0,
+    owned: row.owned || [],
+    look: row.look || {},
+    appearance: wardrobe.resolveLook(row.look),
+    title: wardrobe.titleOf(row.look),
     upgrades: row.upgrades || {},
     loadout: armory.loadoutOf(row.upgrades),
   };
@@ -166,28 +175,48 @@ function buyUpgrade(playerId, id, level, cost) {
   );
 }
 
+// Buys a wardrobe item once. Re-checks the gold and ownership in the same
+// statement, so a double click can't pay twice. Null if it didn't go through.
+function buyItem(playerId, itemKey, cost) {
+  return one(
+    `UPDATE players SET gold = gold - $3, owned = owned || to_jsonb($2::text)
+     WHERE id = $1 AND gold >= $3 AND NOT owned ? $2
+     RETURNING *`,
+    [playerId, itemKey, cost],
+  );
+}
+
+function setLook(playerId, slot, id) {
+  return one(
+    `UPDATE players SET look = look || jsonb_build_object($2::text, $3::text) WHERE id = $1 RETURNING *`,
+    [playerId, slot, id],
+  );
+}
+
 async function leaderboard() {
   const [hunt, duel, skirmish] = await Promise.all([
     pool.query(
-      `SELECT username, best_bounty AS "bestBounty", best_wave AS "bestWave"
+      `SELECT username, look->>'title' AS title, best_bounty AS "bestBounty", best_wave AS "bestWave"
        FROM players WHERE best_bounty > 0
        ORDER BY best_bounty DESC, best_wave DESC, created_at LIMIT 10`,
     ),
     pool.query(
-      `SELECT username, duel_wins AS wins, duel_losses AS losses
+      `SELECT username, look->>'title' AS title, duel_wins AS wins, duel_losses AS losses
        FROM players WHERE duel_wins + duel_losses > 0
        ORDER BY duel_wins DESC, duel_losses ASC, created_at LIMIT 10`,
     ),
     pool.query(
-      `SELECT username, skirmish_wins AS wins, skirmish_losses AS losses
+      `SELECT username, look->>'title' AS title, skirmish_wins AS wins, skirmish_losses AS losses
        FROM players WHERE skirmish_wins + skirmish_losses > 0
        ORDER BY skirmish_wins DESC, skirmish_losses ASC, created_at LIMIT 10`,
     ),
   ]);
-  return { hunt: hunt.rows, duel: duel.rows, skirmish: skirmish.rows };
+  // Only titles that exist (and aren't 'none') reach the page.
+  const clean = (rows) => rows.map((r) => ({ ...r, title: wardrobe.titleOf({ title: r.title }) }));
+  return { hunt: clean(hunt.rows), duel: clean(duel.rows), skirmish: clean(skirmish.rows) };
 }
 
 module.exports = {
   init, profileOf, createPlayer, playerById, playerByUsername, createSession, playerBySession,
-  deleteSession, recordHunt, recordDuel, recordSkirmish, buyUpgrade, leaderboard,
+  deleteSession, recordHunt, recordDuel, recordSkirmish, buyUpgrade, buyItem, setLook, leaderboard,
 };

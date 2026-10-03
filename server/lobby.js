@@ -8,6 +8,7 @@ const crypto = require('crypto');
 const db = require('./db');
 const auth = require('./auth');
 const armory = require('./armory');
+const wardrobe = require('./wardrobe');
 
 const PARTY_SIZE = 4;
 const MODES = ['hunt', 'showdown', 'skirmish'];
@@ -21,7 +22,7 @@ const RECONNECT_GRACE_MS = 15000;
 // Failed logins allowed per username before a short lockout.
 const LOGIN_MAX_FAILS = 5, LOGIN_LOCK_MS = 60000;
 
-const sessions = new Map(); // playerId -> { ws, username, partyCode, leaveTimer }
+const sessions = new Map(); // playerId -> { ws, username, partyCode, leaveTimer, appearance, title }
 const parties = new Map();  // code -> { code, mode, members: [playerId, ...], sides: { playerId: 0 | 1 } }
 let onPartyChange = () => {}; // set by the server so Skirmish can re-match
 const loginFails = new Map(); // username_lower -> { count, until }
@@ -48,6 +49,8 @@ function broadcast(party) {
     leader: i === 0,
     online: !!sessions.get(id).ws,
     side: party.sides[id],
+    look: sessions.get(id).appearance,
+    title: sessions.get(id).title,
   }));
   party.members.forEach((id, i) => {
     send(sessions.get(id).ws, {
@@ -108,11 +111,14 @@ function attach(ws, player, tokenHash, token) {
     session = { ws, username: player.username, partyCode: null, leaveTimer: null };
     sessions.set(player.id, session);
   }
+  session.appearance = wardrobe.resolveLook(player.look);
+  session.title = wardrobe.titleOf(player.look);
   ws.playerId = player.id;
   ws.username = player.username;
   ws.tokenHash = tokenHash;
   send(ws, {
     type: 'welcome', username: player.username, profile: db.profileOf(player), armory: armory.CATALOG,
+    wardrobe: wardrobe.CATALOG,
     ...(token ? { token } : {}),
   });
 
@@ -212,6 +218,38 @@ async function handleMessage(ws, msg) {
       const row = await db.buyUpgrade(me, msg.id, next.level, next.cost);
       if (!row) return error(ws, 'Not enough gold'), true;
       pushProfile(me, row);
+      return true;
+    }
+
+    case 'buyItem': {
+      if (!me) return true;
+      const slot = String(msg.slot || ''), id = String(msg.id || '');
+      const item = wardrobe.itemOf(slot, id);
+      if (!item || item.cost === 0) return true;
+      const player = await db.playerById(me);
+      if (wardrobe.owns(player.owned, slot, id)) return true;
+      if (player.gold < item.cost) return error(ws, 'Not enough gold'), true;
+      const row = await db.buyItem(me, wardrobe.key(slot, id), item.cost);
+      if (!row) return error(ws, 'Not enough gold'), true;
+      pushProfile(me, row);
+      return true;
+    }
+
+    case 'wear': {
+      // Put on an owned item, or a title that has been earned.
+      if (!me) return true;
+      const slot = String(msg.slot || ''), id = String(msg.id || '');
+      const player = await db.playerById(me);
+      const profile = db.profileOf(player);
+      const ok = slot === 'title' ? wardrobe.titleUnlocked(profile, id) : wardrobe.owns(player.owned, slot, id);
+      if (!ok) return error(ws, slot === 'title' ? 'That title is not yet earned' : 'You do not own that'), true;
+      const row = await db.setLook(me, slot, id);
+      const session = sessions.get(me);
+      session.appearance = wardrobe.resolveLook(row.look);
+      session.title = wardrobe.titleOf(row.look);
+      pushProfile(me, row);
+      const p = parties.get(session.partyCode);
+      if (p) broadcast(p); // warband mates see the new look
       return true;
     }
 
@@ -324,6 +362,12 @@ function skirmishPartyOf(ws) {
   };
 }
 
+// How this player looks in a match (resolved colours; the default if unknown).
+function lookOf(ws) {
+  const session = ws.playerId && sessions.get(ws.playerId);
+  return (session && session.appearance) || wardrobe.resolveLook(null);
+}
+
 function setPartyChangeListener(fn) {
   onPartyChange = fn;
 }
@@ -335,5 +379,5 @@ function pushProfile(playerId, row) {
 }
 
 module.exports = {
-  handleMessage, handleClose, usernameOf, matchPartyOf, skirmishPartyOf, pushProfile, setPartyChangeListener,
+  handleMessage, handleClose, usernameOf, lookOf, matchPartyOf, skirmishPartyOf, pushProfile, setPartyChangeListener,
 };

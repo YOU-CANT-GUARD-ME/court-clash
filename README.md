@@ -11,6 +11,7 @@ A dark medieval top-down shooter: survive **The Hunt** solo, fight
 - `public/showdown.html` — The Duel (online 1v1)
 - `public/skirmish.html` — Skirmish (online 2v2)
 - `public/config.js` — shared by all pages: server address + login token
+- `public/mercenary.js` — draws a mercenary in a given look (lobby + games)
 - `public/i18n.js` — English and Korean text for every page (see Languages)
 - `server/` — Node server: HTTP API + WebSockets on one port
   - `server.js` — Duel matchmaking and authoritative round/score state
@@ -20,6 +21,7 @@ A dark medieval top-down shooter: survive **The Hunt** solo, fight
   - `db.js` — Postgres access; creates its tables on startup
   - `auth.js` — scrypt password hashing, session tokens
   - `armory.js` — the Armory's upgrades, prices and effects
+  - `wardrobe.js` — looks (colours, helm styles, bolt trails), prices, titles
 
 ## Database (Neon Postgres)
 All accounts, gold and stats live in Postgres. The server creates its tables
@@ -74,6 +76,17 @@ the same browser share one login, and the newest tab takes over.
   catalog the server sends, and the Hunt loads its starting stats from
   `/api/me`. A purchase is one SQL update that re-checks the gold and the
   current level, so double clicks or two devices can't overspend.
+- **Your mercenary** (MERCENARY in the lobby) is a dressing room with a
+  live preview. Four slots: cloak colour, helm style, trim & metal, and bolt
+  trail. A few of each are free; the rest are bought once with gold (300 to
+  1500) and can be worn any time after. Looks are cosmetic only and show
+  everywhere: your party slot portrait, the Hunt, and to opponents in the
+  Duel and Skirmish (where a ring in your side's colour keeps friend and foe
+  clear). **Titles** are earned, not bought: e.g. *the Butcher* for 100
+  Hunt kills, *the Duelist* for 10 Duel wins, *Warmaster* for 50 Skirmish
+  wins. The worn title shows in party slots and the Hall of Legends.
+  Colours and prices live in `server/wardrobe.js`; the server resolves a
+  player's chosen ids into colours and sends those to other players.
 - **Hall of Legends** (LEGENDS in the lobby) shows your record and the top
   10 Hunt bounties and Duel records.
 
@@ -86,7 +99,8 @@ the same browser share one login, and the newest tab takes over.
 | POST | `/api/hunt` | `{ score, wave, kills }` for a finished Hunt (bearer token; one per 10s) |
 
 Lobby and Duel traffic goes over the WebSocket: `hello {token}`,
-`signup`/`login {username, password}`, `logout`, `buyUpgrade {id}`, warband messages, then
+`signup`/`login {username, password}`, `logout`, `buyUpgrade {id}`, `buyItem {slot, id}`,
+`wear {slot, id}` (slot `title` for titles), warband messages, then
 `findMatch` and the match messages below.
 
 ## Languages

@@ -835,6 +835,132 @@ button.fighter:hover {
   color: var(--ink2);
   border: 0;
 }
+/* ---- party portraits ---- */
+.num.portrait {
+  padding: 0;
+  background: radial-gradient(circle at 50% 40%,#3a2e24,#120d0a 75%);
+}
+.num.portrait canvas {
+  width: 40px;
+  height: 46px;
+}
+/* ---- dressing room ---- */
+.modal .merc-card {
+  width: min(760px,100%);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+}
+.dressing {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 18px;
+}
+.mirror {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 8px;
+}
+.mirror canvas {
+  width: 220px;
+  height: 220px;
+  border-radius: 6px;
+  border: 1px solid var(--ink2);
+  background: radial-gradient(circle at 50% 45%,#3a2e24,#0e0a07 80%);
+  box-shadow: inset 0 0 20px #000;
+}
+.mirror b {
+  font: 700 15px 'Cinzel', 'Noto Serif KR', serif;
+  color: var(--ink);
+}
+.mirror small {
+  font: italic 500 15px 'EB Garamond', 'Noto Serif KR', serif;
+  color: var(--blood);
+}
+.wd-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.wd-tabs button {
+  padding: 7px 10px;
+  border: 1px solid var(--ink2);
+  border-radius: 4px;
+  background: rgba(42,29,18,.08);
+  font: 700 10px 'Cinzel', 'Noto Serif KR', serif;
+  letter-spacing: 1.5px;
+  color: var(--ink2);
+  cursor: pointer;
+}
+.wd-tabs button.on {
+  background: var(--ink);
+  color: var(--gold);
+  border-color: var(--ink);
+}
+.wd-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill,minmax(150px,1fr));
+  gap: 8px;
+}
+.wd-item {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid rgba(90,70,48,.35);
+  border-radius: 4px;
+  background: rgba(255,255,255,.18);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.wd-item:hover {
+  border-color: var(--gold-d);
+}
+.wd-item.worn {
+  border-color: var(--gold-d);
+  box-shadow: inset 0 0 0 2px rgba(201,162,74,.5);
+  background: rgba(201,162,74,.18);
+}
+.wd-item.locked {
+  cursor: default;
+  opacity: .65;
+}
+.wd-item canvas {
+  width: 34px;
+  height: 34px;
+  border-radius: 4px;
+  background: radial-gradient(circle,#3a2e24,#0e0a07 80%);
+}
+.wd-item b {
+  display: block;
+  font: 700 12px 'Cinzel', 'Noto Serif KR', serif;
+  color: var(--ink);
+}
+.wd-item small {
+  display: block;
+  font: 700 9px 'Cinzel', 'Noto Serif KR', serif;
+  letter-spacing: 1px;
+  color: var(--blood);
+}
+.wd-item small.free {
+  color: var(--ink2);
+}
+.wd-item.title-item {
+  grid-template-columns: 1fr;
+}
+@media(max-width:600px) {
+  .dressing {
+    grid-template-columns: 1fr;
+  }
+}
+.boards li span small {
+  margin-left: 6px;
+  font: italic 500 13px 'EB Garamond', 'Noto Serif KR', serif;
+  color: var(--ink2);
+}
 /* ---- settings ---- */
 .hdr-btn.gear {
   font-size: 16px;
@@ -1025,13 +1151,22 @@ button.fighter:hover {
   font: italic 500 15px 'EB Garamond', 'Noto Serif KR', serif;
   color: #6a5a48;
 }
-/* Phones: drop the wordmark so the header buttons fit beside the crest. */
+/* Phones: drop the wordmark and let the header buttons wrap onto two rows. */
 @media(max-width:600px) {
   .brand-text {
     display: none;
   }
+  header.top { /* beats the fixed phone height set further down */
+    height: auto;
+    min-height: 66px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    gap: 8px;
+  }
   .top-right {
     gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
   .scoretile {
     padding: 8px 10px;
@@ -1103,6 +1238,7 @@ button.fighter:hover {
 <header class="top">
   <div class="brand"><svg class="emblem" aria-hidden="true"><use href="#crest"/></svg><div class="brand-text">Bloodsworn<small data-i18n="brand.sub">MERCENARIES OF THE ASHEN REALM</small></div></div>
   <div class="top-right">
+    <button class="hdr-btn" id="merc-btn" data-i18n="hdr.mercenary">MERCENARY</button>
     <button class="hdr-btn" id="armory-btn" data-i18n="hdr.armory">ARMORY</button>
     <button class="hdr-btn" id="legends-btn" data-i18n="hdr.legends">LEGENDS</button>
     <div class="scoretile" title="Gold earned in battle" data-i18n-title="hdr.goldTitle"><b id="gold">0000</b><span data-i18n="hdr.gold">GOLD</span></div>
@@ -1167,6 +1303,23 @@ button.fighter:hover {
   </div>
 </div>
 
+<div class="modal" id="merc" hidden>
+  <div class="lobby merc-card" role="dialog" aria-labelledby="merc-title">
+    <div class="lobby-head"><h1 id="merc-title"><span data-i18n="wd.title">YOUR MERCENARY</span><small data-i18n="wd.sub">DRESS FOR THE SLAUGHTER</small></h1><button class="close" id="merc-close" aria-label="Close" data-i18n-aria="close">✕</button></div>
+    <div class="lobby-body">
+      <div class="dressing">
+        <div class="mirror"><canvas id="mirror" width="440" height="440" aria-hidden="true"></canvas><b id="mirror-name"></b><small id="mirror-title"></small></div>
+        <div>
+          <div class="purse"><span data-i18n="armory.purseBefore">Your purse holds </span><b id="merc-purse">0</b><span data-i18n="wd.purseAfter"> gold.</span></div>
+          <div class="wd-tabs" id="wd-tabs" role="tablist"></div>
+          <div class="wd-items" id="wd-items"></div>
+          <div class="notice" id="merc-notice" role="status"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="armory" hidden>
   <div class="lobby armory-card" role="dialog" aria-labelledby="armory-title">
     <div class="lobby-head"><h1 id="armory-title"><span data-i18n="armory.title">THE ARMORY</span><small data-i18n="armory.sub">STEEL FOR THE HUNT</small></h1><button class="close" id="armory-close" aria-label="Close" data-i18n-aria="close">✕</button></div>
@@ -1190,6 +1343,7 @@ button.fighter:hover {
 
 <script src="config.js"></script>
 <script src="i18n.js"></script>
+<script src="mercenary.js"></script>
 <script>
 const PARTY_SIZE = 4;
 const $ = sel => document.querySelector(sel);
@@ -1204,6 +1358,7 @@ let replaced = false;
 let noticeTimer = null;
 let profile = null; // our gold and stats, from the server
 let armory = []; // the upgrade catalog, from the server
+let wardrobeCat = null; // looks and titles, from the server
 let authMode = 'signup'; // or 'login'
 let status = ['status.connecting']; // translation key + values for the line under YOUR WARBAND
 function setStatus(key, vars) {
@@ -1267,6 +1422,7 @@ function onMessage(msg) {
             setStatus('status.sworn', { name: msg.username.toUpperCase() });
             profile = msg.profile;
             armory = msg.armory || [];
+            wardrobeCat = msg.wardrobe || null;
             showProfile();
             break;
         case 'profile':
@@ -1279,7 +1435,8 @@ function onMessage(msg) {
             break;
         case 'lobbyError':
             $('#auth-submit').disabled = false;
-            notify(trServer(msg.message), !$('#signup').hidden ? $('#signup-notice') : !$('#armory').hidden ? $('#armory-notice') : $('#notice'));
+            notify(trServer(msg.message), !$('#signup').hidden ? $('#signup-notice') : !$('#armory').hidden ? $('#armory-notice')
+                : !$('#merc').hidden ? $('#merc-notice') : $('#notice'));
             if (!$('#armory').hidden)
                 renderArmory();
             break;
@@ -1309,11 +1466,18 @@ function slotEl(member) {
     }
     slot.className = 'slot' + (member.online ? '' : ' away');
     slot.innerHTML = '<div class="num"></div><div class="slot-info"><b><span class="name"></span></b><small></small></div>';
-    slot.querySelector('.num').textContent = member.username[0].toUpperCase();
+    const num = slot.querySelector('.num');
+    if (member.look) {
+        num.classList.add('portrait');
+        num.append(portrait(member.look, 40, 46, -Math.PI / 2, 12));
+    }
+    else
+        num.textContent = member.username[0].toUpperCase();
     slot.querySelector('.name').textContent = member.username;
     if (member.leader)
         slot.querySelector('b').append(Object.assign(document.createElement('span'), { className: 'host', title: tr('slot.captainTitle'), textContent: '♛' }));
-    slot.querySelector('small').textContent = tr(!member.online ? 'slot.reconnecting' : member.leader ? 'slot.captain' : 'slot.sellsword');
+    slot.querySelector('small').textContent = tr(!member.online ? 'slot.reconnecting' : member.leader ? 'slot.captain' : 'slot.sellsword')
+        + (member.title ? ' · ' + tr('title.' + member.title) : '');
     if (member.you)
         slot.prepend(Object.assign(document.createElement('span'), { className: 'tag', textContent: tr('slot.you') }));
     return slot;
@@ -1514,11 +1678,15 @@ function showProfile() {
     $('#gold').textContent = String(profile ? profile.gold : 0).padStart(4, '0');
     if (!$('#armory').hidden)
         renderArmory();
+    if (!$('#merc').hidden)
+        renderWardrobe();
 }
-function boardRow(rank, name, value) {
+function boardRow(rank, name, value, title) {
     const li = document.createElement('li');
-    li.append(Object.assign(document.createElement('i'), { textContent: rank }),
-        Object.assign(document.createElement('span'), { textContent: name }),
+    const who = Object.assign(document.createElement('span'), { textContent: name });
+    if (title)
+        who.append(Object.assign(document.createElement('small'), { textContent: tr('title.' + title) }));
+    li.append(Object.assign(document.createElement('i'), { textContent: rank }), who,
         Object.assign(document.createElement('b'), { textContent: value }));
     if (profile && name === profile.username)
         li.className = 'me';
@@ -1551,14 +1719,14 @@ async function openLegends() {
             throw new Error(res.status);
         const board = await res.json();
         $('#board-hunt').replaceChildren(...(board.hunt.length
-            ? board.hunt.map((r, i) => boardRow(i + 1, r.username, tr('legends.bountyRow', { bounty: r.bestBounty, wave: r.bestWave })))
+            ? board.hunt.map((r, i) => boardRow(i + 1, r.username, tr('legends.bountyRow', { bounty: r.bestBounty, wave: r.bestWave }), r.title))
             : [emptyRow(tr('legends.noHunt'))]));
         $('#board-duel').replaceChildren(...(board.duel.length
-            ? board.duel.map((r, i) => boardRow(i + 1, r.username, `${r.wins}–${r.losses}`))
+            ? board.duel.map((r, i) => boardRow(i + 1, r.username, `${r.wins}–${r.losses}`, r.title))
             : [emptyRow(tr('legends.noDuel'))]));
         const sk = board.skirmish || [];
         $('#board-skirmish').replaceChildren(...(sk.length
-            ? sk.map((r, i) => boardRow(i + 1, r.username, `${r.wins}–${r.losses}`))
+            ? sk.map((r, i) => boardRow(i + 1, r.username, `${r.wins}–${r.losses}`, r.title))
             : [emptyRow(tr('legends.noSkirmish'))]));
         $('#legends-notice').textContent = '';
     }
@@ -1566,6 +1734,162 @@ async function openLegends() {
         $('#legends-notice').textContent = tr('legends.failed');
     }
 }
+// ---- mercenary (wardrobe) ----
+// A small canvas with a mercenary drawn on it, at 2x for sharp edges.
+function portrait(look, w, h, angle, r) {
+    const c = document.createElement('canvas');
+    c.width = w * 2;
+    c.height = h * 2;
+    const g = c.getContext('2d');
+    g.scale(2, 2);
+    drawMercenary(w / 2, h / 2 - 2, r, angle, look, g);
+    return c;
+}
+const WD_SLOTS = ['cloak', 'helm', 'trim', 'trail', 'title'];
+// Which resolved-look fields each slot controls, for previews.
+const WD_FIELDS = { cloak: ['cloak', 'cloakDark'], trim: ['trim', 'metal'], helm: ['helm'], trail: ['trail'] };
+let wdTab = 'cloak';
+let wdPreview = null; // an item hovered in the list, shown in the mirror
+function wornId(slot) {
+    const look = (profile && profile.look) || {};
+    if (slot === 'title')
+        return look.title || 'none';
+    return look[slot] || wardrobeCat.slots[slot][0].id;
+}
+function owns(slot, item) {
+    return item.cost === 0 || (profile && profile.owned.includes(slot + ':' + item.id));
+}
+function lookWith(slot, item) {
+    const base = { ...((profile && profile.appearance) || DEFAULT_LOOK) };
+    for (const f of WD_FIELDS[slot] || [])
+        base[f] = item.look[f];
+    return base;
+}
+function renderWardrobe() {
+    if (!wardrobeCat)
+        return;
+    $('#merc-purse').textContent = profile ? profile.gold : 0;
+    $('#mirror-name').textContent = profile ? profile.username : '';
+    $('#mirror-title').textContent = profile && profile.title ? tr('title.' + profile.title) : '';
+    $('#wd-tabs').replaceChildren(...WD_SLOTS.map(slot => {
+        const b = Object.assign(document.createElement('button'), { type: 'button', className: slot === wdTab ? 'on' : '', textContent: tr('wd.tab.' + slot) });
+        b.setAttribute('role', 'tab');
+        b.setAttribute('aria-selected', String(slot === wdTab));
+        b.onclick = () => { wdTab = slot; wdPreview = null; renderWardrobe(); };
+        return b;
+    }));
+    const items = wdTab === 'title' ? wardrobeCat.titles.map(t => titleCard(t)) : wardrobeCat.slots[wdTab].map(it => itemCard(wdTab, it));
+    $('#wd-items').replaceChildren(...items);
+}
+function itemCard(slot, item) {
+    const worn = wornId(slot) === item.id, have = owns(slot, item);
+    const b = Object.assign(document.createElement('button'), { type: 'button', className: 'wd-item' + (worn ? ' worn' : '') });
+    const look = lookWith(slot, item);
+    // Trails show as a bolt streak; everything else as the mercenary wearing it.
+    const icon = slot === 'trail' ? trailIcon(look) : portrait(look, 34, 34, -Math.PI / 2, 9);
+    const label = document.createElement('span');
+    const state = worn ? tr('wd.worn') : have ? (item.cost === 0 ? tr('wd.free') : tr('wd.wear')) : tr('wd.buy', { cost: item.cost });
+    label.append(Object.assign(document.createElement('b'), { textContent: tr('wd.' + slot + '.' + item.id) }),
+        Object.assign(document.createElement('small'), { className: have ? 'free' : '', textContent: state }));
+    b.append(icon, label);
+    b.onmouseenter = b.onfocus = () => { wdPreview = look; };
+    b.onmouseleave = b.onblur = () => { wdPreview = null; };
+    b.onclick = () => {
+        if (!profile || worn)
+            return;
+        if (have)
+            sendMsg({ type: 'wear', slot, id: item.id });
+        else if (profile.gold < item.cost)
+            notify(trServer('Not enough gold'), $('#merc-notice'));
+        else
+            sendMsg({ type: 'buyItem', slot, id: item.id });
+    };
+    return b;
+}
+function trailIcon(look) {
+    const c = document.createElement('canvas');
+    c.width = c.height = 68;
+    const g = c.getContext('2d');
+    g.scale(2, 2);
+    g.lineCap = 'round';
+    g.strokeStyle = trailOf(look);
+    g.globalAlpha = 0.45;
+    g.lineWidth = 6;
+    g.beginPath();
+    g.moveTo(6, 28);
+    g.lineTo(26, 8);
+    g.stroke();
+    g.globalAlpha = 1;
+    g.strokeStyle = '#c8b48a';
+    g.lineWidth = 2;
+    g.stroke();
+    return c;
+}
+function titleCard(t) {
+    const worn = wornId('title') === t.id;
+    const have = !t.stat || (profile && (profile[t.stat] || 0) >= t.n);
+    const b = Object.assign(document.createElement('button'), { type: 'button', className: 'wd-item title-item' + (worn ? ' worn' : '') + (have ? '' : ' locked') });
+    const state = worn ? tr('wd.worn') : have ? tr('wd.wear')
+        : `${tr('rule.' + t.stat, { n: t.n })} · ${Math.min(profile ? profile[t.stat] || 0 : 0, t.n)}/${t.n}`;
+    const label = document.createElement('span');
+    label.append(Object.assign(document.createElement('b'), { textContent: tr('title.' + t.id) }),
+        Object.assign(document.createElement('small'), { className: have ? 'free' : '', textContent: state }));
+    b.append(label);
+    b.onclick = () => {
+        if (profile && have && !worn)
+            sendMsg({ type: 'wear', slot: 'title', id: t.id });
+    };
+    return b;
+}
+// The mirror: our mercenary slowly looking around, or the item being hovered.
+function drawMirror(ts) {
+    if ($('#merc').hidden)
+        return;
+    requestAnimationFrame(drawMirror);
+    const c = $('#mirror'), g = c.getContext('2d');
+    g.setTransform(2, 0, 0, 2, 0, 0);
+    g.clearRect(0, 0, 220, 220);
+    const look = wdPreview || (profile && profile.appearance) || DEFAULT_LOOK;
+    const angle = -Math.PI / 2 + Math.sin(ts / 1400) * 1.1;
+    g.save();
+    g.translate(110, 105);
+    g.scale(3.4, 3.4);
+    drawMercenary(0, 0, 12, angle, look, g);
+    g.restore();
+    // A bolt flying out, in the trail colour.
+    const t = (ts % 1400) / 1400, d = 50 + t * 70;
+    const bx = 110 + Math.cos(angle) * d, by = 105 + Math.sin(angle) * d;
+    g.save();
+    g.globalAlpha = 1 - t;
+    g.lineCap = 'round';
+    g.strokeStyle = trailOf(look);
+    g.globalAlpha *= 0.4;
+    g.lineWidth = 6;
+    g.beginPath();
+    g.moveTo(bx - Math.cos(angle) * 18, by - Math.sin(angle) * 18);
+    g.lineTo(bx, by);
+    g.stroke();
+    g.restore();
+}
+function openMerc() {
+    $('#merc').hidden = false;
+    $('#merc-notice').textContent = profile ? '' : tr('wd.signIn');
+    renderWardrobe();
+    requestAnimationFrame(drawMirror);
+    $('#merc-close').focus();
+}
+function closeMerc() {
+    $('#merc').hidden = true;
+    $('#merc-btn').focus();
+}
+$('#merc-btn').onclick = openMerc;
+$('#merc-close').onclick = closeMerc;
+$('#merc').onclick = e => e.target === $('#merc') && closeMerc();
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !$('#merc').hidden)
+        closeMerc();
+});
+
 // ---- armory ----
 function renderArmory() {
     const gold = profile ? profile.gold : 0;
@@ -1727,6 +2051,8 @@ window.addEventListener('langchange', () => {
     renderLangChoices();
     if (!$('#armory').hidden)
         renderArmory();
+    if (!$('#merc').hidden)
+        renderWardrobe();
     if (!$('#legends').hidden)
         openLegends();
 });
