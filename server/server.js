@@ -9,6 +9,7 @@ const { WebSocketServer } = require('ws');
 const db = require('./db');
 const api = require('./api');
 const lobby = require('./lobby');
+const skirmish = require('./skirmish');
 
 const PORT = process.env.PORT || 8080;
 const WINS_NEEDED = 2; // best of 3
@@ -32,6 +33,7 @@ let waitingPlayer = null; // a socket waiting for a public opponent
 // waiting to fight; the front of the line is matched first. After a duel the
 // winner rejoins at the front and the loser at the back.
 const lines = new Map(); // party code -> [socket, ...] in line order
+lobby.setPartyChangeListener(skirmish.partyChanged);
 const rooms = new Map();  // roomId -> room state
 let nextRoomId = 1;
 
@@ -279,6 +281,7 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
+    skirmish.handleClose(ws); // before the lobby update, which can trigger matchmaking
     lobby.handleClose(ws);
     dequeue(ws);
     const room = rooms.get(ws.roomId);
@@ -298,6 +301,7 @@ wss.on('connection', (ws) => {
 
 async function onMessage(ws, msg) {
   if (await lobby.handleMessage(ws, msg)) return;
+  if (skirmish.handleMessage(ws, msg)) return;
 
   if (msg.type === 'findMatch') return findMatch(ws);
   if (msg.type === 'cancelMatch') return dequeue(ws);

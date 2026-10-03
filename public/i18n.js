@@ -55,7 +55,11 @@ const STRINGS = {
         'who.you': 'YOU CHOOSE THE CONTRACT', 'who.leader': '{name} CHOOSES · ',
         'leaveWarband': 'LEAVE WARBAND',
         'mode.huntSub': 'Survive the horde', 'mode.duelSub': 'Best of three',
-        'mode.duo': 'SKIRMISH 2V2', 'mode.duoSub': 'Coming soon',
+        'mode.skirmish': 'SKIRMISH 2V2', 'mode.skirmishSub': 'Two against two',
+        'sides.title': 'SKIRMISH SIDES', 'sides.shuffle': 'SHUFFLE',
+        'sides.hintCaptain': 'Tap a name, then a name or open place on the other banner, to swap or move them.',
+        'sides.hintMember': 'The captain chooses the sides.',
+        'sides.solo': 'Alone? You’ll be paired with sellswords from the realm.',
         'play': 'TO BATTLE',
         // lobby: sign in
         'auth.title': 'WHO GOES THERE?',
@@ -69,12 +73,14 @@ const STRINGS = {
         'close': 'Close',
         'legends.title': 'HALL OF LEGENDS', 'legends.sub': 'THE REALM REMEMBERS',
         'legends.hunt': 'THE HUNT · BOUNTIES', 'legends.duel': 'THE DUEL · VICTORIES',
+        'legends.skirmish': 'SKIRMISH · VICTORIES', 'legends.noSkirmish': 'No skirmishes fought yet.',
         'legends.loading': 'Consulting the chronicles…',
         'legends.noHunt': 'No bounties claimed yet.', 'legends.noDuel': 'No duels fought yet.',
         'legends.failed': 'The chronicles could not be reached. Try again shortly.',
         'legends.bountyRow': '{bounty} · W{wave}',
         'stat.gold': 'GOLD', 'stat.bestBounty': 'BEST BOUNTY', 'stat.bestWave': 'BEST WAVE',
         'stat.kills': 'KILLS', 'stat.hunts': 'HUNTS', 'stat.duels': 'DUELS',
+        'stat.skirmishes': 'SKIRMISHES',
         // lobby: armory
         'armory.title': 'THE ARMORY', 'armory.sub': 'STEEL FOR THE HUNT',
         'armory.purseBefore': 'Your purse holds ',
@@ -148,6 +154,19 @@ const STRINGS = {
         'duel.lineNext': 'YOU ARE NEXT IN LINE', 'duel.linePos': 'YOU ARE #{n} IN LINE',
         'duel.holdField': 'YOU HOLD THE FIELD · YOUR NEXT FOE STEPS UP SHORTLY',
         'duel.toBack': 'TO THE BACK OF THE LINE · YOUR TURN WILL COME AGAIN',
+
+        // skirmish
+        'sk.title': 'SKIRMISH', 'sk.tag': 'TWO AGAINST TWO  ·  BEST OF THREE',
+        'sk.soloText': 'Two against two. You’ll be paired with another sellsword against two foes. The first band to win two rounds claims the purse.',
+        'sk.partyText': 'Your warband fights on the sides your captain chose. Open places are filled by sellswords from the realm.',
+        'sk.gold': 'GOLD BANNER', 'sk.crimson': 'CRIMSON BANNER', 'sk.open': 'Open place',
+        'sk.seek': 'SEEK A SKIRMISH',
+        'sk.gathering': 'GATHERING', 'sk.gatherText': 'Waiting for your warband to arrive: {arrived} of {total} here.',
+        'sk.seekTag': 'MUSTERING THE BANDS', 'sk.seekText': 'Mustering sellswords for the fight: {found} of 4 found.',
+        'sk.yourBand': 'YOUR BAND', 'sk.foes': 'FOES', 'sk.down': 'DOWN', 'sk.fled': 'FLED',
+        'sk.spectate': 'YOU ARE DOWN  ·  WATCHING {name}', 'sk.downAlone': 'YOU ARE DOWN',
+        'sk.felled': '{a} FELLED {b}', 'sk.left': '{name} FLED THE FIELD',
+        'sk.again': 'FIGHT AGAIN',
     },
 
     ko: {
@@ -194,7 +213,11 @@ const STRINGS = {
         'who.you': '당신이 계약을 고릅니다', 'who.leader': '{name} 님이 고릅니다 · ',
         'leaveWarband': '전투단 떠나기',
         'mode.huntSub': '몰려오는 적을 버텨내라', 'mode.duelSub': '3판 2선승',
-        'mode.duo': '2대2 접전', 'mode.duoSub': '곧 공개',
+        'mode.skirmish': '2대2 접전', 'mode.skirmishSub': '둘 대 둘',
+        'sides.title': '접전 편 나누기', 'sides.shuffle': '섞기',
+        'sides.hintCaptain': '이름을 누른 뒤 반대편의 이름이나 빈자리를 누르면 바꾸거나 옮깁니다.',
+        'sides.hintMember': '편은 대장이 정합니다.',
+        'sides.solo': '혼자인가요? 왕국의 용병들과 짝을 이룹니다.',
         'play': '전투 개시',
         // lobby: sign in
         'auth.title': '거기 누구냐?',
@@ -208,12 +231,14 @@ const STRINGS = {
         'close': '닫기',
         'legends.title': '전설의 전당', 'legends.sub': '왕국은 기억한다',
         'legends.hunt': '사냥 · 현상금', 'legends.duel': '결투 · 승리',
+        'legends.skirmish': '접전 · 승리', 'legends.noSkirmish': '아직 치러진 접전이 없습니다.',
         'legends.loading': '연대기를 살피는 중…',
         'legends.noHunt': '아직 현상금을 받은 이가 없습니다.', 'legends.noDuel': '아직 치러진 결투가 없습니다.',
         'legends.failed': '연대기에 닿을 수 없습니다. 잠시 후 다시 시도하세요.',
         'legends.bountyRow': '{bounty} · {wave}웨이브',
         'stat.gold': '금화', 'stat.bestBounty': '최고 현상금', 'stat.bestWave': '최고 웨이브',
         'stat.kills': '처치', 'stat.hunts': '사냥 횟수', 'stat.duels': '결투 전적',
+        'stat.skirmishes': '접전 전적',
         // lobby: armory
         'armory.title': '무기고', 'armory.sub': '사냥을 위한 강철',
         'armory.purseBefore': '지갑에 금화 ',
@@ -287,6 +312,19 @@ const STRINGS = {
         'duel.lineNext': '다음 차례입니다', 'duel.linePos': '대기 순서 {n}번째',
         'duel.holdField': '전장을 지켰습니다 · 곧 다음 상대가 나섭니다',
         'duel.toBack': '줄 맨 뒤로 갑니다 · 곧 다시 차례가 옵니다',
+
+        // skirmish
+        'sk.title': '접전', 'sk.tag': '2대2  ·  3판 2선승',
+        'sk.soloText': '2대2 전투입니다. 다른 용병과 짝을 이뤄 두 적과 맞섭니다. 먼저 두 라운드를 이기는 쪽이 상금을 차지합니다.',
+        'sk.partyText': '대장이 정한 편으로 전투단이 싸웁니다. 빈자리는 왕국의 용병들로 채워집니다.',
+        'sk.gold': '황금 깃발', 'sk.crimson': '진홍 깃발', 'sk.open': '빈자리',
+        'sk.seek': '접전 찾기',
+        'sk.gathering': '집결 중', 'sk.gatherText': '전투단이 모이길 기다리는 중: {total}명 중 {arrived}명 도착.',
+        'sk.seekTag': '부대를 모으는 중', 'sk.seekText': '전투에 나설 용병을 모으는 중: 4명 중 {found}명.',
+        'sk.yourBand': '우리 편', 'sk.foes': '적', 'sk.down': '쓰러짐', 'sk.fled': '도망',
+        'sk.spectate': '쓰러졌습니다  ·  {name} 관전 중', 'sk.downAlone': '쓰러졌습니다',
+        'sk.felled': '{a} → {b} 처치', 'sk.left': '{name} 님이 전장을 떠났습니다',
+        'sk.again': '다시 싸우기',
     },
 };
 
@@ -304,6 +342,8 @@ const SERVER_MESSAGES = {
         'That cannot be forged any further': '더 이상 제련할 수 없습니다',
         'Not enough gold': '금화가 부족합니다',
         'The server stumbled. Try again': '서버에 문제가 생겼습니다. 다시 시도하세요',
+        'Only the captain can choose the sides': '편은 대장만 정할 수 있습니다',
+        'That side is full': '그 편은 가득 찼습니다',
     },
 };
 

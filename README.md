@@ -1,17 +1,20 @@
 # BLOODSWORN — Mercenaries of the Ashen Realm
 
-A dark medieval top-down shooter: survive **The Hunt** solo, or fight
-**The Duel** (online 1v1, best of 3) against strangers or your warband.
+A dark medieval top-down shooter: survive **The Hunt** solo, fight
+**The Duel** (online 1v1, best of 3), or band up for **Skirmish** (online
+2v2, best of 3) against strangers or your warband.
 
 ## What's here
 - `public/index.html` — loading screen + lobby (accounts, warbands, gold,
   Hall of Legends)
 - `public/game.html` — The Hunt (single-player waves)
 - `public/showdown.html` — The Duel (online 1v1)
+- `public/skirmish.html` — Skirmish (online 2v2)
 - `public/config.js` — shared by all pages: server address + login token
 - `public/i18n.js` — English and Korean text for every page (see Languages)
 - `server/` — Node server: HTTP API + WebSockets on one port
   - `server.js` — Duel matchmaking and authoritative round/score state
+  - `skirmish.js` — Skirmish matchmaking (warband + public fill) and 2v2 matches
   - `lobby.js` — sign up / log in, warbands (parties)
   - `api.js` — leaderboard, profile, Hunt results
   - `db.js` — Postgres access; creates its tables on startup
@@ -53,8 +56,8 @@ the same browser share one login, and the newest tab takes over.
   right) logs out and deletes the session. 5 wrong passwords lock that name
   for a minute.
 - **Gold:** the Hunt pays bounty ÷ 10 when you die (retreating forfeits the
-  run). A Duel pays 100 for a win and 25 for a loss; leaving mid-Duel
-  forfeits it and pays nothing.
+  run). A Duel pays 100 for a win and 25 for a loss; a Skirmish pays 150 and
+  40. Leaving mid-match forfeits it and pays nothing.
 - **The Armory** (ARMORY in the lobby) sells permanent Hunt upgrades, each
   with 5 levels costing 150 / 400 / 800 / 1500 / 2500 gold:
 
@@ -78,7 +81,7 @@ the same browser share one login, and the newest tab takes over.
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/` | Health check |
-| GET | `/api/leaderboard` | Top 10 Hunt bounties and Duel records |
+| GET | `/api/leaderboard` | Top 10 Hunt bounties, Duel and Skirmish records |
 | GET | `/api/me` | Your profile, upgrade levels and Hunt loadout (`Authorization: Bearer <token>`) |
 | POST | `/api/hunt` | `{ score, wave, kills }` for a finished Hunt (bearer token; one per 10s) |
 
@@ -120,6 +123,26 @@ work with a Korean keyboard input method switched on.
   presses TO BATTLE in Duel mode, everyone is sent to `showdown.html#party`,
   which joins the line automatically.
 
+## Skirmish (2v2)
+- **Matchmaking:** players search in units that must fill two sides of two.
+  A warband (2+ members) counts once everyone in it has arrived on the
+  Skirmish page, split into the sides its captain chose; a solo player is a
+  unit of one. The oldest unit is topped up from the rest, pairs first, so a
+  warband of four plays itself, a pair faces another pair or two strangers,
+  and solo players fill any open place.
+- **Sides:** with Skirmish selected, the lobby shows a GOLD and a CRIMSON
+  banner. The captain taps a name, then a name or open place on the other
+  banner, to swap or move it, or presses SHUFFLE. Newcomers fill gold first.
+- **Matches:** players 0–1 are one team and 2–3 the other. Like the Duel,
+  each client moves itself and the server relays positions; the server owns
+  health, rounds and score, and ignores hits on allies or by the downed.
+  Downed players watch a standing ally until the round ends, and a round
+  ends when a whole team is down. First team to two rounds wins. Anyone who
+  leaves is out for the rest of the match (recorded as a loss with no gold);
+  if a whole team leaves, the other wins by forfeit.
+- The spawn points (`SPAWNS` in `server/skirmish.js`) must sit on open floor
+  in the arena (`RAW_MAP` in `skirmish.html`).
+
 ## How a Duel works
 1. Both clients search → the server pairs them into a room.
 2. Server sends `roundStart` with spawn points and resets health to 100.
@@ -134,8 +157,10 @@ work with a Korean keyboard input method switched on.
   modified client could submit a fake run. The server rejects impossible
   numbers (kills per wave, points per kill, one result per 10s) but can't
   catch a careful cheat. Duel results are decided by the server.
-- **Duel hits are client-reported**, so a modified client could claim hits.
-  Fixing this means simulating bolts on the server.
+- **Duel and Skirmish hits are client-reported**, so a modified client could
+  claim hits. Fixing this means simulating bolts on the server.
+- **Skirmish waits for a full four.** With few players online, a pair or a
+  loner can wait a long time; there are no bots to fill in.
 - **No lag compensation**, and no rejoin if a socket drops mid-Duel (the
   other player wins by forfeit).
 - **Armory upgrades only affect the Hunt.** The Duel stays even on purpose.

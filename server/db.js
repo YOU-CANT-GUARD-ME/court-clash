@@ -46,9 +46,12 @@ CREATE TABLE IF NOT EXISTS sessions (
 -- Armory upgrade levels, e.g. {"mail": 2, "boots": 1}. Added after launch,
 -- so existing databases get it via ALTER.
 ALTER TABLE players ADD COLUMN IF NOT EXISTS upgrades jsonb NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE players ADD COLUMN IF NOT EXISTS skirmish_wins integer NOT NULL DEFAULT 0;
+ALTER TABLE players ADD COLUMN IF NOT EXISTS skirmish_losses integer NOT NULL DEFAULT 0;
 CREATE INDEX IF NOT EXISTS sessions_player_idx ON sessions (player_id);
 CREATE INDEX IF NOT EXISTS players_bounty_idx ON players (best_bounty DESC);
 CREATE INDEX IF NOT EXISTS players_duel_idx ON players (duel_wins DESC);
+CREATE INDEX IF NOT EXISTS players_skirmish_idx ON players (skirmish_wins DESC);
 `;
 
 async function init() {
@@ -66,6 +69,8 @@ function profileOf(row) {
     totalKills: row.total_kills,
     duelWins: row.duel_wins,
     duelLosses: row.duel_losses,
+    skirmishWins: row.skirmish_wins || 0,
+    skirmishLosses: row.skirmish_losses || 0,
     upgrades: row.upgrades || {},
     loadout: armory.loadoutOf(row.upgrades),
   };
@@ -136,6 +141,17 @@ function recordDuel(playerId, won, gold) {
   );
 }
 
+function recordSkirmish(playerId, won, gold) {
+  return one(
+    `UPDATE players SET
+       gold = gold + $3,
+       skirmish_wins = skirmish_wins + CASE WHEN $2 THEN 1 ELSE 0 END,
+       skirmish_losses = skirmish_losses + CASE WHEN $2 THEN 0 ELSE 1 END
+     WHERE id = $1 RETURNING *`,
+    [playerId, won, gold],
+  );
+}
+
 // Spends gold on the next level of an upgrade. The WHERE clause re-checks the
 // balance and the current level, so two quick clicks can't buy the same level
 // twice or spend gold that's already gone. Returns null if it didn't go through.
@@ -151,7 +167,7 @@ function buyUpgrade(playerId, id, level, cost) {
 }
 
 async function leaderboard() {
-  const [hunt, duel] = await Promise.all([
+  const [hunt, duel, skirmish] = await Promise.all([
     pool.query(
       `SELECT username, best_bounty AS "bestBounty", best_wave AS "bestWave"
        FROM players WHERE best_bounty > 0
@@ -162,11 +178,16 @@ async function leaderboard() {
        FROM players WHERE duel_wins + duel_losses > 0
        ORDER BY duel_wins DESC, duel_losses ASC, created_at LIMIT 10`,
     ),
+    pool.query(
+      `SELECT username, skirmish_wins AS wins, skirmish_losses AS losses
+       FROM players WHERE skirmish_wins + skirmish_losses > 0
+       ORDER BY skirmish_wins DESC, skirmish_losses ASC, created_at LIMIT 10`,
+    ),
   ]);
-  return { hunt: hunt.rows, duel: duel.rows };
+  return { hunt: hunt.rows, duel: duel.rows, skirmish: skirmish.rows };
 }
 
 module.exports = {
   init, profileOf, createPlayer, playerById, playerByUsername, createSession, playerBySession,
-  deleteSession, recordHunt, recordDuel, buyUpgrade, leaderboard,
+  deleteSession, recordHunt, recordDuel, recordSkirmish, buyUpgrade, leaderboard,
 };

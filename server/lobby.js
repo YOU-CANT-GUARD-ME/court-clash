@@ -10,7 +10,8 @@ const auth = require('./auth');
 const armory = require('./armory');
 
 const PARTY_SIZE = 4;
-const MODES = ['hunt', 'showdown'];
+const MODES = ['hunt', 'showdown', 'skirmish'];
+const SIDE_SIZE = 2; // Skirmish is two-a-side
 const NAME_RE = /^[A-Za-z0-9_]{3,16}$/;
 const PASSWORD_MIN = 6, PASSWORD_MAX = 72;
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O or 1/I
@@ -21,7 +22,8 @@ const RECONNECT_GRACE_MS = 15000;
 const LOGIN_MAX_FAILS = 5, LOGIN_LOCK_MS = 60000;
 
 const sessions = new Map(); // playerId -> { ws, username, partyCode, leaveTimer }
-const parties = new Map();  // code -> { code, mode, members: [playerId, ...] }
+const parties = new Map();  // code -> { code, mode, members: [playerId, ...], sides: { playerId: 0 | 1 } }
+let onPartyChange = () => {}; // set by the server so Skirmish can re-match
 const loginFails = new Map(); // username_lower -> { count, until }
 
 function send(ws, msg) {
@@ -45,6 +47,7 @@ function broadcast(party) {
     username: sessions.get(id).username,
     leader: i === 0,
     online: !!sessions.get(id).ws,
+    side: party.sides[id],
   }));
   party.members.forEach((id, i) => {
     send(sessions.get(id).ws, {
@@ -55,16 +58,23 @@ function broadcast(party) {
       members: members.map((m, j) => ({ ...m, you: i === j })),
     });
   });
+  onPartyChange();
+}
+
+// Skirmish sides: newcomers fill the gold side (0) first, then crimson (1).
+function sideCount(party, side) {
+  return party.members.filter((id) => party.sides[id] === side).length;
 }
 
 function addToParty(party, playerId) {
   party.members.push(playerId);
+  party.sides[playerId] = sideCount(party, 0) < SIDE_SIZE ? 0 : 1;
   sessions.get(playerId).partyCode = party.code;
   broadcast(party);
 }
 
 function createParty(playerId) {
-  const party = { code: makeCode(), mode: 'hunt', members: [] };
+  const party = { code: makeCode(), mode: 'hunt', members: [], sides: {} };
   parties.set(party.code, party);
   addToParty(party, playerId);
 }
@@ -74,6 +84,7 @@ function removeFromParty(playerId) {
   const party = session && parties.get(session.partyCode);
   if (!party) return;
   party.members = party.members.filter((id) => id !== playerId);
+  delete party.sides[playerId];
   session.partyCode = null;
   if (party.members.length === 0) parties.delete(party.code);
   else broadcast(party); // if the captain left, members[0] is now the new captain
@@ -227,6 +238,44 @@ async function handleMessage(ws, msg) {
       party.members.slice(1).forEach((id) => send(sessions.get(id).ws, { type: 'launch', mode: party.mode }));
       return true;
 
+    case 'setSide': {
+      // Captain moves a member to the other Skirmish side (if it has room).
+      if (!party) return true;
+      if (party.members[0] !== me) return error(ws, 'Only the captain can choose the sides'), true;
+      const id = party.members[msg.index];
+      const side = msg.side === 1 ? 1 : 0;
+      if (!id || party.sides[id] === side) return true;
+      if (sideCount(party, side) >= SIDE_SIZE) return error(ws, 'That side is full'), true;
+      party.sides[id] = side;
+      broadcast(party);
+      return true;
+    }
+
+    case 'swapSides': {
+      // Captain trades two members on opposite Skirmish sides.
+      if (!party) return true;
+      if (party.members[0] !== me) return error(ws, 'Only the captain can choose the sides'), true;
+      const a = party.members[msg.a], b = party.members[msg.b];
+      if (!a || !b || party.sides[a] === party.sides[b]) return true;
+      [party.sides[a], party.sides[b]] = [party.sides[b], party.sides[a]];
+      broadcast(party);
+      return true;
+    }
+
+    case 'shuffleSides': {
+      if (!party) return true;
+      if (party.members[0] !== me) return error(ws, 'Only the captain can choose the sides'), true;
+      const order = [...party.members];
+      for (let i = order.length - 1; i > 0; i--) {
+        const j = crypto.randomInt(i + 1);
+        [order[i], order[j]] = [order[j], order[i]];
+      }
+      // Deal alternately, so a warband of 2 or 4 splits evenly.
+      order.forEach((id, i) => { party.sides[id] = i % 2; });
+      broadcast(party);
+      return true;
+    }
+
     case 'setMode':
       if (!party) return true;
       if (party.members[0] !== me) return error(ws, 'Only the captain can choose the contract'), true;
@@ -263,10 +312,28 @@ function matchPartyOf(ws) {
   return party && party.members.length >= 2 ? party.code : null;
 }
 
+// The warband to play Skirmish with: every member's current socket (null if
+// they're reconnecting) and side. Null if this player has no warband mates.
+function skirmishPartyOf(ws) {
+  const session = ws.playerId && sessions.get(ws.playerId);
+  const party = session && parties.get(session.partyCode);
+  if (!party || party.members.length < 2) return null;
+  return {
+    code: party.code,
+    members: party.members.map((id) => ({ ws: sessions.get(id).ws, side: party.sides[id] })),
+  };
+}
+
+function setPartyChangeListener(fn) {
+  onPartyChange = fn;
+}
+
 // Push fresh gold/stats to the player's open page, if any.
 function pushProfile(playerId, row) {
   const session = sessions.get(playerId);
   if (session && row) send(session.ws, { type: 'profile', profile: db.profileOf(row) });
 }
 
-module.exports = { handleMessage, handleClose, usernameOf, matchPartyOf, pushProfile };
+module.exports = {
+  handleMessage, handleClose, usernameOf, matchPartyOf, skirmishPartyOf, pushProfile, setPartyChangeListener,
+};

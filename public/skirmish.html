@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BLOODSWORN — SKIRMISH</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=EB+Garamond:ital,wght@0,500;1,500&family=Pirata+One&family=Noto+Serif+KR:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void: #070605; --stone: #14110f; --stone2: #221d19; --stone3: #2f2822; --iron: #3d352e;
+    --blood: #8e1c1c; --blood-d: #4a0d0d; --ember: #e0503a; --gold: #c9a24a; --gold-d: #7a5a1e;
+    --parch: #e6d8b8; --parch2: #d4c299; --ink: #2a1d12; --ink2: #5a4630;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--void); display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; font-family: 'EB Garamond', 'Noto Serif KR', Georgia, serif; }
+  canvas { display: block; cursor: none; }
+  /* ---- status overlay (menus between rounds) ---- */
+  #overlay {
+    position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px;
+    background: radial-gradient(ellipse at center, rgba(60,14,10,0.55), rgba(4,3,2,0.95) 75%);
+    backdrop-filter: blur(4px);
+    animation: fadeIn .3s ease-out;
+  }
+  @keyframes fadeIn { from { opacity: 0; } }
+  .card {
+    width: min(440px, 100%); background: linear-gradient(170deg, var(--parch), var(--parch2));
+    border-radius: 6px; border: 3px solid var(--iron); overflow: hidden;
+    box-shadow: 0 0 0 1px #000, 0 0 0 4px var(--stone2), 0 0 0 5px #000, 0 24px 50px #000c;
+    animation: rise .4s cubic-bezier(.2,.9,.3,1.1) both;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(18px); } }
+  .card.still { animation: none; } /* an update to the card already on screen */
+  .card-head {
+    display: flex; align-items: center; gap: 14px; padding: 18px 22px;
+    background: linear-gradient(180deg, var(--stone3), var(--stone)); border-bottom: 3px solid var(--blood);
+  }
+  .card.win .card-head { border-bottom-color: var(--gold); }
+  .card.lose .card-head { border-bottom-color: var(--ember); }
+  .card-head h2 {
+    font: 900 28px/1 'Cinzel', 'Noto Serif KR', serif; letter-spacing: 2px; color: var(--parch);
+    text-shadow: 0 2px 0 #000;
+  }
+  .card.win h2 { color: var(--gold); }
+  .card.lose h2 { color: var(--ember); }
+  .card-head small {
+    display: block; margin-top: 7px; font: 700 9px 'Cinzel', 'Noto Serif KR', serif; letter-spacing: 2.5px; color: var(--gold);
+    text-shadow: none;
+  }
+  .spinner {
+    width: 34px; height: 34px; flex: none; border-radius: 50%;
+    border: 3px solid rgba(201,162,74,.15); border-top-color: var(--gold); border-right-color: var(--ember);
+    animation: spin .8s cubic-bezier(.5,.1,.5,.9) infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .card-body { padding: 20px 22px 22px; }
+  .card-body > p { font-size: 17px; font-style: italic; line-height: 1.4; color: var(--ink2); }
+  .card-body > * + * { margin-top: 16px; }
+  .tally { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; text-align: center; }
+  .tally .side small { display: block; font: 700 9px 'Cinzel', 'Noto Serif KR', serif; letter-spacing: 2px; color: var(--ink2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tally .side.opp small { color: var(--blood); }
+  .tally .side b { display: block; margin: 4px 0 6px; font: 900 44px/1 'Cinzel', 'Noto Serif KR', serif; color: var(--ink); }
+  .tally .vs { font: italic 500 24px 'EB Garamond', 'Noto Serif KR', serif; color: #8a7656; }
+  .pips { display: flex; justify-content: center; gap: 7px; }
+  .pips i { width: 9px; height: 9px; transform: rotate(45deg); background: rgba(90,70,48,.25); }
+  .pips i.on { background: var(--gold-d); box-shadow: 0 0 0 2px rgba(201,162,74,.45); }
+  .opp .pips i.on { background: var(--blood); box-shadow: 0 0 0 2px rgba(224,80,58,.35); }
+  .progress { height: 8px; border: 1px solid var(--ink2); background: rgba(42,29,18,.15); overflow: hidden; }
+  .progress i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--blood-d), var(--blood), var(--ember)); transform-origin: left; animation: fill 3s linear both; }
+  @keyframes fill { from { transform: scaleX(0); } }
+  .progress-label { display: flex; justify-content: space-between; font: 700 9px 'Cinzel', 'Noto Serif KR', serif; letter-spacing: 2px; color: var(--ink2); }
+  .keys { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
+  .keys div { display: flex; align-items: center; gap: 9px; font-size: 16px; color: var(--ink); }
+  kbd {
+    min-width: 26px; padding: 4px 7px; border-radius: 3px; text-align: center;
+    background: var(--stone3); box-shadow: 0 2px 0 #000; color: var(--gold); font: 700 9px 'Cinzel', 'Noto Serif KR', serif;
+  }
+  .card-body > p.purse { text-align: center; font: 700 15px 'Cinzel', 'Noto Serif KR', serif; font-style: normal; letter-spacing: 1px; color: var(--gold-d); }
+  .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .btns.one { grid-template-columns: 1fr; }
+  .btn {
+    border: 1px solid #000; border-radius: 4px; padding: 14px 10px; cursor: pointer; color: var(--parch);
+    font: 900 15px 'Cinzel', 'Noto Serif KR', serif; letter-spacing: 1.5px; text-shadow: 0 1px 0 #000;
+    background: linear-gradient(180deg, #4d4339, var(--iron)); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 3px 0 #000;
+    transition: filter .15s, transform .1s;
+  }
+  .btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
+  .btn.primary { background: linear-gradient(180deg, #b52828, var(--blood) 60%, #6a1414); box-shadow: inset 0 1px 0 rgba(255,255,255,.15), 0 3px 0 var(--blood-d), 0 0 14px rgba(142,28,28,.4); }
+  .btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .sides { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .sides section { padding: 10px 12px; border: 1px solid rgba(90,70,48,.35); border-radius: 4px; background: rgba(255,255,255,.18); }
+  .sides h3 { margin-bottom: 6px; font: 900 10px 'Cinzel', 'Noto Serif KR', serif; letter-spacing: 2px; color: var(--gold-d); }
+  .sides section.crimson h3 { color: var(--blood); }
+  .sides li { list-style: none; padding: 3px 0; font: 700 14px 'Cinzel', 'Noto Serif KR', serif; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sides li.open { font: italic 500 15px 'EB Garamond', 'Noto Serif KR', serif; color: #8a7656; }
+  @media (prefers-reduced-motion: reduce) {
+    #overlay, .card, .spinner, .progress i { animation: none; }
+  }
+</style>
+</head>
+
+<body>
+<canvas id="c"></canvas>
+<div id="overlay" role="dialog" aria-live="polite"></div>
+
+<script src="config.js"></script>
+<script src="i18n.js"></script>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+// Render at the screen's pixel density so text and lines stay sharp on
+// high-DPI displays. All drawing code works in CSS pixels (W × H).
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
+let W, H;
+function sizeCanvas() {
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = W * DPR;
+    canvas.height = H * DPR;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+sizeCanvas();
+window.addEventListener('resize', sizeCanvas);
+// Canvas text doesn't trigger web-font downloads on its own.
+if (document.fonts)
+    ['900 12px Cinzel', '700 12px Cinzel', '500 12px "EB Garamond"'].forEach(f => document.fonts.load(f));
+const BASE_TILE = 40;
+// ── ARENA MAP (wide and mirrored — two spawn corners per band) ─────────────────
+// Team 0 spawns on the left, team 1 on the right. The spawn points live in
+// server/skirmish.js (SPAWNS) and must stay on open floor if this changes.
+const RAW_MAP = [
+    "########################################",
+    "#......................................#",
+    "#......................................#",
+    "#.....##........##....##........##.....#",
+    "#.....##........##....##........##.....#",
+    "#.....##........##....##........##.....#",
+    "#.....##........................##.....#",
+    "#......................................#",
+    "#.................####.................#",
+    "#..........###....####....###..........#",
+    "#..........###............###..........#",
+    "#.###..............................###.#",
+    "#.###..............................###.#",
+    "#..........###............###..........#",
+    "#..........###....####....###..........#",
+    "#.................####.................#",
+    "#......................................#",
+    "#.....##........................##.....#",
+    "#.....##........##....##........##.....#",
+    "#.....##........##....##........##.....#",
+    "#.....##........##....##........##.....#",
+    "#......................................#",
+    "#......................................#",
+    "########################################",
+];
+const MAP_W = RAW_MAP[0].length, MAP_H = RAW_MAP.length;
+// Grow tiles when necessary so the complete arena covers the viewport. The
+// network protocol uses tile units, keeping matches aligned across displays.
+// Sized for the whole screen, not just the window, so the arena still fills it in fullscreen.
+const TILE = Math.max(BASE_TILE, Math.ceil(Math.max(Math.max(W, screen.width) / MAP_W, Math.max(H, screen.height) / MAP_H)));
+const WORLD_SCALE = TILE / BASE_TILE;
+function isWall(tx, ty) {
+    const mx = Math.floor(tx), my = Math.floor(ty);
+    if (mx < 0 || mx >= MAP_W || my < 0 || my >= MAP_H)
+        return true;
+    return RAW_MAP[my][mx] === '#';
+}
+function isWallPx(px, py) { return isWall(px / TILE, py / TILE); }
+// ── PRE-RENDER MAP ────────────────────────────────────────────────────────────
+const mapCanvas = document.createElement('canvas');
+mapCanvas.width = MAP_W * TILE;
+mapCanvas.height = MAP_H * TILE;
+const mctx = mapCanvas.getContext('2d');
+(function buildMap() {
+    paintDungeon(mctx, TILE);
+})();
+// ── PARTICLES ─────────────────────────────────────────────────────────────────
+const particles = [];
+function spawnParticles(x, y, color, count, sMin, sMax, life, size = 3) {
+    for (let i = 0; i < count; i++) {
+        const a = Math.random() * Math.PI * 2, spd = sMin + Math.random() * (sMax - sMin);
+        particles.push({ x, y, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, color, life, maxLife: life, size: size + Math.random() * 2 });
+    }
+}
+// ── BULLETS ───────────────────────────────────────────────────────────────────
+// Distance from point (px, py) to the segment a→b. Used for bullet hits so a
+// fast bullet can't skip past a target between two frames.
+function distToSegment(px, py, ax, ay, bx, by) {
+    const dx = bx - ax, dy = by - ay, len2 = dx * dx + dy * dy;
+    const t = len2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2)) : 0;
+    return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+function makeBullet(x, y, angle, speed = 22 * WORLD_SCALE) {
+    return { x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, alive: true, dist: 0 };
+}
+function updateBullet(b) {
+    for (let s = 0; s < 3; s++) {
+        const nx = b.x + b.vx / 3, ny = b.y + b.vy / 3;
+        if (isWallPx(nx, ny)) {
+            b.alive = false;
+            spawnParticles(b.x, b.y, '#dcc850', 4, 1, 3, 8, 1);
+            return;
+        }
+        b.x = nx;
+        b.y = ny;
+    }
+    b.dist += Math.hypot(b.vx, b.vy);
+    if (b.dist > TILE * 20)
+        b.alive = false;
+}
+// ── ART: dungeon, mercenaries, bolts, torchlight ─────────────────────────────
+// Stable per-tile noise, so every stone keeps its own shade, crack or stain.
+function tileHash(c, r) {
+    let h = (c * 374761393 + r * 668265263) | 0;
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
+}
+function paintDungeon(g, size) {
+    g.fillStyle = '#070605';
+    g.fillRect(0, 0, MAP_W * size, MAP_H * size);
+    for (let row = 0; row < MAP_H; row++)
+        for (let col = 0; col < MAP_W; col++) {
+            const x = col * size, y = row * size, h = tileHash(col, row);
+            if (RAW_MAP[row][col] === '#') {
+                // Heavy stone wall: two courses of offset blocks with a worn top edge.
+                const s = 48 + Math.floor(h * 12);
+                g.fillStyle = `rgb(${s},${s - 6},${s - 12})`;
+                g.fillRect(x, y, size, size);
+                g.strokeStyle = 'rgba(0,0,0,0.6)';
+                g.lineWidth = 2;
+                g.beginPath();
+                g.moveTo(x, y + size / 2);
+                g.lineTo(x + size, y + size / 2);
+                g.moveTo(x + size / 2, y);
+                g.lineTo(x + size / 2, y + size / 2);
+                g.moveTo(x, y + size / 2);
+                g.lineTo(x, y + size);
+                g.moveTo(x, y);
+                g.lineTo(x + size, y);
+                g.stroke();
+                g.fillStyle = 'rgba(255,235,200,0.06)';
+                g.fillRect(x, y + 1, size, 3);
+                g.fillStyle = 'rgba(0,0,0,0.4)';
+                g.fillRect(x, y + size - 4, size, 4);
+            }
+            else {
+                // Flagstone floor.
+                const s = 33 + Math.floor(h * 9);
+                g.fillStyle = `rgb(${s},${s - 4},${s - 9})`;
+                g.fillRect(x, y, size, size);
+                g.strokeStyle = 'rgba(0,0,0,0.65)';
+                g.lineWidth = 2;
+                g.beginPath();
+                g.moveTo(x, y);
+                g.lineTo(x + size, y);
+                g.moveTo(x, y);
+                g.lineTo(x, y + size);
+                g.stroke();
+                if (row > 0 && RAW_MAP[row - 1][col] === '#') {
+                    const sh = g.createLinearGradient(0, y, 0, y + size * 0.45);
+                    sh.addColorStop(0, 'rgba(0,0,0,0.55)');
+                    sh.addColorStop(1, 'rgba(0,0,0,0)');
+                    g.fillStyle = sh;
+                    g.fillRect(x, y, size, size * 0.45);
+                }
+                if (h > 0.94) {
+                    g.strokeStyle = 'rgba(10,8,6,0.8)';
+                    g.lineWidth = 1;
+                    g.beginPath();
+                    g.moveTo(x + size * 0.15, y + size * (0.3 + h * 0.3));
+                    g.lineTo(x + size * 0.45, y + size * 0.5);
+                    g.lineTo(x + size * 0.6, y + size * 0.35);
+                    g.lineTo(x + size * 0.85, y + size * 0.6);
+                    g.stroke();
+                }
+                else if (h < 0.06) {
+                    g.fillStyle = 'rgba(100,12,12,0.4)';
+                    g.beginPath();
+                    g.ellipse(x + size * 0.5, y + size * 0.55, size * 0.3, size * 0.18, h * 40, 0, Math.PI * 2);
+                    g.fill();
+                }
+                else if (h > 0.45 && h < 0.5) {
+                    g.fillStyle = 'rgba(160,150,130,0.18)';
+                    for (let i = 0; i < 4; i++)
+                        g.fillRect(x + size * (0.2 + i * 0.17), y + size * (0.3 + ((i * 7) % 5) * 0.1), 2, 2);
+                }
+            }
+        }
+}
+const MERC_SELF = { cloak: '#3a2a1e', cloakDark: '#0e0a07', trim: '#c9a24a', helm: '#9aa0a8' };
+// A hooded mercenary seen from above, crossbow aimed along `angle`.
+function drawMercenary(sx, sy, r, angle, pal) {
+    const ca = Math.cos(angle), sa = Math.sin(angle);
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.beginPath();
+    ctx.ellipse(sx, sy + r, r * 1.2, r * 0.42, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Crossbow: stock, steel limbs, string.
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#2a1a0e';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx + ca * (r + 13), sy + sa * (r + 13));
+    ctx.stroke();
+    ctx.strokeStyle = '#6a4a2a';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    const lx = sx + ca * (r + 5), ly = sy + sa * (r + 5), span = 1.05, lr = 10;
+    ctx.strokeStyle = '#b8bec6';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(lx, ly, lr, angle - span, angle + span);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(230,216,184,0.8)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(lx + Math.cos(angle - span) * lr, ly + Math.sin(angle - span) * lr);
+    ctx.lineTo(sx + ca * (r + 1), sy + sa * (r + 1));
+    ctx.lineTo(lx + Math.cos(angle + span) * lr, ly + Math.sin(angle + span) * lr);
+    ctx.stroke();
+    // Cloak with a trimmed hem.
+    ctx.fillStyle = pal.cloakDark;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r + 2, 0, Math.PI * 2);
+    ctx.fill();
+    const cg = ctx.createRadialGradient(sx - ca * 3, sy - sa * 3, 2, sx, sy, r);
+    cg.addColorStop(0, pal.cloak);
+    cg.addColorStop(1, pal.cloakDark);
+    ctx.fillStyle = cg;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = pal.trim;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r - 1, 0, Math.PI * 2);
+    ctx.stroke();
+    // Pauldrons either side.
+    ctx.fillStyle = pal.helm;
+    for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.arc(sx - sa * side * (r - 3), sy + ca * side * (r - 3), 3.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    // Helm with a visor slit facing the aim.
+    const hx = sx + ca * 2, hy = sy + sa * 2, hr = r * 0.5;
+    const hg = ctx.createRadialGradient(hx - 2, hy - 2, 1, hx, hy, hr);
+    hg.addColorStop(0, '#e0e4ea');
+    hg.addColorStop(1, pal.helm);
+    ctx.fillStyle = hg;
+    ctx.beginPath();
+    ctx.arc(hx, hy, hr, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#0a0807';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(hx + ca * hr * 0.4 - sa * hr * 0.6, hy + sa * hr * 0.4 + ca * hr * 0.6);
+    ctx.lineTo(hx + ca * hr * 0.4 + sa * hr * 0.6, hy + sa * hr * 0.4 - ca * hr * 0.6);
+    ctx.stroke();
+    ctx.restore();
+}
+// A bolt or arrow pointing along its velocity.
+function drawBolt(b, camX, camY, shaft, head, glow, len = 14) {
+    const sp = Math.hypot(b.vx, b.vy) || 1, ux = b.vx / sp, uy = b.vy / sp;
+    const x = b.x - camX, y = b.y - camY, tx = x - ux * len, ty = y - uy * len;
+    ctx.save();
+    ctx.lineCap = 'round';
+    if (glow) {
+        ctx.globalAlpha = 0.35;
+        ctx.strokeStyle = glow;
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(tx, ty);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+    }
+    ctx.strokeStyle = shaft;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(tx, ty);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    ctx.fillStyle = head;
+    ctx.beginPath();
+    ctx.moveTo(x + ux * 5, y + uy * 5);
+    ctx.lineTo(x - uy * 3, y + ux * 3);
+    ctx.lineTo(x + uy * 3, y - ux * 3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = shaft;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(tx, ty);
+    ctx.lineTo(tx - ux * 3 - uy * 3, ty - uy * 3 + ux * 3);
+    ctx.moveTo(tx, ty);
+    ctx.lineTo(tx - ux * 3 + uy * 3, ty - uy * 3 - ux * 3);
+    ctx.stroke();
+    ctx.restore();
+}
+// Darkness everywhere except a flickering pool of torchlight around (px, py).
+function drawTorchlight(px, py) {
+    const t = Date.now();
+    const f = 1 + Math.sin(t * 0.011) * 0.025 + Math.sin(t * 0.029) * 0.015;
+    const g = ctx.createRadialGradient(px, py, 70 * f, px, py, Math.max(W, H) * 0.8 * f);
+    g.addColorStop(0, 'rgba(6,4,3,0)');
+    g.addColorStop(0.35, 'rgba(6,4,3,0.3)');
+    g.addColorStop(1, 'rgba(4,3,2,0.72)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const warm = ctx.createRadialGradient(px, py, 0, px, py, 190 * f);
+    warm.addColorStop(0, 'rgba(255,140,60,0.10)');
+    warm.addColorStop(1, 'rgba(255,140,60,0)');
+    ctx.fillStyle = warm;
+    ctx.fillRect(px - 200, py - 200, 400, 400);
+    ctx.restore();
+}
+// ── PLAYER (local, fully simulated) ───────────────────────────────────────────
+function makePlayer(spawn) {
+    return { x: spawn.x, y: spawn.y, angle: 0, speed: 4 * WORLD_SCALE, health: 100, displayHealth: 100, ammo: 30,
+        hurtTimer: 0, shootTimer: 0, reloadTimer: 0, reloadCd: 4, rollTimer: 0,
+        bullets: [], bob: 0, moving: false };
+}
+function updatePlayer(player, keys, mouseX, mouseY, camX, camY) {
+    const M = 10 * WORLD_SCALE;
+    let spd = player.speed;
+    if (player.rollTimer > 0) {
+        spd *= 2.4;
+        player.rollTimer--;
+    }
+    let moved = false;
+    if (keys['w'] || keys['arrowup']) {
+        const ny = player.y - spd;
+        if (!isWallPx(player.x, ny - M))
+            player.y = ny;
+        moved = true;
+    }
+    if (keys['s'] || keys['arrowdown']) {
+        const ny = player.y + spd;
+        if (!isWallPx(player.x, ny + M))
+            player.y = ny;
+        moved = true;
+    }
+    if (keys['a'] || keys['arrowleft']) {
+        const nx = player.x - spd;
+        if (!isWallPx(nx - M, player.y))
+            player.x = nx;
+        moved = true;
+    }
+    if (keys['d'] || keys['arrowright']) {
+        const nx = player.x + spd;
+        if (!isWallPx(nx + M, player.y))
+            player.x = nx;
+        moved = true;
+    }
+    player.moving = moved;
+    player.bob = moved ? (player.bob + 0.15) % (Math.PI * 2) : player.bob * 0.85;
+    if (player.hurtTimer > 0)
+        player.hurtTimer--;
+    if (player.shootTimer > 0)
+        player.shootTimer--;
+    if (player.reloadTimer > 0)
+        player.reloadTimer--;
+    player.angle = Math.atan2((camY + mouseY) - player.y, (camX + mouseX) - player.x);
+    for (let i = player.bullets.length - 1; i >= 0; i--) {
+        const b = player.bullets[i], ox = b.x, oy = b.y;
+        updateBullet(b);
+        if (!b.alive) {
+            player.bullets.splice(i, 1);
+            continue;
+        }
+        // Hit test against foes' last known positions; bolts pass through allies.
+        const target = fighters.findIndex((f, j) => j !== me && isFoe(j) && f.health > 0 && !f.left
+            && distToSegment(f.x, f.y, ox, oy, b.x, b.y) < 16 * WORLD_SCALE);
+        if (target >= 0) {
+            b.alive = false;
+            player.bullets.splice(i, 1);
+            spawnParticles(fighters[target].x, fighters[target].y, '#8c0a0a', 10, 1.5, 4, 20, 2);
+            sendMsg({ type: 'skHit', target, damage: 20 });
+        }
+    }
+}
+function playerShoot(player) {
+    if (player.ammo <= 0 || player.reloadTimer > 0 || matchState !== 'playing' || player.health <= 0)
+        return;
+    player.ammo--;
+    player.shootTimer = 8;
+    player.reloadTimer = player.reloadCd;
+    player.bullets.push(makeBullet(player.x, player.y, player.angle));
+    spawnParticles(player.x + Math.cos(player.angle) * 18, player.y + Math.sin(player.angle) * 18, '#ffa020', 5, 1, 4, 10, 2);
+    sendMsg({ type: 'skShoot', x: player.x / TILE, y: player.y / TILE, angle: player.angle });
+}
+function drawFighter(p, camX, camY, pal, label) {
+    const sx = p.x - camX, sy = p.y - camY, r = 12 * WORLD_SCALE;
+    ctx.save();
+    if (p.health <= 0) {
+        // Fallen: a dim body under a dark stain, no weapon glow, greyed name.
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = 'rgba(90,10,10,0.55)';
+        ctx.beginPath();
+        ctx.ellipse(sx, sy + 3, r * 1.6, r * 0.9, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        drawMercenary(sx, sy, r, p.angle, pal);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = 'rgba(10,8,7,0.9)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(sx - 7, sy - 7); ctx.lineTo(sx + 7, sy + 7);
+        ctx.moveTo(sx + 7, sy - 7); ctx.lineTo(sx - 7, sy + 7);
+        ctx.stroke();
+        drawText(label, sx, sy - r - 14, { size: 10, align: 'center', color: '#7a6e60', spacing: 1, shadow: 'rgba(0,0,0,0.85)', shadowOffset: 1 });
+        ctx.restore();
+        return;
+    }
+    const glow = ctx.createRadialGradient(sx, sy, r * 0.5, sx, sy, r * 2.6);
+    glow.addColorStop(0, pal.trim + '30');
+    glow.addColorStop(1, pal.trim + '00');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r * 2.6, 0, Math.PI * 2);
+    ctx.fill();
+    drawMercenary(sx, sy, r, p.angle, pal);
+    if (p.shootTimer > 4) {
+        const fx = sx + Math.cos(p.angle) * (r + 12), fy = sy + Math.sin(p.angle) * (r + 12);
+        const g = ctx.createRadialGradient(fx, fy, 0, fx, fy, 10);
+        g.addColorStop(0, 'rgba(255,240,200,0.9)');
+        g.addColorStop(1, 'rgba(255,180,80,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(fx, fy, 10, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    drawText(label, sx, sy - r - 20, { size: 10, align: 'center', color: pal.label, spacing: 1,
+        shadow: 'rgba(0,0,0,0.85)', shadowOffset: 1 });
+    // A small health bar over everyone but us (ours is in the scoreboard).
+    if (p !== player) {
+        const bw = 34, [hA, hB] = healthColors(p.health);
+        meter(sx - bw / 2, sy - r - 14, bw, 5, p.displayHealth / 100, hA, hB);
+    }
+    ctx.restore();
+}
+function drawBolts(p, camX, camY, pal) {
+    for (const b of p.bullets)
+        drawBolt(b, camX, camY, '#c8b48a', '#eef0f2', pal.trim);
+}
+// ── NETWORKING ────────────────────────────────────────────────────────────────
+// The server address and login token come from config.js.
+let socket = null;
+let matchState = 'idle'; // idle | queued | playing | roundover | matchover
+let wantMatch = false;   // should we be searching?
+let party = null;        // our lobby warband, once the server recognises us
+let signedIn = false;    // only signed-in players earn gold and records
+let status = null;       // latest search progress from the server
+let roster = [];         // [{ name, team }] for players 0–3; 0–1 are team 0
+let me = null;           // our index in the roster
+let scores = [0, 0];     // by team
+let round = 1;
+const feed = [];         // recent knock-downs: { text, at }
+function teamOf(i) { return i < 2 ? 0 : 1; }
+function myTeam() { return me === null ? 0 : teamOf(me); }
+function isFoe(i) { return teamOf(i) !== myTeam(); }
+function partyMates() { return party ? party.members.filter(m => !m.you) : []; }
+function nameOf(i) { return i === me ? tr('duel.you') : (roster[i]?.name || '').toUpperCase(); }
+function sendMsg(msg) {
+    if (socket && socket.readyState === WebSocket.OPEN)
+        socket.send(JSON.stringify(msg));
+}
+// One socket for the whole visit. Saying hello with our login token keeps us
+// in our warband while on this page, so the server can match us with it.
+function openSocket() {
+    const ws = socket = new WebSocket(SERVER.ws);
+    ws.addEventListener('open', () => {
+        if (ws !== socket)
+            return;
+        sendMsg({ type: 'hello', token: getToken() });
+        if (wantMatch)
+            sendMsg({ type: 'findSkirmish' });
+    });
+    ws.addEventListener('message', (ev) => {
+        if (ws === socket)
+            handleServerMessage(JSON.parse(ev.data));
+    });
+    ws.addEventListener('close', () => {
+        if (ws !== socket)
+            return;
+        socket = null;
+        if (matchState !== 'idle' && matchState !== 'matchover')
+            showConnectionProblem(tr('duel.lost'), tr('duel.lostText'));
+    });
+    ws.addEventListener('error', () => {
+        if (ws === socket && matchState !== 'idle' && matchState !== 'matchover')
+            showConnectionProblem(tr('duel.failed'), tr('duel.failedText'));
+    });
+}
+function findSkirmish() {
+    wantMatch = true;
+    matchState = 'queued';
+    status = null;
+    showSearching();
+    if (!socket)
+        openSocket(); // the open handler sends findSkirmish
+    else
+        sendMsg({ type: 'findSkirmish' });
+}
+function cancelSearch() {
+    wantMatch = false;
+    matchState = 'idle';
+    sendMsg({ type: 'cancelSkirmish' });
+    showIntro();
+}
+function addFeed(text) {
+    feed.push({ text, at: performance.now() });
+    if (feed.length > 4)
+        feed.shift();
+}
+function handleServerMessage(msg) {
+    switch (msg.type) {
+        case 'welcome':
+            signedIn = true;
+            break;
+        case 'needAuth':
+            signedIn = false;
+            break;
+        case 'party':
+            party = msg;
+            if (matchState === 'idle')
+                showIntro();
+            else if (matchState === 'queued')
+                showSearching();
+            break;
+        case 'launch':
+            // The captain started a Skirmish from the lobby while we were already here.
+            if (msg.mode === 'skirmish' && matchState === 'idle')
+                findSkirmish();
+            break;
+        case 'replaced':
+            socket = null;
+            matchState = 'idle';
+            showCard({ title: tr('duel.elsewhere'), tag: tr('duel.elsewhereTag'), tone: 'lose',
+                body: [el('p', null, tr('duel.elsewhereText'))],
+                buttons: [[tr('btn.hall'), goToLobby, true]] });
+            break;
+        case 'skStatus':
+            status = msg;
+            if (matchState === 'queued')
+                showSearching();
+            break;
+        case 'skMatchFound':
+            me = msg.you;
+            roster = msg.players.map(p => ({ ...p, left: false }));
+            scores = [0, 0];
+            feed.length = 0;
+            wantMatch = false;
+            break;
+        case 'skRoundStart':
+            round = msg.round;
+            scores = msg.scores;
+            fighters = roster.map((info, i) => makeFighter(msg.spawns[i], info, msg.health[i]));
+            player = fighters[me];
+            prevMyHealth = player.health;
+            matchState = 'playing';
+            mouseDown = false; // a new round needs a fresh click to fire
+            roundBannerStart = performance.now();
+            hideOverlay();
+            break;
+        case 'skState': {
+            // Glide toward the relayed position over the next few frames (see loop()).
+            const f = fighters[msg.i];
+            if (!f)
+                break;
+            f.targetX = msg.x * TILE;
+            f.targetY = msg.y * TILE;
+            f.targetAngle = msg.angle;
+            f.moving = msg.moving;
+            break;
+        }
+        case 'skShoot': {
+            const f = fighters[msg.i];
+            if (!f)
+                break;
+            f.bullets.push(makeBullet(msg.x * TILE, msg.y * TILE, msg.angle));
+            f.shootTimer = 8;
+            spawnParticles(msg.x * TILE + Math.cos(msg.angle) * 18, msg.y * TILE + Math.sin(msg.angle) * 18, '#ffa020', 5, 1, 4, 10, 2);
+            break;
+        }
+        case 'skHealth':
+            msg.health.forEach((hp, i) => { if (fighters[i]) fighters[i].health = hp; });
+            if (player.health < prevMyHealth)
+                player.hurtTimer = 30;
+            prevMyHealth = player.health;
+            break;
+        case 'skDown': {
+            const f = fighters[msg.i];
+            if (f) {
+                f.bullets.length = 0;
+                spawnParticles(f.x, f.y, '#8c0a0a', 26, 1.5, 5, 35, 3);
+            }
+            if (msg.i === me)
+                mouseDown = false;
+            addFeed(tr('sk.felled', { a: nameOf(msg.by), b: nameOf(msg.i) }));
+            break;
+        }
+        case 'skLeft':
+            if (roster[msg.i])
+                roster[msg.i].left = true;
+            if (fighters[msg.i])
+                fighters[msg.i].left = true;
+            addFeed(tr('sk.left', { name: nameOf(msg.i) }));
+            break;
+        case 'skRoundOver':
+            scores = msg.scores;
+            matchState = 'roundover';
+            mouseDown = false;
+            showRoundOver(msg.winnerTeam === myTeam());
+            break;
+        case 'skMatchOver':
+            scores = msg.scores;
+            matchState = 'matchover';
+            showMatchOver(msg.winnerTeam === myTeam(), msg.gold, msg.forfeit);
+            break;
+    }
+}
+// ── OVERLAY / STATUS UI ────────────────────────────────────────────────────────
+const WINS_NEEDED = 2; // best of 3, must match the server
+const overlay = document.getElementById('overlay');
+function el(tag, cls, text) {
+    const n = document.createElement(tag);
+    if (cls)
+        n.className = cls;
+    if (text != null)
+        n.textContent = text;
+    return n;
+}
+// Builds a lobby-style card: dark header (title + tag), then body content.
+function showCard({ title, tag, tone, spinner, view, body = [], buttons = [] }) {
+    // Redrawing the same view (e.g. a progress update) shouldn't replay the entrance.
+    const same = view && overlay.style.display !== 'none' && overlay.firstChild?.dataset.view === view;
+    const card = el('div', 'card' + (tone ? ' ' + tone : '') + (same ? ' still' : ''));
+    if (view)
+        card.dataset.view = view;
+    const head = el('div', 'card-head');
+    if (spinner)
+        head.append(el('div', 'spinner'));
+    const h2 = el('h2', null, title);
+    if (tag)
+        h2.append(el('small', null, tag));
+    head.append(h2);
+    const content = el('div', 'card-body');
+    content.append(...body);
+    if (buttons.length) {
+        const row = el('div', 'btns' + (buttons.length === 1 ? ' one' : ''));
+        for (const [label, onClick, primary] of buttons) {
+            const b = el('button', 'btn' + (primary ? ' primary' : ''), label);
+            b.onclick = onClick;
+            row.append(b);
+        }
+        content.append(row);
+    }
+    card.append(head, content);
+    overlay.replaceChildren(card);
+    overlay.style.display = 'grid';
+    overlay.querySelector('.btn.primary')?.focus();
+}
+function hideOverlay() { overlay.style.display = 'none'; }
+function goToLobby() { window.location.href = 'index.html'; }
+// Band score: ours on the left.
+function tally() {
+    const mine = scores[myTeam()], theirs = scores[1 - myTeam()];
+    const side = (label, value, cls) => {
+        const d = el('div', 'side ' + cls);
+        const pips = el('div', 'pips');
+        for (let i = 0; i < WINS_NEEDED; i++)
+            pips.append(el('i', i < value ? 'on' : ''));
+        d.append(el('small', null, label), el('b', null, String(value)), pips);
+        return d;
+    };
+    const t = el('div', 'tally');
+    t.append(side(tr('sk.yourBand'), mine, 'me'), el('div', 'vs', tr('duel.vs')), side(tr('sk.foes'), theirs, 'opp'));
+    return t;
+}
+function controlsList() {
+    const keys = el('div', 'keys');
+    for (const [k, label] of controls()) {
+        const row = el('div');
+        row.append(el('kbd', null, k), label);
+        keys.append(row);
+    }
+    return keys;
+}
+// The two banners as the captain set them in the lobby; gaps are filled from the realm.
+function sidesList() {
+    const box = el('div', 'sides');
+    [['sk.gold', ''], ['sk.crimson', 'crimson']].forEach(([key, cls], side) => {
+        const sec = el('section', cls);
+        sec.append(el('h3', null, tr(key)));
+        const names = party.members.filter(m => m.side === side).map(m => m.username);
+        const list = el('ul');
+        for (let i = 0; i < 2; i++)
+            list.append(names[i] ? el('li', null, names[i]) : el('li', 'open', tr('sk.open')));
+        sec.append(list);
+        box.append(sec);
+    });
+    return box;
+}
+function showIntro() {
+    const mates = partyMates();
+    showCard({
+        title: tr('sk.title'), tag: tr('sk.tag'),
+        body: mates.length
+            ? [el('p', null, tr('sk.partyText')), sidesList(), controlsList()]
+            : [el('p', null, tr('sk.soloText')), controlsList()],
+        buttons: [[tr('sk.seek'), findSkirmish, true], [tr('btn.hall'), goToLobby]],
+    });
+}
+function showSearching() {
+    const gathering = status && status.phase === 'gathering';
+    const text = gathering
+        ? tr('sk.gatherText', { arrived: status.arrived, total: status.total })
+        : tr('sk.seekText', { found: status ? status.found : 1 });
+    showCard({
+        title: tr(gathering ? 'sk.gathering' : 'duel.seeking'), tag: tr(gathering ? 'duel.awaitParty' : 'sk.seekTag'),
+        spinner: true, view: 'search',
+        body: [el('p', null, text)],
+        buttons: [[tr('duel.withdraw'), cancelSearch]],
+    });
+}
+function showRoundOver(won) {
+    const decided = Math.max(...scores) >= WINS_NEEDED;
+    const label = el('div', 'progress-label');
+    label.append(el('span', null, decided ? tr('duel.decided') : tr('duel.nextRound', { n: round + 1 })), el('span', null, tr('duel.getReady')));
+    const bar = el('div', 'progress');
+    bar.append(el('i'));
+    showCard({
+        title: tr(won ? 'duel.roundWon' : 'duel.roundLost'), tag: tr('duel.roundDone', { n: round }), tone: won ? 'win' : 'lose',
+        body: [tally(), label, bar],
+    });
+}
+function showMatchOver(won, gold, forfeit) {
+    const purse = el('p', 'purse', signedIn ? tr('duel.purse', { n: gold || 0 }) : tr('duel.purseGuest'));
+    showCard({
+        title: tr(forfeit && won ? 'duel.fled' : won ? 'duel.victory' : 'duel.defeat'),
+        tag: tr(forfeit && won ? 'duel.forfeit' : 'duel.finalScore'), tone: won ? 'win' : 'lose',
+        body: [tally(), purse],
+        buttons: [[tr('sk.again'), findSkirmish, true], [tr('btn.hall'), goToLobby]],
+    });
+}
+function showConnectionProblem(title, text) {
+    matchState = 'idle';
+    showCard({
+        title, tag: tr('duel.server'), tone: 'lose',
+        body: [el('p', null, text)],
+        buttons: [[tr('duel.retry'), findSkirmish, true], [tr('btn.hall'), goToLobby]],
+    });
+}
+// ── INPUT ─────────────────────────────────────────────────────────────────────
+const keys = {};
+let mouseX = W / 2, mouseY = H / 2, mouseDown = false;
+// Use physical key codes for movement. `event.key` changes with the user's
+// keyboard layout, which made the WASD controls appear unresponsive on some
+// layouts. Keep arrow keys as an equivalent set of controls.
+function movementKey(event) {
+    return {
+        KeyW: 'w', ArrowUp: 'arrowup',
+        KeyA: 'a', ArrowLeft: 'arrowleft',
+        KeyS: 's', ArrowDown: 'arrowdown',
+        KeyD: 'd', ArrowRight: 'arrowright',
+    }[event.code];
+}
+function clearMovementKeys() {
+    for (const key of Object.keys(keys))
+        keys[key] = false;
+}
+document.addEventListener('keydown', e => {
+    const moveKey = movementKey(e);
+    if (moveKey) {
+        e.preventDefault();
+        keys[moveKey] = true;
+    }
+    if (e.code === 'Space') {
+        e.preventDefault();
+        if (player && player.health > 0 && player.rollTimer <= 0)
+            player.rollTimer = 15;
+    }
+});
+document.addEventListener('keyup', e => {
+    const moveKey = movementKey(e);
+    if (moveKey) {
+        e.preventDefault();
+        keys[moveKey] = false;
+    }
+});
+window.addEventListener('blur', clearMovementKeys);
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden)
+        clearMovementKeys();
+});
+canvas.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+});
+canvas.addEventListener('mousedown', e => { if (e.button === 0)
+    mouseDown = true; });
+// Listen on the window, not the canvas: a release over the round-over card (or
+// outside the page) would otherwise be missed and leave the bow firing.
+window.addEventListener('mouseup', e => { if (e.button === 0)
+    mouseDown = false; });
+window.addEventListener('blur', () => { mouseDown = false; });
+// ── GAME STATE ────────────────────────────────────────────────────────────────
+// fighters[i] follows roster order; fighters[me] is simulated here, the rest
+// glide toward positions relayed by the server.
+function makeFighter(spawn, info, health) {
+    const f = makePlayer({ x: spawn.x * TILE, y: spawn.y * TILE });
+    f.angle = spawn.x < MAP_W / 2 ? 0 : Math.PI; // face the other band
+    f.health = f.displayHealth = health;
+    f.targetX = f.x;
+    f.targetY = f.y;
+    f.targetAngle = f.angle;
+    return Object.assign(f, { name: info.name, team: info.team, left: info.left });
+}
+let fighters = [];
+let player = makePlayer({ x: 2.5 * TILE, y: 2.5 * TILE });
+let prevMyHealth = 100;
+let lastStateSend = 0;
+// ── UI KIT ───────────────────────────────────────────────────────────────────
+// Same palette, fonts and panel style as the lobby and Hunt mode.
+const UI = { navy: '#14110f', navy2: '#3d352e', navy3: '#070605', orange: '#8e1c1c', orangeD: '#3a0808',
+    gold: '#c9a24a', paper: '#e6d8b8', muted: '#9a8b74', red: '#e0503a', oppRed: '#ff7a64' };
+const FONTS = { display: ["'Cinzel', 'Noto Serif KR', Georgia, serif", 900], num: ["'Cinzel', 'Noto Serif KR', Georgia, serif", 700],
+    ui: ["'Cinzel', 'Noto Serif KR', Georgia, serif", 700], body: ["'EB Garamond', 'Noto Serif KR', Georgia, serif", 500] };
+let roundBannerStart = -Infinity;
+function setFont(size, family = 'ui', weight) {
+    const [face, w] = FONTS[family];
+    ctx.font = `${weight || w} ${size}px ${face}`;
+}
+function drawText(str, x, y, o = {}) {
+    ctx.save();
+    setFont(o.size || 12, o.family, o.weight);
+    ctx.textAlign = o.align || 'left';
+    ctx.textBaseline = o.baseline || 'alphabetic';
+    if (o.spacing)
+        ctx.letterSpacing = o.spacing + 'px';
+    if (o.alpha != null)
+        ctx.globalAlpha *= o.alpha;
+    if (o.shadow) {
+        const off = o.shadowOffset ?? 2;
+        ctx.fillStyle = o.shadow;
+        ctx.fillText(str, x + off, y + off);
+    }
+    ctx.fillStyle = o.color || UI.paper;
+    ctx.fillText(str, x, y);
+    const w = ctx.measureText(str).width;
+    ctx.restore();
+    return w;
+}
+function textWidth(str, size, family, spacing) {
+    ctx.save();
+    setFont(size, family);
+    if (spacing)
+        ctx.letterSpacing = spacing + 'px';
+    const w = ctx.measureText(str).width;
+    ctx.restore();
+    return w;
+}
+function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, h, r);
+}
+function panel(x, y, w, h, o = {}) {
+    const r = o.r ?? 12;
+    ctx.save();
+    if (o.shadow !== false) {
+        roundRect(x, y + 4, w, h, r);
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.fill();
+    }
+    roundRect(x, y, w, h, r);
+    ctx.fillStyle = o.fill || 'rgba(10,8,7,0.88)';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = o.stroke || UI.navy2;
+    ctx.stroke();
+    if (o.accent) {
+        roundRect(x, y, w, h, r);
+        ctx.clip();
+        ctx.fillStyle = o.accent;
+        ctx.fillRect(x, y + h - 3, w, 3);
+    }
+    ctx.restore();
+}
+// A rounded bar; `reverse` drains it toward the right (used for the opponent).
+function meter(x, y, w, h, frac, colA, colB, reverse) {
+    frac = Math.max(0, Math.min(1, frac));
+    ctx.save();
+    roundRect(x, y, w, h, h / 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fill();
+    if (frac > 0) {
+        const fw = Math.max(h, w * frac), fx = reverse ? x + w - fw : x;
+        const g = ctx.createLinearGradient(fx, 0, fx + fw, 0);
+        g.addColorStop(0, reverse ? colB : colA);
+        g.addColorStop(1, reverse ? colA : colB);
+        roundRect(fx, y, fw, h, h / 2);
+        ctx.fillStyle = g;
+        ctx.fill();
+        roundRect(fx + 3, y + 2, Math.max(0, fw - 6), h * 0.3, h * 0.15);
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        ctx.fill();
+    }
+    ctx.restore();
+}
+function keycap(k, x, y, size = 10) {
+    const w = Math.max(size * 2.2, textWidth(k, size) + 12), h = size + 10;
+    ctx.save();
+    roundRect(x, y + 2, w, h, 5);
+    ctx.fillStyle = UI.navy3;
+    ctx.fill();
+    roundRect(x, y, w, h, 5);
+    ctx.fillStyle = UI.navy2;
+    ctx.fill();
+    ctx.restore();
+    drawText(k, x + w / 2, y + h / 2 + 1, { size, align: 'center', baseline: 'middle', color: UI.gold });
+    return w;
+}
+function vignette(rgb, alpha) {
+    const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.hypot(W, H) / 2);
+    g.addColorStop(0, `rgba(${rgb},0)`);
+    g.addColorStop(1, `rgba(${rgb},${alpha})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+}
+// Health is blood: deep crimson, brightening to a raw red as it runs low.
+function healthColors(hp) {
+    return hp > 50 ? ['#d84a3a', '#7a1414'] : hp > 25 ? ['#e8743a', '#8a2a12'] : ['#ff6a4a', '#5a0a0a'];
+}
+const CONTROLS = [['WASD', 'ctl.move'], ['key.click', 'ctl.fire'], ['key.space', 'ctl.roll'], ['R', 'ctl.reload'], ['F', 'ctl.fullscreen']];
+function controls() { return CONTROLS.map(([k, label]) => [k.includes('.') ? tr(k) : k, tr(label)]); }
+// ── HUD ───────────────────────────────────────────────────────────────────────
+// Who the camera follows: us, or a standing ally once we're down.
+function spectating() {
+    if (player.health > 0)
+        return null;
+    return fighters.find((f, i) => i !== me && !isFoe(i) && f.health > 0) || null;
+}
+function drawHUD(camX, camY) {
+    if (player.hurtTimer > 0)
+        vignette('220,20,20', player.hurtTimer / 30 * 0.55);
+    if (player.health < 35 && player.health > 0)
+        vignette('200,0,0', 0.2 + Math.abs(Math.sin(Date.now() * 0.006)) * 0.25);
+    for (const f of fighters)
+        f.displayHealth += (f.health - f.displayHealth) * 0.15;
+    drawScoreboard();
+    if (player.health > 0)
+        drawAmmo();
+    else
+        drawDownBanner();
+    drawMarkers(camX, camY);
+    drawFeed();
+    drawRoundBanner();
+    if (round === 1 && player.health > 0) {
+        const t = (performance.now() - roundBannerStart) / 1000;
+        const a = t < 6 ? 1 : Math.max(0, 1 - (t - 6));
+        if (a > 0) {
+            ctx.save();
+            ctx.globalAlpha = a;
+            drawControls(W / 2, H - 150);
+            ctx.restore();
+        }
+    }
+    if (matchState === 'playing' && player.health > 0)
+        drawCrosshair();
+}
+// Our band on the left, foes on the right, round + score in the middle.
+function drawScoreboard() {
+    const sw = Math.min(760, W - 32), sx = W / 2 - sw / 2, sy = 16, sh = 96, mid = 130;
+    const side = (sw - mid) / 2;
+    panel(sx, sy, sw, sh, { accent: UI.orange });
+    const mine = scores[myTeam()], theirs = scores[1 - myTeam()];
+    ctx.save();
+    roundRect(sx + side, sy + 8, mid, sh - 16, 10);
+    ctx.fillStyle = UI.navy3;
+    ctx.fill();
+    ctx.restore();
+    drawText(tr('duel.round', { n: round }), W / 2, sy + 30, { size: 9, align: 'center', color: UI.muted, spacing: 2 });
+    drawText(String(mine), W / 2 - 24, sy + 68, { size: 28, family: 'num', align: 'center', color: UI.gold });
+    drawText(':', W / 2, sy + 65, { size: 24, family: 'num', align: 'center', color: UI.muted });
+    drawText(String(theirs), W / 2 + 24, sy + 68, { size: 28, family: 'num', align: 'center', color: UI.oppRed });
+    const allies = [me, ...fighters.map((_, i) => i).filter(i => i !== me && !isFoe(i))];
+    const foes = fighters.map((_, i) => i).filter(isFoe);
+    const column = (ids, x, w, title, col, alignRight) => {
+        drawText(title, alignRight ? x + w : x, sy + 20, { size: 9, color: col, spacing: 2, align: alignRight ? 'right' : 'left' });
+        for (let k = 0; k < WINS_NEEDED; k++) {
+            ctx.beginPath();
+            const won = alignRight ? theirs : mine;
+            ctx.arc(alignRight ? x + w - textWidth(title, 9, 'ui', 2) - 12 - k * 11 : x + textWidth(title, 9, 'ui', 2) + 12 + k * 11, sy + 17, 3.5, 0, Math.PI * 2);
+            ctx.fillStyle = k < won ? col : 'rgba(154,139,116,0.2)';
+            ctx.fill();
+        }
+        ids.forEach((i, row) => {
+            const f = fighters[i], y = sy + 30 + row * 31;
+            const out = f.left ? tr('sk.fled') : f.health <= 0 ? tr('sk.down') : String(Math.ceil(f.health));
+            const [hA, hB] = healthColors(f.health);
+            const nameCol = f.health > 0 ? (i === me ? UI.gold : UI.paper) : UI.muted;
+            drawText(nameOf(i), alignRight ? x + w : x, y + 12, { size: 12, family: 'display', color: nameCol, align: alignRight ? 'right' : 'left', spacing: 0.5 });
+            drawText(out, alignRight ? x : x + w, y + 12, { size: 12, family: 'num', color: f.health > 0 ? hA : UI.muted, align: alignRight ? 'left' : 'right' });
+            meter(x, y + 17, w, 8, f.displayHealth / 100, hA, hB, alignRight);
+        });
+    };
+    column(allies, sx + 16, side - 32, tr('sk.yourBand'), UI.gold, false);
+    column(foes, sx + side + mid + 16, side - 32, tr('sk.foes'), UI.oppRed, true);
+}
+function drawAmmo() {
+    const aw = 214, ah = 86, ax = W / 2 - aw / 2, ay = H - ah - 16;
+    panel(ax, ay, aw, ah, { accent: player.ammo ? UI.orange : UI.red });
+    drawText(tr('hud.bolts'), ax + 16, ay + 27, { size: 9, color: UI.muted, spacing: 2 });
+    const ammoCol = player.ammo === 0 ? UI.red : player.ammo <= 5 ? '#ffc24a' : UI.paper;
+    drawText(String(player.ammo), ax + 16, ay + 68, { size: 32, family: 'num', color: ammoCol });
+    const pipX = ax + aw - 16 - 100;
+    for (let i = 0; i < 30; i++) {
+        ctx.fillStyle = i < player.ammo ? (player.ammo <= 5 ? '#ffc24a' : UI.gold) : 'rgba(154,139,116,0.15)';
+        roundRect(pipX + (i % 10) * 10, ay + 20 + Math.floor(i / 10) * 10, 7, 6, 2);
+        ctx.fill();
+    }
+    if (player.ammo === 0) {
+        const kw = keycap('R', pipX, ay + 52);
+        drawText(tr('hud.reload'), pipX + kw + 8, ay + 66, { size: 11, color: UI.red, spacing: 1, alpha: 0.6 + Math.abs(Math.sin(Date.now() * 0.008)) * 0.4 });
+    }
+}
+// Shown instead of the bolt panel while we sit out the round.
+function drawDownBanner() {
+    const ally = spectating();
+    const text = ally ? tr('sk.spectate', { name: ally.name.toUpperCase() }) : tr('sk.downAlone');
+    const w = Math.min(W - 32, textWidth(text, 13, 'ui', 2) + 48), h = 46, x = W / 2 - w / 2, y = H - h - 24;
+    panel(x, y, w, h, { accent: UI.red });
+    drawText(text, W / 2, y + 28, { size: 13, align: 'center', color: UI.paper, spacing: 2 });
+}
+// Arrows on the screen edge pointing at anyone standing out of view.
+function drawMarkers(camX, camY) {
+    fighters.forEach((f, i) => {
+        if (i === me || f.health <= 0)
+            return;
+        const ox = f.x - camX, oy = f.y - camY, m = 40;
+        if (ox > -10 && ox < W + 10 && oy > -10 && oy < H + 10)
+            return;
+        const foe = isFoe(i);
+        const ang = Math.atan2(oy - H / 2, ox - W / 2);
+        const ex = Math.max(m, Math.min(W - m, ox)), ey = Math.max(130 + m / 2, Math.min(H - m, oy));
+        ctx.save();
+        ctx.translate(ex, ey);
+        ctx.beginPath();
+        ctx.arc(0, 0, 18, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(10,8,7,0.85)';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = foe ? UI.red : UI.gold;
+        ctx.stroke();
+        ctx.rotate(ang);
+        ctx.beginPath();
+        ctx.moveTo(12, 0);
+        ctx.lineTo(1, -7);
+        ctx.lineTo(1, 7);
+        ctx.closePath();
+        ctx.fillStyle = foe ? UI.oppRed : UI.gold;
+        ctx.fill();
+        ctx.restore();
+    });
+}
+// Knock-downs, top right, fading after a few seconds.
+function drawFeed() {
+    const now = performance.now();
+    let y = 128;
+    for (const item of feed) {
+        const age = (now - item.at) / 1000;
+        if (age > 6)
+            continue;
+        const a = age > 5 ? 6 - age : 1;
+        const w = textWidth(item.text, 10, 'ui', 1) + 24;
+        ctx.save();
+        ctx.globalAlpha = a;
+        panel(W - 16 - w, y, w, 26, { r: 13, shadow: false });
+        drawText(item.text, W - 16 - w / 2, y + 17, { size: 10, align: 'center', spacing: 1 });
+        ctx.restore();
+        y += 32;
+    }
+}
+// "ROUND 2" then "FIGHT!" at the start of each round.
+function drawRoundBanner() {
+    const t = (performance.now() - roundBannerStart) / 1000;
+    if (t < 0 || t > 1.8)
+        return;
+    const fight = t > 0.9;
+    const local = fight ? (t - 0.9) / 0.9 : t / 0.9;
+    const alpha = local < 0.15 ? local / 0.15 : local > 0.75 ? Math.max(0, (1 - local) / 0.25) : 1;
+    const scale = fight ? 1 + (1 - Math.min(1, local * 4)) * 0.4 : 1;
+    const bh = 120, by = H / 2 - bh / 2;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = 'rgba(10,8,7,0.85)';
+    ctx.fillRect(0, by, W, bh);
+    ctx.fillStyle = fight ? UI.gold : UI.orange;
+    ctx.fillRect(0, by, W, 4);
+    ctx.fillRect(0, by + bh - 4, W, 4);
+    ctx.translate(W / 2, H / 2);
+    ctx.scale(scale, scale);
+    if (fight)
+        drawText(tr('duel.fight'), 0, 4, { size: 64, family: 'display', align: 'center', baseline: 'middle', color: UI.red, shadow: '#000', shadowOffset: 4, spacing: 4 });
+    else {
+        drawText(tr('duel.round', { n: round }), 0, -2, { size: 48, family: 'display', align: 'center', baseline: 'middle', shadow: UI.orangeD, shadowOffset: 3, spacing: 1 });
+        const mine = scores[myTeam()], theirs = scores[1 - myTeam()];
+        const sub = tr(mine === WINS_NEEDED - 1 && theirs === WINS_NEEDED - 1 ? 'duel.deciding' : mine === WINS_NEEDED - 1 ? 'duel.matchPoint' : 'duel.bestOf3');
+        drawText(sub, 0, 40, { size: 11, align: 'center', color: UI.gold, spacing: 4 });
+    }
+    ctx.restore();
+}
+function drawControls(cx, y) {
+    const items = controls().map(([k, label]) => ({ k, label, w: Math.max(22, textWidth(k, 10) + 12) + 6 + textWidth(label, 11) }));
+    const total = items.reduce((s, i) => s + i.w, 0) + (items.length - 1) * 18 + 32;
+    panel(cx - total / 2, y - 8, total, 36, { r: 18, shadow: false });
+    let x = cx - total / 2 + 16;
+    for (const i of items) {
+        const kw = keycap(i.k, x, y);
+        drawText(i.label, x + kw + 6, y + 14, { size: 11, color: UI.muted });
+        x += i.w + 18;
+    }
+}
+function drawCrosshair() {
+    const empty = player.ammo <= 0;
+    const gap = 7 + (player.shootTimer / 8) * 5, len = 9;
+    const col = empty ? UI.red : UI.gold;
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (const [lw, c] of [[4, 'rgba(10,8,7,0.85)'], [2, col]]) {
+        ctx.lineWidth = lw;
+        ctx.strokeStyle = c;
+        ctx.beginPath();
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            ctx.moveTo(mouseX + dx * gap, mouseY + dy * gap);
+            ctx.lineTo(mouseX + dx * (gap + len), mouseY + dy * (gap + len));
+        }
+        ctx.stroke();
+    }
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.arc(mouseX, mouseY, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+}
+document.addEventListener('keydown', e => {
+    if (e.code === 'KeyR')
+        player.ammo = 30; // local-only reload for now
+});
+// ── FULLSCREEN ────────────────────────────────────────────────────────────────
+// Browsers only allow fullscreen from a click or key press, so the first one on
+// this page enters it. F toggles it after that.
+function isFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function enterFullscreen() {
+    const el = document.documentElement, req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (!req || isFullscreen())
+        return;
+    try {
+        const p = req.call(el);
+        if (p && p.catch)
+            p.catch(() => { });
+    }
+    catch { }
+}
+function exitFullscreen() {
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit && isFullscreen())
+        exit.call(document);
+}
+let autoFullscreenDone = false;
+function onFirstGesture(e) {
+    if (autoFullscreenDone || (e.type === 'keydown' && e.code === 'KeyF'))
+        return;
+    autoFullscreenDone = true;
+    enterFullscreen();
+}
+document.addEventListener('mousedown', onFirstGesture);
+document.addEventListener('keydown', onFirstGesture);
+document.addEventListener('keydown', e => {
+    if (e.code === 'KeyF' && !e.repeat) {
+        autoFullscreenDone = true;
+        isFullscreen() ? exitFullscreen() : enterFullscreen();
+    }
+});
+// ── GAME LOOP ─────────────────────────────────────────────────────────────────
+// Gold for us and our ally, crimson for the foe.
+const ME_COLOR = { cloak: '#3a2a1e', cloakDark: '#0e0a07', trim: '#c9a24a', helm: '#9aa0a8', label: '#e6d8b8' };
+const ALLY_COLOR = { cloak: '#2e2a1e', cloakDark: '#0c0a07', trim: '#d8b860', helm: '#a8aeb6', label: '#f0d890' };
+const OPP_COLOR = { cloak: '#3a1414', cloakDark: '#0e0505', trim: '#e0503a', helm: '#6a6e74', label: '#ff9a88' };
+function clampCam(worldSize, viewSize, focus) {
+    if (worldSize <= viewSize)
+        return (worldSize - viewSize) / 2; // center the map in the extra space
+    return Math.max(0, Math.min(worldSize - viewSize, focus - viewSize / 2));
+}
+function lerpAngle(a, b, t) {
+    let diff = ((b - a + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+    return a + diff * t;
+}
+function loop(ts) {
+    requestAnimationFrame(loop);
+    const focus = spectating() || player;
+    let camX = clampCam(MAP_W * TILE, W, focus.x);
+    let camY = clampCam(MAP_H * TILE, H, focus.y);
+    const live = matchState === 'playing' || matchState === 'roundover';
+    canvas.style.cursor = matchState === 'playing' && player.health > 0 ? 'none' : 'default';
+    if (matchState === 'playing' && player.health > 0) {
+        updatePlayer(player, keys, mouseX, mouseY, camX, camY);
+        if (mouseDown)
+            playerShoot(player);
+        // Send our state a few times a second, not every frame.
+        if (ts - lastStateSend > 50) {
+            lastStateSend = ts;
+            sendMsg({ type: 'skState', x: player.x / TILE, y: player.y / TILE, angle: player.angle, moving: player.moving });
+        }
+    }
+    if (live) {
+        fighters.forEach((f, i) => {
+            if (i === me)
+                return;
+            if (f.shootTimer > 0)
+                f.shootTimer--;
+            // Glide toward the last relayed position; hides the gap between updates.
+            if (f.health > 0) {
+                f.x += (f.targetX - f.x) * 0.25;
+                f.y += (f.targetY - f.y) * 0.25;
+                f.angle = lerpAngle(f.angle, f.targetAngle, 0.3);
+            }
+            for (let k = f.bullets.length - 1; k >= 0; k--) {
+                updateBullet(f.bullets[k]);
+                if (!f.bullets[k].alive)
+                    f.bullets.splice(k, 1);
+            }
+        });
+        if (player.health <= 0 && player.hurtTimer > 0)
+            player.hurtTimer--; // updatePlayer (which fades it) doesn't run while we're down
+        if (player.health <= 0)
+            for (let k = player.bullets.length - 1; k >= 0; k--) {
+                updateBullet(player.bullets[k]);
+                if (!player.bullets[k].alive)
+                    player.bullets.splice(k, 1);
+            }
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vx *= 0.92;
+            p.vy *= 0.92;
+            p.life--;
+            if (p.life <= 0)
+                particles.splice(i, 1);
+        }
+        const now = spectating() || player;
+        camX = clampCam(MAP_W * TILE, W, now.x);
+        camY = clampCam(MAP_H * TILE, H, now.y);
+    }
+    ctx.drawImage(mapCanvas, -camX, -camY);
+    const vignette = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.75);
+    vignette.addColorStop(0, 'rgba(0,0,0,0)');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.35)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, W, H);
+    for (const p of particles) {
+        const alpha = p.life / p.maxLife;
+        ctx.globalAlpha = alpha * 0.85;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x - camX, p.y - camY, Math.max(0.5, p.size * alpha), 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if (live && fighters.length) {
+        const pal = i => (i === me ? ME_COLOR : isFoe(i) ? OPP_COLOR : ALLY_COLOR);
+        // The fallen underneath, then the standing, then us on top.
+        const order = fighters.map((_, i) => i).filter(i => !fighters[i].left)
+            .sort((a, b) => (fighters[a].health > 0) - (fighters[b].health > 0) || (a === me) - (b === me));
+        for (const i of order)
+            drawFighter(fighters[i], camX, camY, pal(i), nameOf(i));
+        fighters.forEach((f, i) => drawBolts(f, camX, camY, pal(i)));
+        const lit = spectating() || player;
+        drawTorchlight(lit.x - camX, lit.y - camY);
+        drawHUD(camX, camY);
+    }
+}
+// Arriving from the lobby's TO BATTLE with a warband: start searching straight away.
+if (location.hash === '#party') {
+    history.replaceState(null, '', location.pathname);
+    findSkirmish();
+}
+else {
+    showIntro();
+    openSocket();
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
+

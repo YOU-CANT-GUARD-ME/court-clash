@@ -532,9 +532,9 @@ main {
   background: var(--blood);
   box-shadow: 0 0 6px rgba(214,64,43,.6);
 }
-.mode[data-mode="duo"]:before {
-  background: #4a4038;
-  box-shadow: none;
+.mode[data-mode="skirmish"]:before {
+  background: var(--gold);
+  box-shadow: 0 0 6px rgba(201,162,74,.6);
 }
 .mode b {
   display: block;
@@ -561,6 +561,89 @@ main {
 .mode.locked {
   opacity: .45;
   cursor: not-allowed;
+}
+/* ---- skirmish sides (team picker) ---- */
+.sides {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(90,70,48,.35);
+}
+.sides[hidden] {
+  display: none;
+}
+.sides-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font: 700 10px 'Cinzel', 'Noto Serif KR', serif;
+  letter-spacing: 2px;
+  color: var(--blood);
+}
+.sides-head .btn {
+  height: 28px;
+  min-width: 0;
+  font-size: 10px;
+}
+.banners {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.banner {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid rgba(90,70,48,.35);
+  border-top: 3px solid var(--gold-d);
+  border-radius: 4px;
+  background: rgba(255,255,255,.18);
+}
+.banner.crimson {
+  border-top-color: var(--blood);
+}
+.banner h3 {
+  margin: 0;
+  font: 900 9px 'Cinzel', 'Noto Serif KR', serif;
+  letter-spacing: 2px;
+  color: var(--gold-d);
+}
+.banner.crimson h3 {
+  color: var(--blood);
+}
+.fighter {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--ink2);
+  border-radius: 4px;
+  background: linear-gradient(170deg,#f0e4c6,#dccb9f);
+  font: 700 12px 'Cinzel', 'Noto Serif KR', serif;
+  color: var(--ink);
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+button.fighter {
+  cursor: pointer;
+}
+button.fighter:hover {
+  border-color: var(--gold-d);
+}
+.fighter.picked {
+  outline: 2px solid var(--gold);
+  background: linear-gradient(180deg,#d8b45a,#a8802e);
+}
+.fighter.open {
+  border-style: dashed;
+  background: rgba(42,29,18,.06);
+  font: italic 500 14px 'EB Garamond', 'Noto Serif KR', serif;
+  color: #8a7656;
+}
+.sides-hint {
+  margin: 8px 0 0;
+  font: italic 500 14px 'EB Garamond', 'Noto Serif KR', serif;
+  color: var(--ink2);
 }
 .play {
   background: linear-gradient(180deg,#b52828,var(--blood) 60%,#6a1414);
@@ -662,7 +745,9 @@ main {
 }
 /* ---- hall of legends ---- */
 .modal .legends-card {
-  width: min(660px,100%);
+  width: min(860px,100%);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
 }
 .close {
   border: 1px solid var(--iron);
@@ -676,7 +761,7 @@ main {
 }
 .ledger {
   display: grid;
-  grid-template-columns: repeat(3,1fr);
+  grid-template-columns: repeat(auto-fit,minmax(95px,1fr));
   gap: 8px;
   margin-bottom: 18px;
 }
@@ -698,7 +783,7 @@ main {
 }
 .boards {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3,1fr);
   gap: 16px;
 }
 .boards h2 {
@@ -834,11 +919,16 @@ main {
   cursor: not-allowed;
   transform: none;
 }
+@media(max-width:800px) {
+  .boards {
+    grid-template-columns: 1fr 1fr;
+  }
+}
 @media(max-width:560px) {
   .wares {
     grid-template-columns: 1fr;
   }
-  .boards,.ledger {
+  .ledger {
     grid-template-columns: 1fr 1fr;
   }
   .boards {
@@ -1029,6 +1119,7 @@ main {
     </div>
     <div class="lobby-body">
       <div class="party" id="party"></div>
+      <div class="sides" id="sides" hidden></div>
       <div class="code-wrap">
         <label class="code-label" for="code"><span data-i18n="seal.label">WARBAND SEAL</span> <span data-i18n="seal.hint">SHARE YOURS, OR ENTER AN ALLY'S</span></label>
         <div class="code"><input id="code" maxlength="6" autocomplete="off" spellcheck="false" placeholder="······"><button class="btn small" id="copy">COPY</button></div>
@@ -1043,7 +1134,7 @@ main {
   <div class="list">
     <button class="mode selected" data-mode="hunt"><b data-i18n="mode.hunt">THE HUNT</b><span data-i18n="mode.huntSub">Survive the horde</span></button>
     <button class="mode" data-mode="showdown"><b data-i18n="mode.duel">THE DUEL</b><span data-i18n="mode.duelSub">Best of three</span></button>
-    <button class="mode locked" data-mode="duo"><b data-i18n="mode.duo">SKIRMISH 2V2</b><span data-i18n="mode.duoSub">Coming soon</span></button>
+    <button class="mode" data-mode="skirmish"><b data-i18n="mode.skirmish">SKIRMISH 2V2</b><span data-i18n="mode.skirmishSub">Two against two</span></button>
   </div>
   <button class="btn play" id="play" data-i18n="play">TO BATTLE</button>
 </nav>
@@ -1069,6 +1160,7 @@ main {
       <div class="boards">
         <section><h2 data-i18n="legends.hunt">THE HUNT · BOUNTIES</h2><ol id="board-hunt"></ol></section>
         <section><h2 data-i18n="legends.duel">THE DUEL · VICTORIES</h2><ol id="board-duel"></ol></section>
+        <section><h2 data-i18n="legends.skirmish">SKIRMISH · VICTORIES</h2><ol id="board-skirmish"></ol></section>
       </div>
       <div class="notice" id="legends-notice" role="status"></div>
     </div>
@@ -1195,6 +1287,8 @@ function onMessage(msg) {
             // The party leader started a 1v1: follow them into the match.
             if (msg.mode === 'showdown')
                 location.href = 'showdown.html#party';
+            else if (msg.mode === 'skirmish')
+                location.href = 'skirmish.html#party';
             break;
         case 'replaced':
             replaced = true;
@@ -1254,10 +1348,86 @@ function render() {
         who.append(leave);
     }
     modeButtons.forEach(b => b.classList.toggle('nolead', !party.youAreLeader && !b.classList.contains('locked')));
+    renderSides();
+}
+
+// ---- skirmish sides ----
+// In Skirmish mode the captain splits the warband into two banners. Tapping a
+// name picks it; tapping a name or open place on the other banner swaps or moves it.
+let pickedSide = null; // index into party.members, picked for a swap
+function renderSides() {
+    const box = $('#sides');
+    if (!party || mode !== 'skirmish') {
+        box.hidden = true;
+        return;
+    }
+    box.hidden = false;
+    const members = party.members, captain = party.youAreLeader;
+    if (pickedSide !== null && !members[pickedSide])
+        pickedSide = null;
+    if (members.length < 2) {
+        box.replaceChildren(Object.assign(document.createElement('p'), { className: 'sides-hint', textContent: tr('sides.solo') }));
+        return;
+    }
+    const head = Object.assign(document.createElement('div'), { className: 'sides-head' });
+    head.append(tr('sides.title'));
+    if (captain) {
+        const shuffle = Object.assign(document.createElement('button'), { className: 'btn small', textContent: tr('sides.shuffle') });
+        shuffle.onclick = () => { pickedSide = null; sendMsg({ type: 'shuffleSides' }); };
+        head.append(shuffle);
+    }
+    const banners = Object.assign(document.createElement('div'), { className: 'banners' });
+    [['sk.gold', ''], ['sk.crimson', ' crimson']].forEach(([key, cls], side) => {
+        const banner = Object.assign(document.createElement('div'), { className: 'banner' + cls });
+        banner.append(Object.assign(document.createElement('h3'), { textContent: tr(key) }));
+        const here = members.map((m, i) => ({ m, i })).filter(({ m }) => m.side === side);
+        for (let k = 0; k < 2; k++) {
+            const entry = here[k];
+            const el = document.createElement(captain ? 'button' : 'div');
+            if (captain)
+                el.type = 'button';
+            if (entry) {
+                el.className = 'fighter' + (pickedSide === entry.i ? ' picked' : '');
+                el.textContent = entry.m.username + (entry.m.you ? ' ·' : '');
+                if (captain)
+                    el.onclick = () => pickFighter(entry.i, side);
+            }
+            else {
+                el.className = 'fighter open';
+                el.textContent = tr('sk.open');
+                if (captain)
+                    el.onclick = () => pickOpen(side);
+            }
+            banner.append(el);
+        }
+        banners.append(banner);
+    });
+    const hint = Object.assign(document.createElement('p'), { className: 'sides-hint', textContent: tr(captain ? 'sides.hintCaptain' : 'sides.hintMember') });
+    box.replaceChildren(head, banners, hint);
+}
+function pickFighter(i, side) {
+    if (pickedSide === null || pickedSide === i)
+        pickedSide = pickedSide === i ? null : i;
+    else if (party.members[pickedSide].side === side)
+        pickedSide = i; // same banner: just pick the other one
+    else {
+        sendMsg({ type: 'swapSides', a: pickedSide, b: i });
+        pickedSide = null;
+    }
+    renderSides();
+}
+function pickOpen(side) {
+    if (pickedSide !== null && party.members[pickedSide].side !== side)
+        sendMsg({ type: 'setSide', index: pickedSide, side });
+    pickedSide = null;
+    renderSides();
 }
 
 function showMode(next) {
+    const changed = mode !== next;
     mode = next;
+    if (changed)
+        renderSides();
     modeButtons.forEach(b => {
         const on = b.dataset.mode === next;
         b.classList.toggle('selected', on);
@@ -1270,8 +1440,6 @@ function showMode(next) {
 
 // ---- controls ----
 modeButtons.forEach(b => b.onclick = () => {
-    if (b.dataset.mode === 'duo')
-        return;
     if (!party)
         return showMode(b.dataset.mode); // offline: pick locally
     if (!party.youAreLeader)
@@ -1366,7 +1534,8 @@ async function openLegends() {
     ledger.replaceChildren();
     if (profile) {
         const stats = [['stat.gold', profile.gold], ['stat.bestBounty', profile.bestBounty], ['stat.bestWave', profile.bestWave],
-            ['stat.kills', profile.totalKills], ['stat.hunts', profile.huntRuns], ['stat.duels', `${profile.duelWins}–${profile.duelLosses}`]];
+            ['stat.kills', profile.totalKills], ['stat.hunts', profile.huntRuns], ['stat.duels', `${profile.duelWins}–${profile.duelLosses}`],
+            ['stat.skirmishes', `${profile.skirmishWins || 0}–${profile.skirmishLosses || 0}`]];
         for (const [key, value] of stats) {
             const label = tr(key);
             const d = document.createElement('div');
@@ -1387,6 +1556,10 @@ async function openLegends() {
         $('#board-duel').replaceChildren(...(board.duel.length
             ? board.duel.map((r, i) => boardRow(i + 1, r.username, `${r.wins}–${r.losses}`))
             : [emptyRow(tr('legends.noDuel'))]));
+        const sk = board.skirmish || [];
+        $('#board-skirmish').replaceChildren(...(sk.length
+            ? sk.map((r, i) => boardRow(i + 1, r.username, `${r.wins}–${r.losses}`))
+            : [emptyRow(tr('legends.noSkirmish'))]));
         $('#legends-notice').textContent = '';
     }
     catch {
@@ -1466,7 +1639,8 @@ $('#play').onclick = () => {
     if (withParty && party.youAreLeader)
         sendMsg({ type: 'launch' });
     // Give the launch message a moment to leave before the page unloads.
-    setTimeout(() => location.href = 'showdown.html' + (withParty ? '#party' : ''), withParty ? 150 : 0);
+    const page = mode === 'skirmish' ? 'skirmish.html' : 'showdown.html';
+    setTimeout(() => location.href = page + (withParty ? '#party' : ''), withParty ? 150 : 0);
 };
 
 // ---- loading screen ----
