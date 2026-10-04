@@ -8,8 +8,22 @@
 const DEFAULT_LOOK = { cloak: '#3a2a1e', cloakDark: '#0e0a07', trim: '#c9a24a', metal: '#9aa0a8', helm: 'sallet', trail: null };
 
 // What a bolt's glow should be for this look: its trail, else its trim.
-function trailOf(look) {
-    return (look && look.trail) || (look && look.trim) || DEFAULT_LOOK.trim;
+// The limited 'prism' trail cycles through the rainbow; pass the bolt (or any
+// number) as `seed` so bolts in flight shimmer out of step with each other.
+function trailOf(look, seed = 0) {
+    const t = (look && look.trail) || (look && look.trim) || DEFAULT_LOOK.trim;
+    if (t !== 'prism')
+        return t;
+    const offset = typeof seed === 'object' && seed ? (seed.x + seed.y) * 0.6 : Number(seed) || 0;
+    return `hsl(${Math.floor((performance.now() / 4 + offset) % 360)}, 100%, 62%)`;
+}
+
+// A rainbow running from (x0, y0) to (x1, y1), drifting over time.
+function prismGradient(g, x0, y0, x1, y1) {
+    const grad = g.createLinearGradient(x0, y0, x1, y1), shift = performance.now() / 4;
+    for (let k = 0; k <= 6; k++)
+        grad.addColorStop(k / 6, `hsl(${Math.floor((k * 60 + shift) % 360)}, 100%, 64%)`);
+    return grad;
 }
 
 // Crossbow aimed along `angle`. `g` defaults to the page's own canvas context.

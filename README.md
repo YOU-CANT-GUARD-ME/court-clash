@@ -22,6 +22,7 @@ A dark medieval top-down shooter: survive **The Hunt** solo, fight
   - `auth.js` — scrypt password hashing, session tokens
   - `armory.js` — the Armory's upgrades, prices and effects
   - `wardrobe.js` — looks (colours, helm styles, bolt trails), prices, titles
+  - `events.js` — limited-time events (the Prism)
 
 ## Database (Neon Postgres)
 All accounts, gold and stats live in Postgres. The server creates its tables
@@ -87,6 +88,15 @@ the same browser share one login, and the newest tab takes over.
   wins. The worn title shows in party slots and the Hall of Legends.
   Colours and prices live in `server/wardrobe.js`; the server resolves a
   player's chosen ids into colours and sends those to other players.
+- **The Prism (event, 4–18 October 2026):** in roughly 1 Hunt in 15, one
+  shot fires as a rainbow bolt. Strike a foe with it to win the limited
+  **Prismatic** bolt trail, which can't be bought and can't be won after the
+  event. The server rolls the chance when a run starts
+  (`POST /api/hunt/start`) and only grants the trail for that run
+  (`POST /api/hunt/prism`), refusing claims sooner than that many shots could
+  take; a Hunt can start at most every 20s. Dates and odds are in
+  `server/events.js`. This keeps out casual cheating but a determined
+  scripter could still claim it without hitting anything.
 - **Hall of Legends** (LEGENDS in the lobby) shows your record and the top
   10 Hunt bounties and Duel records.
 
@@ -97,6 +107,8 @@ the same browser share one login, and the newest tab takes over.
 | GET | `/api/leaderboard` | Top 10 Hunt bounties, Duel and Skirmish records |
 | GET | `/api/me` | Your profile, upgrade levels and Hunt loadout (`Authorization: Bearer <token>`) |
 | POST | `/api/hunt` | `{ score, wave, kills }` for a finished Hunt (bearer token; one per 10s) |
+| POST | `/api/hunt/start` | Begin a Hunt run; returns `{ runId, prismShot, event }` (bearer token; one per 20s) |
+| POST | `/api/hunt/prism` | `{ runId }`: claim the rainbow-bolt hit for that run (bearer token) |
 
 Lobby and Duel traffic goes over the WebSocket: `hello {token}`,
 `signup`/`login {username, password}`, `logout`, `buyUpgrade {id}`, `buyItem {slot, id}`,

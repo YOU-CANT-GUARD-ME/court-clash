@@ -9,6 +9,7 @@ const db = require('./db');
 const auth = require('./auth');
 const armory = require('./armory');
 const wardrobe = require('./wardrobe');
+const events = require('./events');
 
 const PARTY_SIZE = 4;
 const MODES = ['hunt', 'showdown', 'skirmish'];
@@ -118,7 +119,7 @@ function attach(ws, player, tokenHash, token) {
   ws.tokenHash = tokenHash;
   send(ws, {
     type: 'welcome', username: player.username, profile: db.profileOf(player), armory: armory.CATALOG,
-    wardrobe: wardrobe.CATALOG,
+    wardrobe: wardrobe.CATALOG, event: events.eventInfo(),
     ...(token ? { token } : {}),
   });
 
@@ -225,7 +226,7 @@ async function handleMessage(ws, msg) {
       if (!me) return true;
       const slot = String(msg.slot || ''), id = String(msg.id || '');
       const item = wardrobe.itemOf(slot, id);
-      if (!item || item.cost === 0) return true;
+      if (!item || !item.cost) return true; // free, or limited (never sold)
       const player = await db.playerById(me);
       if (wardrobe.owns(player.owned, slot, id)) return true;
       if (player.gold < item.cost) return error(ws, 'Not enough gold'), true;

@@ -449,7 +449,7 @@ function drawFighter(p, camX, camY, pal, label) {
     drawText(label, sx, sy - r - 14, { size: 10, align: 'center', color: pal.label, spacing: 1,
         shadow: 'rgba(0,0,0,0.85)', shadowOffset: 1 });
     for (const b of p.bullets)
-        drawBolt(b, camX, camY, '#c8b48a', '#eef0f2', trailOf(p.look));
+        drawBolt(b, camX, camY, '#c8b48a', '#eef0f2', trailOf(p.look, b));
     ctx.restore();
 }
 // ── NETWORKING ────────────────────────────────────────────────────────────────

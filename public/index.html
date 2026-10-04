@@ -835,6 +835,49 @@ button.fighter:hover {
   color: var(--ink2);
   border: 0;
 }
+/* ---- event banner ---- */
+.event-banner {
+  width: min(560px,100%);
+  margin: 0 auto 12px;
+  padding: 10px 16px;
+  border-radius: 6px;
+  background: linear-gradient(180deg,#1a1512,#0b0908) padding-box,
+    linear-gradient(90deg,#ff4a4a,#ffb02a,#f6ff4a,#4aff7a,#4ad8ff,#7a5aff,#ff4ad8,#ff4a4a) border-box;
+  background-size: 100% 100%, 200% 100%;
+  border: 2px solid transparent;
+  animation: prism 6s linear infinite;
+  text-align: center;
+  color: var(--bone);
+  font: italic 500 15px 'EB Garamond', 'Noto Serif KR', serif;
+  position: relative;
+  z-index: 2;
+}
+.event-banner[hidden] {
+  display: none;
+}
+.event-banner b {
+  display: block;
+  margin-bottom: 2px;
+  font: 900 13px 'Cinzel', 'Noto Serif KR', serif;
+  font-style: normal;
+  letter-spacing: 3px;
+  color: var(--parch);
+}
+.event-banner small {
+  margin-left: 8px;
+  font: 700 10px 'Cinzel', 'Noto Serif KR', serif;
+  letter-spacing: 2px;
+  color: var(--gold);
+}
+@keyframes prism {
+  to { background-position: 0 0, 200% 0; }
+}
+.wd-item small.limited {
+  background: linear-gradient(90deg,#d02a2a,#d0801a,#2a9a4a,#2a7ad0,#7a3ad0);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
 /* ---- party portraits ---- */
 .num.portrait {
   padding: 0;
@@ -1248,6 +1291,7 @@ button.fighter:hover {
 </header>
 
 <main>
+  <div class="event-banner" id="event-banner" hidden><b><span data-i18n="event.title">THE PRISM</span> <small id="event-left"></small></b><span id="event-text"></span></div>
   <section class="lobby" aria-labelledby="lobby-title">
     <div class="lobby-head">
       <h1 id="lobby-title"><span data-i18n="lobby.title">YOUR WARBAND</span><small id="status">CONNECTING…</small></h1>
@@ -1359,6 +1403,7 @@ let noticeTimer = null;
 let profile = null; // our gold and stats, from the server
 let armory = []; // the upgrade catalog, from the server
 let wardrobeCat = null; // looks and titles, from the server
+let eventInfo = null; // the current limited event, from the server
 let authMode = 'signup'; // or 'login'
 let status = ['status.connecting']; // translation key + values for the line under YOUR WARBAND
 function setStatus(key, vars) {
@@ -1423,6 +1468,7 @@ function onMessage(msg) {
             profile = msg.profile;
             armory = msg.armory || [];
             wardrobeCat = msg.wardrobe || null;
+            eventInfo = msg.event || null;
             showProfile();
             break;
         case 'profile':
@@ -1674,7 +1720,20 @@ $('#logout').onclick = () => {
 };
 
 // ---- gold + hall of legends ----
+// The Prism event banner: a countdown, or a note once the prize is won.
+function renderEvent() {
+    const banner = $('#event-banner');
+    const active = eventInfo && eventInfo.active && Date.now() < eventInfo.endsAt;
+    banner.hidden = !active || !profile;
+    if (banner.hidden)
+        return;
+    const hours = Math.max(1, Math.ceil((eventInfo.endsAt - Date.now()) / 3600000));
+    $('#event-left').textContent = hours > 48 ? tr('event.daysLeft', { n: Math.ceil(hours / 24) }) : tr('event.hoursLeft', { n: hours });
+    const won = profile.owned.includes(eventInfo.item.slot + ':' + eventInfo.item.id);
+    $('#event-text').textContent = tr(won ? 'event.owned' : 'event.text');
+}
 function showProfile() {
+    renderEvent();
     $('#gold').textContent = String(profile ? profile.gold : 0).padStart(4, '0');
     if (!$('#armory').hidden)
         renderArmory();
@@ -1788,14 +1847,19 @@ function itemCard(slot, item) {
     // Trails show as a bolt streak; everything else as the mercenary wearing it.
     const icon = slot === 'trail' ? trailIcon(look) : portrait(look, 34, 34, -Math.PI / 2, 9);
     const label = document.createElement('span');
-    const state = worn ? tr('wd.worn') : have ? (item.cost === 0 ? tr('wd.free') : tr('wd.wear')) : tr('wd.buy', { cost: item.cost });
+    const limited = item.limited && !have;
+    const eventOn = eventInfo && eventInfo.active && Date.now() < eventInfo.endsAt;
+    const state = worn ? tr('wd.worn') : have ? (item.cost === 0 ? tr('wd.free') : tr('wd.wear'))
+        : limited ? tr(eventOn ? 'wd.limitedActive' : 'wd.limitedGone') : tr('wd.buy', { cost: item.cost });
+    if (limited)
+        b.classList.add('locked');
     label.append(Object.assign(document.createElement('b'), { textContent: tr('wd.' + slot + '.' + item.id) }),
-        Object.assign(document.createElement('small'), { className: have ? 'free' : '', textContent: state }));
+        Object.assign(document.createElement('small'), { className: item.limited ? 'limited' : have ? 'free' : '', textContent: state }));
     b.append(icon, label);
     b.onmouseenter = b.onfocus = () => { wdPreview = look; };
     b.onmouseleave = b.onblur = () => { wdPreview = null; };
     b.onclick = () => {
-        if (!profile || worn)
+        if (!profile || worn || limited)
             return;
         if (have)
             sendMsg({ type: 'wear', slot, id: item.id });
@@ -1812,8 +1876,8 @@ function trailIcon(look) {
     const g = c.getContext('2d');
     g.scale(2, 2);
     g.lineCap = 'round';
-    g.strokeStyle = trailOf(look);
-    g.globalAlpha = 0.45;
+    g.strokeStyle = look.trail === 'prism' ? prismGradient(g, 6, 28, 26, 8) : trailOf(look);
+    g.globalAlpha = look.trail === 'prism' ? 0.8 : 0.45;
     g.lineWidth = 6;
     g.beginPath();
     g.moveTo(6, 28);
@@ -2055,6 +2119,8 @@ window.addEventListener('langchange', () => {
         renderWardrobe();
     if (!$('#legends').hidden)
         openLegends();
+    if (profile)
+        renderEvent();
 });
 
 applyI18n();

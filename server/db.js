@@ -186,6 +186,16 @@ function buyItem(playerId, itemKey, cost) {
   );
 }
 
+// Gives a wardrobe item for free (event prizes). Safe to call twice.
+async function grantItem(playerId, itemKey) {
+  const row = await one(
+    `UPDATE players SET owned = owned || to_jsonb($2::text)
+     WHERE id = $1 AND NOT owned ? $2 RETURNING *`,
+    [playerId, itemKey],
+  );
+  return row || playerById(playerId);
+}
+
 function setLook(playerId, slot, id) {
   return one(
     `UPDATE players SET look = look || jsonb_build_object($2::text, $3::text) WHERE id = $1 RETURNING *`,
@@ -218,5 +228,5 @@ async function leaderboard() {
 
 module.exports = {
   init, profileOf, createPlayer, playerById, playerByUsername, createSession, playerBySession,
-  deleteSession, recordHunt, recordDuel, recordSkirmish, buyUpgrade, buyItem, setLook, leaderboard,
+  deleteSession, recordHunt, recordDuel, recordSkirmish, buyUpgrade, buyItem, grantItem, setLook, leaderboard,
 };

@@ -1,6 +1,7 @@
 // BLOODSWORN — the wardrobe: how a mercenary looks, and titles.
 // Looks are cosmetic only. The first item in each slot is the default; items
-// with cost 0 are free for everyone, the rest are bought once with gold.
+// with cost 0 are free for everyone, the rest are bought once with gold,
+// except limited items (cost null), which are only granted by events.
 // The server resolves a player's chosen ids into colours (resolveLook), so
 // colours and prices live only here; public/mercenary.js draws the result
 // and knows the helm styles by id.
@@ -38,6 +39,9 @@ const SLOTS = {
     { id: 'venom', cost: 600, trail: '#7aff5a' },
     { id: 'blood', cost: 800, trail: '#ff2a2a' },
     { id: 'shadow', cost: 1000, trail: '#a05aff' },
+    // Limited: only won during the Prism event (see events.js), never sold.
+    // 'prism' is drawn as a shifting rainbow by public/mercenary.js.
+    { id: 'prismatic', cost: null, limited: 'prism', trail: 'prism' },
   ],
 };
 
@@ -96,7 +100,7 @@ function titleUnlocked(profile, id) {
 // What the lobby needs to draw the dressing room.
 const CATALOG = {
   slots: Object.fromEntries(Object.entries(SLOTS).map(([slot, items]) => [slot, items.map((it) => ({
-    id: it.id, cost: it.cost, look: resolveLook({ [slot]: it.id }),
+    id: it.id, cost: it.cost, limited: it.limited || null, look: resolveLook({ [slot]: it.id }),
   }))])),
   titles: TITLES.map((t) => ({ id: t.id, stat: t.stat, n: t.n })),
 };

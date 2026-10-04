@@ -958,8 +958,80 @@ function applyLoadout(p) {
 function makePlayer() {
     return applyLoadout({ x: 2.5 * TILE, y: 2.5 * TILE, angle: 0,
         score: 0, kills: 0, wave: 1, hurtTimer: 0, shootTimer: 0, reloadTimer: 0, reloadCd: 4, rollTimer: 0,
-        spawnImmunity: 180, bulletDamage: 1, damageReduction: 0, bullets: [], bob: 0, moving: false,
+        spawnImmunity: 180, bulletDamage: 1, damageReduction: 0, bullets: [], bob: 0, moving: false, shots: 0,
     });
+}
+// ── THE PRISM (limited event) ────────────────────────────────────────────────
+// The server decides at the start of each run whether one shot (and which)
+// fires as a rainbow bolt; striking a foe with it wins the Prismatic trail.
+let huntRun = null; // { runId, prismShot } from the server, for this run
+let prism = null;   // null | 'flying' | 'claiming' | 'won' | 'missed'
+let notice = null;  // banner: { title, sub, tone, at, until }
+async function startHuntRun() {
+    huntRun = null;
+    prism = null;
+    const token = getToken();
+    if (!token)
+        return;
+    const forPlayer = player;
+    try {
+        const res = await fetch(SERVER.api + '/api/hunt/start', { method: 'POST', headers: { Authorization: 'Bearer ' + token } });
+        const body = await res.json();
+        if (res.ok && player === forPlayer) // still the same run
+            huntRun = body;
+    }
+    catch { }
+}
+function prismNotice(title, sub, tone, seconds = 3.5) {
+    const now = performance.now();
+    notice = { title, sub, tone, at: now, until: now + seconds * 1000 };
+}
+function prismMissed() {
+    if (prism !== 'flying')
+        return;
+    prism = 'missed';
+    prismNotice('prism.missed', 'prism.missedSub', 'dim');
+}
+async function prismHit(e) {
+    if (prism !== 'flying')
+        return;
+    prism = 'claiming';
+    for (let k = 0; k < 6; k++)
+        spawnParticles(e.x, e.y, `hsl(${k * 60}, 100%, 62%)`, 8, 1.5, 6, 40, 3);
+    prismNotice('prism.claiming', null, 'rainbow', 30);
+    try {
+        const res = await fetch(SERVER.api + '/api/hunt/prism', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken() },
+            body: JSON.stringify({ runId: huntRun.runId }),
+        });
+        if (!res.ok)
+            throw new Error(res.status);
+        prism = 'won';
+        prismNotice('prism.won', 'prism.wonSub', 'rainbow', 7);
+    }
+    catch {
+        prism = 'missed';
+        prismNotice('prism.failed', null, 'dim');
+    }
+}
+function drawPrismNotice() {
+    const now = performance.now();
+    if (!notice || now > notice.until)
+        return;
+    const t = (now - notice.at) / 1000, left = (notice.until - now) / 1000;
+    const alpha = Math.min(1, t / 0.2, left / 0.5);
+    const y = H * 0.3, scale = 1 + Math.max(0, 0.25 - t) * 1.2;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(W / 2, y);
+    ctx.scale(scale, scale);
+    const size = Math.min(46, W / 16), half = textWidth(tr(notice.title), size, 'display', 2) / 2;
+    const color = notice.tone === 'rainbow' ? prismGradient(ctx, -half, 0, half, 0) : UI.muted;
+    drawText(tr(notice.title), 0, 0, { size, family: 'display', align: 'center', color, shadow: '#000', shadowOffset: 3, spacing: 2 });
+    if (notice.sub)
+        drawText(tr(notice.sub), 0, 30, { size: 12, align: 'center', color: UI.paper, spacing: 3, shadow: '#000', shadowOffset: 1 });
+    ctx.restore();
 }
 async function loadArmory() {
     const token = getToken();
@@ -1027,7 +1099,11 @@ function updatePlayer(player, keys, mouseX, mouseY, camX, camY, enemies) {
     for (let i = player.bullets.length - 1; i >= 0; i--) {
         const b = player.bullets[i], ox = b.x, oy = b.y;
         updateBullet(b);
+        if (b.prism)
+            spawnParticles(b.x, b.y, trailOf({ trail: 'prism' }, b), 1, 0.3, 1.2, 22, 2);
         if (!b.alive) {
+            if (b.prism)
+                prismMissed();
             player.bullets.splice(i, 1);
             continue;
         }
@@ -1038,6 +1114,8 @@ function updatePlayer(player, keys, mouseX, mouseY, camX, camY, enemies) {
             if (distToSegment(e.x, e.y, ox, oy, b.x, b.y) < e.radius + 5) {
                 b.alive = false;
                 player.bullets.splice(i, 1);
+                if (b.prism)
+                    prismHit(e);
                 e.health -= player.bulletDamage * player.damageMult;
                 if (e.health <= 0)
                     killEnemy(e, player);
@@ -1058,7 +1136,14 @@ function playerShoot(player, mouseX, mouseY, camX, camY) {
     player.shootTimer = 8;
     player.reloadTimer = player.reloadCd;
     const ang = Math.atan2((camY + mouseY) - player.y, (camX + mouseX) - player.x);
-    player.bullets.push(makeBullet(player.x, player.y, ang));
+    const bolt = makeBullet(player.x, player.y, ang);
+    player.shots++;
+    if (huntRun && huntRun.prismShot === player.shots && !prism) {
+        bolt.prism = true;
+        prism = 'flying';
+        prismNotice('prism.stirs', 'prism.stirsSub', 'rainbow');
+    }
+    player.bullets.push(bolt);
     spawnParticles(player.x + Math.cos(ang) * 18, player.y + Math.sin(ang) * 18, '#ffa020', 5, 1, 4, 10, 2);
 }
 function drawPlayer(player, camX, camY) {
@@ -1102,7 +1187,8 @@ function drawPlayer(player, camX, camY) {
         ctx.globalAlpha = 1;
     }
     for (const b of player.bullets)
-        drawBolt(b, camX, camY, '#c8b48a', '#eef0f2', trailOf(myLook));
+        if (!b.prism)
+            drawBolt(b, camX, camY, '#c8b48a', '#eef0f2', trailOf(myLook, b));
     ctx.restore();
 }
 // ── SPAWN ────────────────────────────────────────────────────────────────────
@@ -1941,6 +2027,7 @@ let spawnCountdown = 0;
 const keys = {};
 let mouseX = W / 2, mouseY = H / 2, mouseDown = false;
 loadArmory();
+startHuntRun();
 // Stay connected to the lobby server while hunting. Without this the server
 // sees us leave and drops us from our warband after its 15s grace period.
 // Nothing here affects the run; it only says hello and reconnects if needed.
@@ -1976,6 +2063,8 @@ function newGame() {
     newBest = false;
     huntReward = null;
     player = makePlayer();
+    notice = null;
+    startHuntRun();
     enemies = spawnEnemies(1);
     gameOver = false;
     paused = false;
@@ -2186,12 +2275,16 @@ function loop(ts) {
         drawEnemy(e, camX, camY);
     drawPlayer(player, camX, camY);
     drawTorchlight(player.x - camX, player.y - camY);
+    for (const b of player.bullets)
+        if (b.prism)
+            drawBolt(b, camX, camY, '#ffffff', '#ffffff', trailOf({ trail: 'prism' }, b), 22);
     drawPopups(camX, camY);
     if (waveClearTimer > 0)
         drawWaveClear(player);
     if (spawnCountdown > 0)
         drawSpawnCountdown(player, spawnCountdown);
     drawHUD(player, enemies);
+    drawPrismNotice();
     drawMinimap(player, enemies, camX, camY);
     if (paused)
         drawPauseOverlay();

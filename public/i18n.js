@@ -224,6 +224,16 @@ const STRINGS = {
         'rule.bestWave': "Reach wave {n} in the Hunt",
         'rule.duelWins': "Win {n} Duels",
         'rule.skirmishWins': "Win {n} Skirmishes",
+        // the Prism event
+        'event.title': 'THE PRISM', 'event.daysLeft': '{n} DAYS LEFT', 'event.hoursLeft': '{n} HOURS LEFT',
+        'event.text': 'A rare rainbow bolt may fire during the Hunt. Strike a foe with it to win the limited Prismatic Trail.',
+        'event.owned': 'You hold the Prismatic Trail. Wear it from the Mercenary room.',
+        'wd.trail.prismatic': 'Prismatic', 'wd.limitedActive': 'LIMITED · WIN IN THE HUNT', 'wd.limitedGone': 'LIMITED · NO LONGER OBTAINABLE',
+        'prism.stirs': 'THE PRISM STIRS!', 'prism.stirsSub': 'STRIKE A FOE WITH THE RAINBOW BOLT',
+        'prism.claiming': 'A TRUE STRIKE…',
+        'prism.won': 'PRISMATIC TRAIL CLAIMED', 'prism.wonSub': 'WEAR IT FROM THE MERCENARY ROOM',
+        'prism.missed': 'THE PRISM FADES…', 'prism.missedSub': 'IT MAY RETURN IN ANOTHER HUNT',
+        'prism.failed': 'THE PRISM COULD NOT BE CLAIMED',
     },
 
     ko: {
@@ -439,6 +449,16 @@ const STRINGS = {
         'rule.bestWave': "사냥에서 {n}웨이브 도달",
         'rule.duelWins': "결투 {n}회 승리",
         'rule.skirmishWins': "접전 {n}회 승리",
+        // the Prism event
+        'event.title': '프리즘', 'event.daysLeft': '{n}일 남음', 'event.hoursLeft': '{n}시간 남음',
+        'event.text': '사냥 중 드물게 무지개 화살이 발사됩니다. 그 화살로 적을 맞히면 한정판 프리즘 궤적을 얻습니다.',
+        'event.owned': '프리즘 궤적을 가지고 있습니다. 용병 메뉴에서 착용하세요.',
+        'wd.trail.prismatic': '프리즘', 'wd.limitedActive': '한정 · 사냥에서 획득', 'wd.limitedGone': '한정 · 더 이상 얻을 수 없음',
+        'prism.stirs': '프리즘이 깨어난다!', 'prism.stirsSub': '무지개 화살로 적을 맞혀라',
+        'prism.claiming': '명중!…',
+        'prism.won': '프리즘 궤적 획득', 'prism.wonSub': '용병 메뉴에서 착용하세요',
+        'prism.missed': '프리즘이 사라진다…', 'prism.missedSub': '다른 사냥에서 다시 나타날지도 모른다',
+        'prism.failed': '프리즘을 얻지 못했습니다',
     },
 };
 

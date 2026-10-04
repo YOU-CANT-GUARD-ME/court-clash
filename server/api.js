@@ -3,10 +3,14 @@
 //   GET  /api/leaderboard  top Hunt bounties and Duel records
 //   GET  /api/me           your profile          (Authorization: Bearer <token>)
 //   POST /api/hunt         record a finished Hunt (Authorization: Bearer <token>)
+//   POST /api/hunt/start   begin a Hunt run; rolls the Prism event's rainbow shot
+//   POST /api/hunt/prism   claim a rainbow-bolt hit for the current run
 
 const db = require('./db');
 const auth = require('./auth');
 const lobby = require('./lobby');
+const events = require('./events');
+const wardrobe = require('./wardrobe');
 
 const HUNT_COOLDOWN_MS = 10000; // one result per player per 10s
 const lastHunt = new Map(); // playerId -> time of last accepted result
@@ -86,6 +90,26 @@ async function handle(req, res) {
       const row = await db.recordHunt(player.id, run);
       lobby.pushProfile(player.id, row);
       return json(res, 200, { gold: run.gold, profile: db.profileOf(row) });
+    }
+
+    if (req.method === 'POST' && path === '/api/hunt/start') {
+      const player = await playerFromRequest(req);
+      if (!player) return json(res, 401, { error: 'Not signed in' });
+      const prize = events.PRISM.item;
+      const run = events.startRun(player.id, wardrobe.owns(player.owned, prize.slot, prize.id));
+      if (!run) return json(res, 429, { error: 'Too soon', event: events.eventInfo() });
+      return json(res, 200, { runId: run.runId, prismShot: run.prismShot, event: events.eventInfo() });
+    }
+
+    if (req.method === 'POST' && path === '/api/hunt/prism') {
+      const player = await playerFromRequest(req);
+      if (!player) return json(res, 401, { error: 'Not signed in' });
+      const body = await readJson(req);
+      const result = events.claimPrism(player.id, String(body.runId || ''));
+      if (result.error) return json(res, 400, { error: result.error });
+      const row = await db.grantItem(player.id, wardrobe.key(result.item.slot, result.item.id));
+      lobby.pushProfile(player.id, row);
+      return json(res, 200, { granted: result.item, profile: db.profileOf(row) });
     }
 
     json(res, 404, { error: 'Not found' });

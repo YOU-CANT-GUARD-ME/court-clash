@@ -485,7 +485,7 @@ function drawFighter(p, camX, camY, pal, label) {
 }
 function drawBolts(p, camX, camY, pal) {
     for (const b of p.bullets)
-        drawBolt(b, camX, camY, '#c8b48a', '#eef0f2', trailOf(p.look));
+        drawBolt(b, camX, camY, '#c8b48a', '#eef0f2', trailOf(p.look, b));
 }
 // ── NETWORKING ────────────────────────────────────────────────────────────────
 // The server address and login token come from config.js.
