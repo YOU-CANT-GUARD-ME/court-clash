@@ -1,4 +1,4 @@
-# BLOODSWORN — Mercenaries of the Ashen Realm
+# BLOODSWORN — Mercenaries of the Ashen Realm.
 
 A dark medieval top-down shooter: survive **The Hunt** solo, fight
 **The Duel** (online 1v1, best of 3), or band up for **Skirmish** (online
