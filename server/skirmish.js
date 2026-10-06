@@ -15,16 +15,11 @@
 
 const db = require('./db');
 const lobby = require('./lobby');
+const maps = require('./maps');
 
 const TEAM_SIZE = 2;
 const WINS_NEEDED = 2; // best of 3
 const GOLD = { win: 150, loss: 40 };
-// Spawn points in map tile units, in player order. Must match the arena in
-// skirmish.html (RAW_MAP): team 0 on the left, team 1 on the right.
-const SPAWNS = [
-  { x: 3.5, y: 5.5 }, { x: 3.5, y: 18.5 },
-  { x: 36.5, y: 5.5 }, { x: 36.5, y: 18.5 },
-];
 
 const searching = new Map(); // socket -> time it started searching
 const rooms = new Map();     // room id -> room
@@ -121,13 +116,14 @@ function startMatch(sides) {
     scores: [0, 0],
     round: 1,
     state: 'starting', // playing | roundover | matchover
+    map: maps.randomMap(maps.SKIRMISH), // spawns per arena are in maps.js
   };
   rooms.set(room.id, room);
   const roster = room.players.map((ws, i) => ({ name: lobby.usernameOf(ws), team: teamOf(i), look: lobby.lookOf(ws) }));
   room.players.forEach((ws, i) => {
     ws.skRoom = room.id;
     ws.skIndex = i;
-    send(ws, { type: 'skMatchFound', you: i, players: roster });
+    send(ws, { type: 'skMatchFound', you: i, players: roster, map: room.map });
   });
   startRound(room);
 }
@@ -139,7 +135,7 @@ function broadcast(room, msg, except) {
 function startRound(room) {
   room.health = room.left.map((gone) => (gone ? 0 : 100));
   room.state = 'playing';
-  broadcast(room, { type: 'skRoundStart', round: room.round, scores: room.scores, spawns: SPAWNS, health: room.health });
+  broadcast(room, { type: 'skRoundStart', round: room.round, scores: room.scores, spawns: maps.SKIRMISH[room.map], health: room.health });
 }
 
 // The team with nobody standing, or -1.

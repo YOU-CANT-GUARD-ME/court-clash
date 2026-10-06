@@ -10,6 +10,7 @@ const db = require('./db');
 const api = require('./api');
 const lobby = require('./lobby');
 const skirmish = require('./skirmish');
+const maps = require('./maps');
 
 const PORT = process.env.PORT || 8080;
 const WINS_NEEDED = 2; // best of 3
@@ -17,13 +18,6 @@ const DUEL_GOLD = { win: 100, loss: 25 };
 // Time to read the result before a warband's next duel starts.
 const NEXT_DUEL_DELAY_MS = 5000;
 
-// Two spawn points, kept far apart on opposite corners. Both clients use the
-// SAME arena layout (see RAW_MAP in showdown.html) so these must stay in sync
-// with that map if it changes.
-const SPAWN_POINTS = [
-  { x: 2.5, y: 2.5 },   // top-left, in map tile units
-  { x: 31.5, y: 17.5 }, // bottom-right, in map tile units
-];
 
 const server = http.createServer(api.handle);
 const wss = new WebSocketServer({ server });
@@ -62,6 +56,7 @@ function makeRoom(playerA, playerB) {
 function startMatch(playerA, playerB, partyCode = null) {
   const room = makeRoom(playerA, playerB);
   room.partyCode = partyCode;
+  room.map = maps.randomMap(maps.DUEL); // same arena for every round of this match
   playerA.lastFoe = playerB;
   playerB.lastFoe = playerA;
   room.players.forEach((sock, i) => {
@@ -69,6 +64,7 @@ function startMatch(playerA, playerB, partyCode = null) {
       type: 'matchFound', playerNum: i, roomId: room.id,
       yourName: lobby.usernameOf(sock),
       opponentName: lobby.usernameOf(room.players[1 - i]),
+      map: room.map,
       yourLook: lobby.lookOf(sock),
       opponentLook: lobby.lookOf(room.players[1 - i]),
     });
@@ -195,8 +191,8 @@ function startRound(room) {
     send(ws, {
       type: 'roundStart',
       round: room.round,
-      yourSpawn: SPAWN_POINTS[i],
-      oppSpawn: SPAWN_POINTS[1 - i],
+      yourSpawn: maps.DUEL[room.map][i],
+      oppSpawn: maps.DUEL[room.map][1 - i],
       scores: room.scores,
     });
   });

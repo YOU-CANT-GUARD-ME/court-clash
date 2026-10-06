@@ -12,6 +12,7 @@ A dark medieval top-down shooter: survive **The Hunt** solo, fight
 - `public/skirmish.html` — Skirmish (online 2v2)
 - `public/config.js` — shared by all pages: server address + login token
 - `public/mercenary.js` — draws a mercenary in a given look (lobby + games)
+- `public/maps.js` — every map layout, per mode; `public/terrain.js` paints them
 - `public/i18n.js` — English and Korean text for every page (see Languages)
 - `server/` — Node server: HTTP API + WebSockets on one port
   - `server.js` — Duel matchmaking and authoritative round/score state
@@ -23,6 +24,7 @@ A dark medieval top-down shooter: survive **The Hunt** solo, fight
   - `armory.js` — the Armory's upgrades, prices and effects
   - `wardrobe.js` — looks (colours, helm styles, bolt trails), prices, titles
   - `events.js` — limited-time events (the Prism)
+  - `maps.js` — which Duel/Skirmish arenas exist and their spawn points
 
 ## Database (Neon Postgres)
 All accounts, gold and stats live in Postgres. The server creates its tables
@@ -129,6 +131,21 @@ server message, add its Korean there or players will see it in English.
 Movement and hotkeys in both games use physical keys (`event.code`), so they
 work with a Korean keyboard input method switched on.
 
+## Maps
+Every mode has three maps, one per look: **Ashen Keep** (stone dungeon),
+**Blighted Wood** (trees for cover, murky ponds) and **Frozen Pass** (snow,
+snow-capped rock, a frozen lake). The map is random every match: the server
+picks it for the Duel and Skirmish and tells the players (so everyone fights
+in the same arena), and the Hunt picks one each run. Its name shows on the
+first round's banner, or the Hunt's wave-1 countdown.
+- Layouts are rows of `#` (wall), `.` (floor) and `~` (water/ice: walkable)
+  in `public/maps.js`; all maps of a mode share its size.
+- Duel and Skirmish spawn points per map are in `server/maps.js` and must be
+  open floor. Duel arenas are rotationally symmetric and Skirmish arenas are
+  mirrored both ways, so no spawn is favoured.
+- Hunt foes spawn on a spread-out grid of open tiles worked out for each map,
+  at most 27 per wave as before.
+
 ## Warbands (parties)
 - Everyone starts in their own warband. Enter a friend's 6-letter seal and
   press JOIN to take a slot (max 4).
@@ -166,8 +183,8 @@ work with a Korean keyboard input method switched on.
   ends when a whole team is down. First team to two rounds wins. Anyone who
   leaves is out for the rest of the match (recorded as a loss with no gold);
   if a whole team leaves, the other wins by forfeit.
-- The spawn points (`SPAWNS` in `server/skirmish.js`) must sit on open floor
-  in the arena (`RAW_MAP` in `skirmish.html`).
+- The spawn points (`SKIRMISH` in `server/maps.js`) must sit on open floor
+  in each arena (`MAPS.skirmish` in `public/maps.js`).
 
 ## How a Duel works
 1. Both clients search → the server pairs them into a room.

@@ -14,6 +14,7 @@ const STRINGS = {
     en: {
         // shared
         'brand.sub': 'MERCENARIES OF THE ASHEN REALM',
+        'map.keep': 'ASHEN KEEP', 'map.wood': 'BLIGHTED WOOD', 'map.frost': 'FROZEN PASS',
         'mode.hunt': 'THE HUNT',
         'mode.duel': 'THE DUEL',
         'ctl.move': 'Move', 'ctl.fire': 'Fire', 'ctl.roll': 'Roll', 'ctl.firepot': 'Firepot',
@@ -239,6 +240,7 @@ const STRINGS = {
     ko: {
         // shared
         'brand.sub': '잿빛 왕국의 용병들',
+        'map.keep': '잿빛 성채', 'map.wood': '병든 숲', 'map.frost': '얼어붙은 고개',
         'mode.hunt': '사냥',
         'mode.duel': '결투',
         'ctl.move': '이동', 'ctl.fire': '발사', 'ctl.roll': '구르기', 'ctl.firepot': '화염병',

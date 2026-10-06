@@ -107,6 +107,8 @@
 <script src="config.js"></script>
 <script src="i18n.js"></script>
 <script src="mercenary.js"></script>
+<script src="maps.js"></script>
+<script src="terrain.js"></script>
 <script>
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
@@ -130,28 +132,9 @@ if (document.fonts)
     ['900 12px Cinzel', '700 12px Cinzel', '500 12px "EB Garamond"'].forEach(f => document.fonts.load(f));
 const BASE_TILE = 40;
 // ── ARENA MAP (compact, symmetric — built for 1v1, not survival) ─────────────
-const RAW_MAP = [
-    "##################################",
-    "#................................#",
-    "#................................#",
-    "#................................#",
-    "#...###........####........###...#",
-    "#...###........####........###...#",
-    "#...###........####........###...#",
-    "#................................#",
-    "#..............####..............#",
-    "#..............#..#..............#",
-    "#..............#..#..............#",
-    "#..............####..............#",
-    "#................................#",
-    "#...###........####........###...#",
-    "#...###........####........###...#",
-    "#...###........####........###...#",
-    "#................................#",
-    "#................................#",
-    "#................................#",
-    "##################################",
-];
+// Layouts and looks are in maps.js; the server picks this match's map.
+let mapLook = 'keep';
+let RAW_MAP = MAPS.duel.keep;
 const MAP_W = RAW_MAP[0].length, MAP_H = RAW_MAP.length;
 // Grow tiles when necessary so the complete arena covers the viewport. The
 // network protocol uses tile units, keeping matches aligned across displays.
@@ -170,9 +153,12 @@ const mapCanvas = document.createElement('canvas');
 mapCanvas.width = MAP_W * TILE;
 mapCanvas.height = MAP_H * TILE;
 const mctx = mapCanvas.getContext('2d');
-(function buildMap() {
-    paintDungeon(mctx, TILE);
-})();
+function setMap(look) {
+    mapLook = MAPS.duel[look] ? look : 'keep';
+    RAW_MAP = MAPS.duel[mapLook];
+    paintMap(mctx, TILE, RAW_MAP, mapLook);
+}
+setMap('keep');
 // ── PARTICLES ─────────────────────────────────────────────────────────────────
 const particles = [];
 function spawnParticles(x, y, color, count, sMin, sMax, life, size = 3) {
@@ -208,84 +194,6 @@ function updateBullet(b) {
         b.alive = false;
 }
 // ── ART: dungeon, mercenaries, bolts, torchlight ─────────────────────────────
-// Stable per-tile noise, so every stone keeps its own shade, crack or stain.
-function tileHash(c, r) {
-    let h = (c * 374761393 + r * 668265263) | 0;
-    h = Math.imul(h ^ (h >>> 13), 1274126177);
-    return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
-}
-function paintDungeon(g, size) {
-    g.fillStyle = '#070605';
-    g.fillRect(0, 0, MAP_W * size, MAP_H * size);
-    for (let row = 0; row < MAP_H; row++)
-        for (let col = 0; col < MAP_W; col++) {
-            const x = col * size, y = row * size, h = tileHash(col, row);
-            if (RAW_MAP[row][col] === '#') {
-                // Heavy stone wall: two courses of offset blocks with a worn top edge.
-                const s = 48 + Math.floor(h * 12);
-                g.fillStyle = `rgb(${s},${s - 6},${s - 12})`;
-                g.fillRect(x, y, size, size);
-                g.strokeStyle = 'rgba(0,0,0,0.6)';
-                g.lineWidth = 2;
-                g.beginPath();
-                g.moveTo(x, y + size / 2);
-                g.lineTo(x + size, y + size / 2);
-                g.moveTo(x + size / 2, y);
-                g.lineTo(x + size / 2, y + size / 2);
-                g.moveTo(x, y + size / 2);
-                g.lineTo(x, y + size);
-                g.moveTo(x, y);
-                g.lineTo(x + size, y);
-                g.stroke();
-                g.fillStyle = 'rgba(255,235,200,0.06)';
-                g.fillRect(x, y + 1, size, 3);
-                g.fillStyle = 'rgba(0,0,0,0.4)';
-                g.fillRect(x, y + size - 4, size, 4);
-            }
-            else {
-                // Flagstone floor.
-                const s = 33 + Math.floor(h * 9);
-                g.fillStyle = `rgb(${s},${s - 4},${s - 9})`;
-                g.fillRect(x, y, size, size);
-                g.strokeStyle = 'rgba(0,0,0,0.65)';
-                g.lineWidth = 2;
-                g.beginPath();
-                g.moveTo(x, y);
-                g.lineTo(x + size, y);
-                g.moveTo(x, y);
-                g.lineTo(x, y + size);
-                g.stroke();
-                if (row > 0 && RAW_MAP[row - 1][col] === '#') {
-                    const sh = g.createLinearGradient(0, y, 0, y + size * 0.45);
-                    sh.addColorStop(0, 'rgba(0,0,0,0.55)');
-                    sh.addColorStop(1, 'rgba(0,0,0,0)');
-                    g.fillStyle = sh;
-                    g.fillRect(x, y, size, size * 0.45);
-                }
-                if (h > 0.94) {
-                    g.strokeStyle = 'rgba(10,8,6,0.8)';
-                    g.lineWidth = 1;
-                    g.beginPath();
-                    g.moveTo(x + size * 0.15, y + size * (0.3 + h * 0.3));
-                    g.lineTo(x + size * 0.45, y + size * 0.5);
-                    g.lineTo(x + size * 0.6, y + size * 0.35);
-                    g.lineTo(x + size * 0.85, y + size * 0.6);
-                    g.stroke();
-                }
-                else if (h < 0.06) {
-                    g.fillStyle = 'rgba(100,12,12,0.4)';
-                    g.beginPath();
-                    g.ellipse(x + size * 0.5, y + size * 0.55, size * 0.3, size * 0.18, h * 40, 0, Math.PI * 2);
-                    g.fill();
-                }
-                else if (h > 0.45 && h < 0.5) {
-                    g.fillStyle = 'rgba(160,150,130,0.18)';
-                    for (let i = 0; i < 4; i++)
-                        g.fillRect(x + size * (0.2 + i * 0.17), y + size * (0.3 + ((i * 7) % 5) * 0.1), 2, 2);
-                }
-            }
-        }
-}
 // A bolt or arrow pointing along its velocity.
 function drawBolt(b, camX, camY, shaft, head, glow, len = 14) {
     const sp = Math.hypot(b.vx, b.vy) || 1, ux = b.vx / sp, uy = b.vy / sp;
@@ -558,6 +466,7 @@ function handleServerMessage(msg) {
             showIntro();
             break;
         case 'matchFound':
+            setMap(msg.map);
             myPlayerNum = msg.playerNum;
             oppName = msg.opponentName;
             myLook = msg.yourLook || DEFAULT_LOOK;
@@ -1087,6 +996,8 @@ function drawRoundBanner() {
         const theirs = myPlayerNum !== null ? scores[1 - myPlayerNum] : 0;
         const sub = tr(mine === WINS_NEEDED - 1 && theirs === WINS_NEEDED - 1 ? 'duel.deciding' : mine === WINS_NEEDED - 1 ? 'duel.matchPoint' : 'duel.bestOf3');
         drawText(sub, 0, 40, { size: 11, align: 'center', color: UI.gold, spacing: 4 });
+        if (round === 1)
+            drawText(tr('map.' + mapLook), 0, -40, { size: 10, align: 'center', color: UI.muted, spacing: 4 });
     }
     ctx.restore();
 }
