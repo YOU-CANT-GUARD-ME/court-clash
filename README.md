@@ -13,6 +13,8 @@ A dark medieval top-down shooter: survive **The Hunt** solo, fight
 - `public/config.js` — shared by all pages: server address + login token
 - `public/mercenary.js` — draws a mercenary in a given look (lobby + games)
 - `public/maps.js` — every map layout, per mode; `public/terrain.js` paints them
+- `public/coop.js` — the co-op Hunt (loaded by `game.html`)
+- `public/gameclock.js` — runs every game at 60 steps a second on any screen
 - `public/i18n.js` — English and Korean text for every page (see Languages)
 - `server/` — Node server: HTTP API + WebSockets on one port
   - `server.js` — Duel matchmaking and authoritative round/score state
@@ -25,6 +27,7 @@ A dark medieval top-down shooter: survive **The Hunt** solo, fight
   - `wardrobe.js` — looks (colours, helm styles, bolt trails), prices, titles
   - `events.js` — limited-time events (the Prism)
   - `maps.js` — which Duel/Skirmish arenas exist and their spawn points
+  - `coop.js` — co-op Hunt rooms: gathering, relaying, payouts
 
 ## Database (Neon Postgres)
 All accounts, gold and stats live in Postgres. The server creates its tables
@@ -131,6 +134,34 @@ server message, add its Korean there or players will see it in English.
 Movement and hotkeys in both games use physical keys (`event.code`), so they
 work with a Korean keyboard input method switched on.
 
+## Co-op Hunt
+A warband (2–4) that picks The Hunt and presses TO BATTLE hunts together;
+solo players still get the normal Hunt.
+- **Gathering:** everyone lands on `game.html#coop`. The run starts when the
+  whole warband has arrived, or after 12 seconds with whoever came. The
+  server picks the map. Someone who arrives late joins the run in progress.
+- **Who runs the foes:** the captain (the host) runs the foes and waves in
+  their browser, the same code as a solo Hunt, and the server relays world
+  snapshots (10 a second) and events (foe shots, explosions, kills, waves)
+  to everyone else. Each hunter moves and shoots on their own screen; their
+  hits on foes go to the host, and foe shots, sapper blasts and firepots hurt
+  each hunter on their own screen. If the host's tab is in the background, a
+  timer keeps the hunt running. **If the host leaves, the run ends** and is
+  paid out from their last snapshot.
+- **Harder for more:** each extra hunter brings about 50% more foes with a
+  quarter more health (warlords: half).
+- **Downed, not dead:** at 0 health you're downed for 30 seconds; an ally
+  standing beside you for 3 seconds raises you at half health. Bleed out and
+  you're fallen until the wave is cleared. The run ends when everyone is down.
+- **Between waves** everyone heals (Field Medic), the downed rise, and each
+  hunter picks their own boon; the host starts the next wave once all have
+  chosen (or after 20 seconds).
+- **Rewards:** every hunter earns the team bounty (bounty ÷ 10 gold); their
+  own kills and the run count toward their stats, and the bounty goes on a
+  separate **Co-op Hunt** board in the Hall of Legends (solo bests are
+  untouched). The server checks the result against the solo bounds, scaled
+  for the party size.
+
 ## Maps
 Every mode has three maps, one per look: **Ashen Keep** (stone dungeon),
 **Blighted Wood** (trees for cover, murky ponds) and **Frozen Pass** (snow,
@@ -206,6 +237,8 @@ first round's banner, or the Hunt's wave-1 countdown.
   loner can wait a long time; there are no bots to fill in.
 - **No lag compensation**, and no rejoin if a socket drops mid-Duel (the
   other player wins by forfeit).
+- **Co-op depends on the host's connection:** foes appear a little behind on
+  other screens, and a hunter who loses their connection is out of the run.
 - **Armory upgrades only affect the Hunt.** The Duel stays even on purpose.
 
 ## Deploying

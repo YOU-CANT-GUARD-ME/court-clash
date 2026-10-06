@@ -169,6 +169,16 @@ const STRINGS = {
         'sk.felled': '{a} FELLED {b}', 'sk.left': '{name} FLED THE FIELD',
         'sk.again': 'FIGHT AGAIN',
 
+        // co-op hunt
+        'coop.gathering': 'GATHERING THE WARBAND', 'coop.gatherSub': '{arrived} OF {total} HERE  ·  THE HUNT BEGINS IN {n}',
+        'coop.down': 'YOU ARE DOWN', 'coop.downSub': 'STAND AN ALLY BESIDE YOU TO RISE  ·  {n}s',
+        'coop.fallen': 'FALLEN', 'coop.fallenSub': 'YOU RISE WHEN THE WAVE IS CLEARED', 'coop.fallenShort': 'FALLEN',
+        'coop.waiting': 'WAITING FOR YOUR BAND TO CHOOSE…',
+        'coop.wiped': 'YOUR WARBAND IS SLAIN', 'coop.hostLeft': 'THE CAPTAIN LEFT  ·  THE HUNT IS OVER',
+        'coop.again': 'HUNT AGAIN', 'coop.joined': '{name} JOINS THE HUNT', 'coop.left': '{name} LEFT THE HUNT',
+        'over.band': 'BAND',
+        'legends.coop': 'CO-OP HUNT · BOUNTIES', 'legends.noCoop': 'No co-op bounties yet.', 'stat.coopBest': 'CO-OP BEST',
+
         // wardrobe
         'hdr.mercenary': "MERCENARY",
         'wd.title': "YOUR MERCENARY",
@@ -394,6 +404,16 @@ const STRINGS = {
         'sk.spectate': '쓰러졌습니다  ·  {name} 관전 중', 'sk.downAlone': '쓰러졌습니다',
         'sk.felled': '{a} → {b} 처치', 'sk.left': '{name} 님이 전장을 떠났습니다',
         'sk.again': '다시 싸우기',
+
+        // co-op hunt
+        'coop.gathering': '전투단 집결 중', 'coop.gatherSub': '{total}명 중 {arrived}명 도착  ·  {n}초 후 사냥 시작',
+        'coop.down': '쓰러졌습니다', 'coop.downSub': '동료가 곁에 서면 다시 일어납니다  ·  {n}초',
+        'coop.fallen': '전사', 'coop.fallenSub': '웨이브를 막아내면 다시 일어납니다', 'coop.fallenShort': '전사',
+        'coop.waiting': '동료들의 선택을 기다리는 중…',
+        'coop.wiped': '전투단이 전멸했다', 'coop.hostLeft': '대장이 떠나 사냥이 끝났습니다',
+        'coop.again': '다시 사냥', 'coop.joined': '{name} 님이 사냥에 합류', 'coop.left': '{name} 님이 사냥을 떠남',
+        'over.band': '인원',
+        'legends.coop': '협동 사냥 · 현상금', 'legends.noCoop': '아직 협동 사냥 현상금이 없습니다.', 'stat.coopBest': '협동 최고',
 
         // wardrobe
         'hdr.mercenary': "용병",

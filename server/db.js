@@ -53,10 +53,15 @@ ALTER TABLE players ADD COLUMN IF NOT EXISTS skirmish_losses integer NOT NULL DE
 -- (e.g. {"cloak": "wine", "helm": "hood", "title": "butcher"}).
 ALTER TABLE players ADD COLUMN IF NOT EXISTS owned jsonb NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE players ADD COLUMN IF NOT EXISTS look jsonb NOT NULL DEFAULT '{}'::jsonb;
+-- Co-op Hunts have their own records, so they don't crowd out solo bounties.
+ALTER TABLE players ADD COLUMN IF NOT EXISTS coop_runs integer NOT NULL DEFAULT 0;
+ALTER TABLE players ADD COLUMN IF NOT EXISTS best_coop_bounty integer NOT NULL DEFAULT 0;
+ALTER TABLE players ADD COLUMN IF NOT EXISTS best_coop_wave integer NOT NULL DEFAULT 0;
 CREATE INDEX IF NOT EXISTS sessions_player_idx ON sessions (player_id);
 CREATE INDEX IF NOT EXISTS players_bounty_idx ON players (best_bounty DESC);
 CREATE INDEX IF NOT EXISTS players_duel_idx ON players (duel_wins DESC);
 CREATE INDEX IF NOT EXISTS players_skirmish_idx ON players (skirmish_wins DESC);
+CREATE INDEX IF NOT EXISTS players_coop_idx ON players (best_coop_bounty DESC);
 `;
 
 async function init() {
@@ -76,6 +81,9 @@ function profileOf(row) {
     duelLosses: row.duel_losses,
     skirmishWins: row.skirmish_wins || 0,
     skirmishLosses: row.skirmish_losses || 0,
+    coopRuns: row.coop_runs || 0,
+    bestCoopBounty: row.best_coop_bounty || 0,
+    bestCoopWave: row.best_coop_wave || 0,
     owned: row.owned || [],
     look: row.look || {},
     appearance: wardrobe.resolveLook(row.look),
@@ -150,6 +158,19 @@ function recordDuel(playerId, won, gold) {
   );
 }
 
+// A co-op Hunt: everyone earns the team bounty's gold; their own kills and
+// the run count toward their totals, and the bounty toward co-op records.
+function recordCoop(playerId, { score, wave, kills, gold }) {
+  return one(
+    `UPDATE players SET
+       gold = gold + $2, hunt_runs = hunt_runs + 1, coop_runs = coop_runs + 1,
+       total_kills = total_kills + $5,
+       best_coop_bounty = GREATEST(best_coop_bounty, $3), best_coop_wave = GREATEST(best_coop_wave, $4)
+     WHERE id = $1 RETURNING *`,
+    [playerId, gold, score, wave, kills],
+  );
+}
+
 function recordSkirmish(playerId, won, gold) {
   return one(
     `UPDATE players SET
@@ -204,7 +225,7 @@ function setLook(playerId, slot, id) {
 }
 
 async function leaderboard() {
-  const [hunt, duel, skirmish] = await Promise.all([
+  const [hunt, duel, skirmish, coop] = await Promise.all([
     pool.query(
       `SELECT username, look->>'title' AS title, best_bounty AS "bestBounty", best_wave AS "bestWave"
        FROM players WHERE best_bounty > 0
@@ -220,13 +241,18 @@ async function leaderboard() {
        FROM players WHERE skirmish_wins + skirmish_losses > 0
        ORDER BY skirmish_wins DESC, skirmish_losses ASC, created_at LIMIT 10`,
     ),
+    pool.query(
+      `SELECT username, look->>'title' AS title, best_coop_bounty AS "bestBounty", best_coop_wave AS "bestWave"
+       FROM players WHERE best_coop_bounty > 0
+       ORDER BY best_coop_bounty DESC, best_coop_wave DESC, created_at LIMIT 10`,
+    ),
   ]);
   // Only titles that exist (and aren't 'none') reach the page.
   const clean = (rows) => rows.map((r) => ({ ...r, title: wardrobe.titleOf({ title: r.title }) }));
-  return { hunt: clean(hunt.rows), duel: clean(duel.rows), skirmish: clean(skirmish.rows) };
+  return { hunt: clean(hunt.rows), duel: clean(duel.rows), skirmish: clean(skirmish.rows), coop: clean(coop.rows) };
 }
 
 module.exports = {
   init, profileOf, createPlayer, playerById, playerByUsername, createSession, playerBySession,
-  deleteSession, recordHunt, recordDuel, recordSkirmish, buyUpgrade, buyItem, grantItem, setLook, leaderboard,
+  deleteSession, recordHunt, recordDuel, recordSkirmish, recordCoop, buyUpgrade, buyItem, grantItem, setLook, leaderboard,
 };

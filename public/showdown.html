@@ -105,6 +105,7 @@
 <div id="overlay" role="dialog" aria-live="polite"></div>
 
 <script src="config.js"></script>
+<script src="gameclock.js"></script>
 <script src="i18n.js"></script>
 <script src="mercenary.js"></script>
 <script src="maps.js"></script>
@@ -409,6 +410,9 @@ function openSocket() {
             showConnectionProblem(tr('duel.failed'), tr('duel.failedText'));
     });
 }
+// Leaving the page closes our connection, so an opponent isn't left waiting
+// (the back/forward cache can otherwise keep it open). Mid-match, that forfeits.
+window.addEventListener('pagehide', () => { if (socket) socket.close(); });
 function findMatch() {
     wantMatch = true;
     matchState = 'queued';
@@ -1089,8 +1093,10 @@ function loop(ts) {
     requestAnimationFrame(loop);
     let camX = clampCam(MAP_W * TILE, W, player.x);
     let camY = clampCam(MAP_H * TILE, H, player.y);
+    const steps = stepsDue(ts);
     if (matchState === 'playing') {
         canvas.style.cursor = 'none';
+        for (let s = 0; s < steps && matchState === 'playing'; s++) {
         updatePlayer(player, keys, mouseX, mouseY, camX, camY);
         if (mouseDown)
             playerShoot(player);
@@ -1115,6 +1121,7 @@ function loop(ts) {
             p.life--;
             if (p.life <= 0)
                 particles.splice(i, 1);
+        }
         }
         // Send our state a few times a second, not every frame.
         if (ts - lastStateSend > 50) {

@@ -30,10 +30,12 @@ canvas {
 <body>
 <canvas id="c"></canvas>
 <script src="config.js"></script>
+<script src="gameclock.js"></script>
 <script src="i18n.js"></script>
 <script src="mercenary.js"></script>
 <script src="maps.js"></script>
 <script src="terrain.js"></script>
+<script src="coop.js"></script>
 <script>
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
@@ -191,7 +193,10 @@ function throwGrenade(player) {
     if (player.grenades <= 0)
         return;
     player.grenades--;
-    grenades.push({ x: player.x, y: player.y, vx: Math.cos(player.angle) * 7, vy: Math.sin(player.angle) * 7, fuse: 90, alive: true });
+    const g = { x: player.x, y: player.y, vx: Math.cos(player.angle) * 7, vy: Math.sin(player.angle) * 7, fuse: 90, alive: true };
+    grenades.push(g);
+    if (coopRunning())
+        coopSend({ k: 'gr', x: Math.round(g.x), y: Math.round(g.y), vx: +g.vx.toFixed(2), vy: +g.vy.toFixed(2) });
 }
 function updateGrenade(g, enemies, player) {
     g.fuse--;
@@ -211,17 +216,18 @@ function updateGrenade(g, enemies, player) {
         const R = TILE * 3.5;
         spawnParticles(g.x, g.y, '#ffb420', 30, 2, 10, 35, 3);
         spawnParticles(g.x, g.y, '#505038', 15, 1, 5, 50, 4);
-        for (const e of enemies) {
+        // Only the host (or a solo hunter) hurts foes; every screen hurts its own hunter.
+        for (const e of isAuthority() ? enemies : []) {
             if (!e.alive)
                 continue;
             if (Math.hypot(e.x - g.x, e.y - g.y) < R) {
                 e.health -= 3;
                 if (e.health <= 0) {
-                    killEnemy(e, player);
+                    killEnemy(e, g.owner);
                 }
             }
         }
-        if (player.spawnImmunity <= 0 && Math.hypot(player.x - g.x, player.y - g.y) < R * 0.7) {
+        if (player.spawnImmunity <= 0 && !player.down && Math.hypot(player.x - g.x, player.y - g.y) < R * 0.7) {
             player.health -= 30;
             player.hurtTimer = 40;
         }
@@ -269,6 +275,16 @@ function moveTowardPlayer(e, player, backOff = TILE * 2) {
     }
     return dist;
 }
+// A foe looses a bolt. Its damage travels with it, so allies' screens (which
+// get the same bolt as an event) hurt their hunter by the same amount.
+function fireFoe(e, ang) {
+    const b = makeBullet(e.x, e.y, ang, e.bulletSpeed);
+    b.dmg = (16 + (player.wave - 1) * 3.5) * (e.bulletDmgScale || 1);
+    e.bullets.push(b);
+    coopEmit({ k: 'eb', i: e.id, x: Math.round(e.x), y: Math.round(e.y), a: +ang.toFixed(3), s: e.bulletSpeed, d: b.dmg });
+}
+// The hunter on this screen (inside foe code, `player` is the foe's target).
+function hunter() { return player; }
 function handleEnemyBullets(e, player) {
     for (let i = e.bullets.length - 1; i >= 0; i--) {
         const b = e.bullets[i];
@@ -277,28 +293,33 @@ function handleEnemyBullets(e, player) {
             e.bullets.splice(i, 1);
             continue;
         }
-        if (player.spawnImmunity <= 0 && Math.hypot(b.x - player.x, b.y - player.y) < 14) {
+        if (player.spawnImmunity <= 0 && !player.down && Math.hypot(b.x - player.x, b.y - player.y) < 14) {
             b.alive = false;
             e.bullets.splice(i, 1);
             const red = player.damageReduction || 0;
-            const base = (16 + (player.wave - 1) * 3.5) * (e.bulletDmgScale || 1);
+            const base = b.dmg ?? (16 + (player.wave - 1) * 3.5) * (e.bulletDmgScale || 1);
             player.health -= Math.max(1, Math.floor(base * (1 - red)));
             player.hurtTimer = 30;
             spawnParticles(player.x, player.y, '#8c0a0a', 6, 1, 4, 15);
         }
     }
 }
-function killEnemy(e, player) {
+// `by` is the co-op id of the hunter who landed the blow (us, by default).
+function killEnemy(e, by = coop && coop.me) {
     e.alive = false;
     if (e.kind === 'bomber' && !e.exploded)
         bomberExplode(e, player, true);
     const scoreMap = { grunt: 100, brute: 250, bomber: 150, boss: 1000 };
     const points = scoreMap[e.kind] || 100;
-    player.score += points;
-    player.kills++;
+    player.score += points; // in co-op this is the team's bounty
+    if (!coop || by === coop.me)
+        player.kills++;
+    if (coop)
+        coop.kills[by] = (coop.kills[by] || 0) + 1;
     addPopup(e.x, e.y - e.radius, '+' + points);
     const burst = e.kind === 'brute' || e.kind === 'boss' ? 25 : 15;
     spawnParticles(e.x, e.y, '#8c0a0a', burst, 1.5, 5, 35, 3);
+    coopEmit({ k: 'kill', i: e.id, by, p: points, x: Math.round(e.x), y: Math.round(e.y - e.radius), big: burst > 15 });
 }
 // ── GRUNT ────────────────────────────────────────────────────────────────────
 function makeGrunt(tx, ty) {
@@ -315,11 +336,10 @@ function updateGrunt(e, player) {
         e.shootTimer--;
         if (e.shootTimer <= 0) {
             e.shootTimer = e.shootCd;
-            const ang = e.angle + (Math.random() - 0.5) * 0.24;
-            e.bullets.push(makeBullet(e.x, e.y, ang, e.bulletSpeed));
+            fireFoe(e, e.angle + (Math.random() - 0.5) * 0.24);
         }
     }
-    handleEnemyBullets(e, player);
+    handleEnemyBullets(e, hunter());
 }
 // ── BRUTE ────────────────────────────────────────────────────────────────────
 function makeBrute(tx, ty) {
@@ -336,11 +356,10 @@ function updateBrute(e, player) {
         e.shootTimer--;
         if (e.shootTimer <= 0) {
             e.shootTimer = e.shootCd;
-            const ang = e.angle + (Math.random() - 0.5) * 0.2;
-            e.bullets.push(makeBullet(e.x, e.y, ang, e.bulletSpeed));
+            fireFoe(e, e.angle + (Math.random() - 0.5) * 0.2);
         }
     }
-    handleEnemyBullets(e, player);
+    handleEnemyBullets(e, hunter());
 }
 // ── BOMBER ───────────────────────────────────────────────────────────────────
 function makeBomber(tx, ty) {
@@ -354,18 +373,8 @@ function makeBomber(tx, ty) {
 function bomberExplode(e, player, fromBullet = false) {
     e.alive = false;
     e.exploded = true;
-    spawnParticles(e.x, e.y, '#ffb420', 40, 2, 12, 40, 3);
-    spawnParticles(e.x, e.y, '#ff5010', 20, 1, 6, 30, 4);
-    spawnParticles(e.x, e.y, '#505038', 15, 1, 5, 50, 4);
-    if (player.spawnImmunity <= 0) {
-        const d = Math.hypot(player.x - e.x, player.y - e.y);
-        if (d < e.explodeRadius) {
-            const red = player.damageReduction || 0;
-            const falloff = 1 - (d / e.explodeRadius) * 0.5;
-            player.health -= Math.max(1, Math.floor(55 * falloff * (1 - red)));
-            player.hurtTimer = 45;
-        }
-    }
+    foeExplosion(e.x, e.y, e.explodeRadius); // hurts the hunter on this screen
+    coopEmit({ k: 'boom', x: Math.round(e.x), y: Math.round(e.y), r: e.explodeRadius });
 }
 function updateBomber(e, player) {
     e.bob += 0.15;
@@ -405,12 +414,11 @@ function updateBoss(e, player) {
             e.shootTimer = e.shootCd;
             for (let i = 0; i < e.spreadShots; i++) {
                 const spread = (i - Math.floor(e.spreadShots / 2)) * 0.18;
-                const ang = e.angle + spread + (Math.random() - 0.5) * 0.1;
-                e.bullets.push(makeBullet(e.x, e.y, ang, e.bulletSpeed));
+                fireFoe(e, e.angle + spread + (Math.random() - 0.5) * 0.1);
             }
         }
     }
-    handleEnemyBullets(e, player);
+    handleEnemyBullets(e, hunter());
 }
 // ── FOE ART ──────────────────────────────────────────────────────────────────
 // Each foe is drawn in its own rotated frame where +x points the way it faces.
@@ -1009,11 +1017,18 @@ function updatePlayer(player, keys, mouseX, mouseY, camX, camY, enemies) {
                 player.bullets.splice(i, 1);
                 if (b.prism)
                     prismHit(e);
-                e.health -= player.bulletDamage * player.damageMult;
-                if (e.health <= 0)
-                    killEnemy(e, player);
-                else
+                const dmg = player.bulletDamage * player.damageMult;
+                if (!isAuthority()) {
+                    coopSend({ k: 'hit', to: 'host', i: e.id, d: +dmg.toFixed(2) });
                     spawnParticles(e.x, e.y, '#8c0a0a', 4, 1, 2, 12, 2);
+                }
+                else {
+                    e.health -= dmg;
+                    if (e.health <= 0)
+                        killEnemy(e);
+                    else
+                        spawnParticles(e.x, e.y, '#8c0a0a', 4, 1, 2, 12, 2);
+                }
                 hit = true;
                 break;
             }
@@ -1038,6 +1053,8 @@ function playerShoot(player, mouseX, mouseY, camX, camY) {
     }
     player.bullets.push(bolt);
     spawnParticles(player.x + Math.cos(ang) * 18, player.y + Math.sin(ang) * 18, '#ffa020', 5, 1, 4, 10, 2);
+    if (coopRunning())
+        coopSend({ k: 'sh', x: Math.round(player.x), y: Math.round(player.y), a: +ang.toFixed(3) });
 }
 function drawPlayer(player, camX, camY) {
     const sx = player.x - camX, sy = player.y - camY, r = 12;
@@ -1111,6 +1128,27 @@ function findSpawnPoints() {
     return pts;
 }
 function spawnEnemies(wave) {
+    const result = spawnWave(wave);
+    // Each extra hunter: about 50% more foes, a quarter more health (a warlord: half).
+    const n = partySize();
+    if (n > 1) {
+        const extra = Math.round(result.filter(e => e.kind !== 'boss').length * 0.5 * (n - 1));
+        let pool = [];
+        for (let i = 0; i < extra; i++) {
+            if (!pool.length)
+                pool = spawnWave(wave).filter(e => e.kind !== 'boss');
+            result.push(pool.pop());
+        }
+        for (const e of result) {
+            const scale = e.kind === 'boss' ? 1 + 0.5 * (n - 1) : 1 + 0.25 * (n - 1);
+            e.health = e.maxHealth = Math.round(e.maxHealth * scale);
+        }
+    }
+    for (const e of result)
+        e.id = nextFoeId++;
+    return result;
+}
+function spawnWave(wave) {
     const valid = spawnPoints;
     const result = [];
     if (wave % 5 === 0) {
@@ -1625,6 +1663,13 @@ function drawMinimap(player, enemies, camX, camY) {
         ctx.arc(ox + e.x / TILE * s, oy + e.y / TILE * s, e.kind === 'boss' ? 4 : 2, 0, Math.PI * 2);
         ctx.fill();
     }
+    if (coopRunning())
+        for (const p of coop.peers.values()) {
+            ctx.fillStyle = p.down ? UI.red : '#f0d890';
+            ctx.beginPath();
+            ctx.arc(ox + p.x / TILE * s, oy + p.y / TILE * s, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
     const mx = ox + player.x / TILE * s, my = oy + player.y / TILE * s;
     ctx.strokeStyle = UI.paper;
     ctx.lineWidth = 2;
@@ -1808,7 +1853,8 @@ function drawGameOver(player) {
     const cy = H / 2;
     // Hangul fills the whole em, so it needs a smaller size than the Latin title font.
     drawText(tr('over.slain'), W / 2, cy - 112, { size: Math.min(LANG === 'ko' ? 84 : 120, W / 6), family: 'title', align: 'center', color: '#c4281e', shadow: '#000', shadowOffset: 5, spacing: 4 });
-    drawText(tr('over.sub'), W / 2, cy - 82, { size: 12, align: 'center', color: UI.gold, spacing: 4 });
+    const sub = !coop ? 'over.sub' : coop.result && coop.result.reason === 'host' ? 'coop.hostLeft' : 'coop.wiped';
+    drawText(tr(sub), W / 2, cy - 82, { size: 12, align: 'center', color: UI.gold, spacing: 4 });
     const cw = Math.min(560, W - 32), ch = 104, cx = W / 2 - cw / 2, cardY = cy - 50;
     ctx.save();
     roundRect(cx, cardY + 8, cw, ch, 16);
@@ -1819,7 +1865,8 @@ function drawGameOver(player) {
     ctx.fill();
     ctx.restore();
     const stats = [[tr('over.bounty'), String(player.score).padStart(6, '0')], [tr('over.wave'), String(player.wave).padStart(2, '0')],
-        [tr('over.kills'), String(player.kills)], [tr('over.best'), String(bestScore).padStart(6, '0')]];
+        [tr('over.kills'), String(player.kills)],
+        coop ? [tr('over.band'), String(coop.peers.size + 1)] : [tr('over.best'), String(bestScore).padStart(6, '0')]];
     const colW = cw / stats.length;
     stats.forEach(([label, value], i) => {
         const x = cx + colW * i + colW / 2;
@@ -1850,7 +1897,7 @@ function drawGameOver(player) {
     if (reward)
         drawText(reward[0], W / 2, cardY + ch + 34, { size: 12, align: 'center', color: reward[1], spacing: 2 });
     const bw = Math.min(210, (cw - 16) / 2), by = cardY + ch + 60;
-    button(tr('btn.riseAgain'), 'R', W / 2 - bw - 8, by, bw, 52, newGame, true);
+    button(tr(coop ? 'coop.again' : 'btn.riseAgain'), 'R', W / 2 - bw - 8, by, bw, 52, coop ? huntAgainTogether : newGame, true);
     button(tr('btn.retreat'), 'Q', W / 2 + 8, by, bw, 52, goToLobby, false);
 }
 function drawWaveClear(player) {
@@ -1942,34 +1989,82 @@ let showingPowerup = false, powerupOptions = [], powerupHovered = -1;
 let spawnCountdown = 0;
 const keys = {};
 let mouseX = W / 2, mouseY = H / 2, mouseDown = false;
+// Arriving from the lobby with a warband: hunt together.
+if (location.hash === '#coop' && getToken()) {
+    startCoop();
+    history.replaceState(null, '', location.pathname);
+}
 loadArmory();
-startHuntRun();
-// Stay connected to the lobby server while hunting. Without this the server
-// sees us leave and drops us from our warband after its 15s grace period.
-// Nothing here affects the run; it only says hello and reconnects if needed.
-(function keepWarbandSlot() {
+if (!coop)
+    startHuntRun(); // co-op starts its run once the warband is gathered
+// One connection to the server for the page. It keeps us in our warband
+// while hunting (the server drops players who leave the lobby for long),
+// and carries the co-op Hunt.
+let huntSocket = null;
+function huntSend(msg) {
+    if (huntSocket && huntSocket.readyState === WebSocket.OPEN)
+        huntSocket.send(JSON.stringify(msg));
+}
+(function connectHuntSocket() {
     const token = getToken();
     if (!token)
         return;
     let retries = 0, replaced = false;
     (function connect() {
-        const ws = new WebSocket(SERVER.ws);
+        const ws = huntSocket = new WebSocket(SERVER.ws);
         ws.onopen = () => {
             retries = 0;
             ws.send(JSON.stringify({ type: 'hello', token }));
+            if (coop && coop.state === 'connecting')
+                ws.send(JSON.stringify({ type: 'coopJoin' }));
         };
         ws.onmessage = e => {
             let msg;
             try { msg = JSON.parse(e.data); } catch { return; }
             if (msg.type === 'replaced' || msg.type === 'needAuth')
                 replaced = true; // the account moved to another tab, or logged out
+            if (coop)
+                coopOnMessage(msg);
         };
         ws.onclose = () => {
+            if (coopRunning()) {
+                // Lost the connection mid-hunt: the run is over for us.
+                coop.state = 'over';
+                coop.result = { reason: 'host' };
+                gameOver = true;
+                huntReward = { state: 'failed' };
+            }
             if (!replaced)
                 setTimeout(connect, Math.min(1000 * 2 ** retries++, 10000));
         };
     })();
 })();
+// Leaving the page (even into the back/forward cache, which can keep the
+// connection open) must leave the co-op hunt: the others can't wait on us.
+window.addEventListener('pagehide', () => {
+    if (coop)
+        huntSend({ type: 'coopLeave' });
+    if (huntSocket)
+        huntSocket.close();
+});
+// After a co-op run: gather the warband again.
+// Browsers stop animation frames in background tabs. In a co-op run that
+// would freeze the hunt for everyone (the host runs the foes), so while the
+// tab is hidden a timer keeps it going. Hidden-tab timers fire about once a
+// second, so each one catches up on everything since the last.
+setInterval(() => {
+    if (!document.hidden || !coopRunning() || gameOver)
+        return;
+    const steps = stepsDue(performance.now(), 70);
+    const camX = Math.max(0, Math.min(MAP_W * TILE - W, player.x - W / 2));
+    const camY = Math.max(0, Math.min(MAP_H * TILE - H, player.y - H / 2));
+    for (let s = 0; s < steps && coopRunning() && !gameOver; s++)
+        step(camX, camY);
+}, 250);
+function huntAgainTogether() {
+    location.hash = 'coop';
+    location.reload();
+}
 function newGame() {
     grenades.length = 0;
     particles.length = 0;
@@ -2005,7 +2100,7 @@ document.addEventListener('keydown', e => {
     keys[k] = true;
     if (gameOver) {
         if (k === 'r')
-            newGame();
+            coop ? huntAgainTogether() : newGame();
         if (k === 'q')
             goToLobby();
         return;
@@ -2056,7 +2151,13 @@ canvas.addEventListener('mousedown', e => {
 });
 canvas.addEventListener('mouseup', e => { if (e.button === 0)
     mouseDown = false; });
-function startNextWave() { showingPowerup = false; spawnCountdown = 180; }
+function startNextWave() {
+    showingPowerup = false;
+    if (coopRunning())
+        coopPicked(); // the host starts the wave once the whole band has chosen
+    else
+        spawnCountdown = 180;
+}
 // ── FULLSCREEN ────────────────────────────────────────────────────────────────
 // Browsers only allow fullscreen from a click or key press, so the first one on
 // this page enters it. F toggles it after that.
@@ -2098,78 +2199,36 @@ document.addEventListener('fullscreenchange', () => {
         paused = true;
 });
 // ── GAME LOOP ─────────────────────────────────────────────────────────────────
-let last = 0;
 function loop(ts) {
     requestAnimationFrame(loop);
-    const dt = Math.min((ts - last) / 16.67, 3);
-    last = ts;
+    const steps = stepsDue(ts);
     uiButtons = [];
     canvas.style.cursor = gameOver || paused || showingPowerup ? 'default' : 'none';
     if (gameOver) {
         drawGameOver(player);
         return;
     }
+    if (coop && !coopRunning()) {
+        drawGathering(); // waiting for the warband
+        return;
+    }
     let camX = Math.max(0, Math.min(MAP_W * TILE - W, player.x - W / 2));
     let camY = Math.max(0, Math.min(MAP_H * TILE - H, player.y - H / 2));
     if (showingPowerup) {
+        // In co-op the world keeps going while we choose.
+        for (let s = 0; s < steps && coopRunning() && !gameOver; s++)
+            step(camX, camY);
         powerupHovered = powerupLayout(powerupOptions.length)
             .findIndex(r => mouseX >= r.x && mouseX <= r.x + r.w && mouseY >= r.y - 8 && mouseY <= r.y + r.h);
         drawPowerupScreen(powerupOptions, powerupHovered, player);
         return;
     }
-    if (!paused) {
-        hudTime++;
-        updatePlayer(player, keys, mouseX, mouseY, camX, camY, enemies);
-        if (mouseDown)
-            playerShoot(player, mouseX, mouseY, camX, camY);
-        for (const e of enemies)
-            updateEnemy(e, player);
-        for (let i = grenades.length - 1; i >= 0; i--) {
-            updateGrenade(grenades[i], enemies, player);
-            if (!grenades[i].alive)
-                grenades.splice(i, 1);
-        }
-        for (let i = particles.length - 1; i >= 0; i--) {
-            const p = particles[i];
-            p.x += p.vx;
-            p.y += p.vy;
-            p.vx *= 0.92;
-            p.vy *= 0.92;
-            p.life--;
-            if (p.life <= 0)
-                particles.splice(i, 1);
-        }
-        for (let i = popups.length - 1; i >= 0; i--)
-            if (--popups[i].life <= 0)
-                popups.splice(i, 1);
-        if (player.health <= 0) {
-            endRun();
-            return;
-        }
-        if (spawnCountdown > 0) {
-            spawnCountdown--;
-            if (spawnCountdown === 0) {
-                enemies = spawnEnemies(player.wave);
-                player.spawnImmunity = 180;
-            }
-        }
-        else if (enemies.every(e => !e.alive)) {
-            if (waveClearTimer === 0)
-                waveClearTimer = 60;
-            else {
-                waveClearTimer--;
-                if (waveClearTimer === 0) {
-                    player.wave++;
-                    player.score += 500;
-                    player.health = Math.min(player.maxHealth, player.health + Math.round(player.maxHealth * player.waveHeal));
-                    showingPowerup = true;
-                    powerupOptions = [...POWERUPS].sort(() => Math.random() - 0.5).slice(0, 3);
-                    powerupHovered = -1;
-                }
-            }
-        }
-        else
-            waveClearTimer = 0;
+    // Co-op can't pause: the menu opens but the hunt goes on.
+    for (let s = 0; s < steps && !gameOver && !showingPowerup && (coopRunning() || !paused); s++)
+        step(camX, camY);
+    if (gameOver || showingPowerup)
+        return; // drawn next frame
+    if (!paused || coopRunning()) {
         camX = Math.max(0, Math.min(MAP_W * TILE - W, player.x - W / 2));
         camY = Math.max(0, Math.min(MAP_H * TILE - H, player.y - H / 2));
     }
@@ -2190,7 +2249,13 @@ function loop(ts) {
     }
     for (const e of enemies)
         drawEnemy(e, camX, camY);
+    if (coopRunning())
+        drawPeers(camX, camY);
+    ctx.save();
+    if (player.down)
+        ctx.globalAlpha = 0.55;
     drawPlayer(player, camX, camY);
+    ctx.restore();
     drawTorchlight(player.x - camX, player.y - camY);
     for (const b of player.bullets)
         if (b.prism)
@@ -2201,12 +2266,91 @@ function loop(ts) {
     if (spawnCountdown > 0)
         drawSpawnCountdown(player, spawnCountdown);
     drawHUD(player, enemies);
+    if (coopRunning()) {
+        drawBandPanel();
+        drawCoopMarkers(camX, camY);
+        if (player.down)
+            drawDownedBanner();
+        else if (coop.waitingForBand)
+            drawWaitingForBand();
+    }
     drawPrismNotice();
     drawMinimap(player, enemies, camX, camY);
     if (paused)
         drawPauseOverlay();
     else
         drawCrosshair(player);
+}
+// One 60th of a second of play (see gameclock.js).
+function step(camX, camY) {
+    {
+        hudTime++;
+        if (!player.down) {
+            updatePlayer(player, keys, mouseX, mouseY, camX, camY, enemies);
+            if (mouseDown)
+                playerShoot(player, mouseX, mouseY, camX, camY);
+        }
+        // The host (or a solo hunter) runs the foes, each chasing its nearest hunter.
+        if (isAuthority())
+            for (const e of enemies)
+                updateEnemy(e, targetFor(e));
+        for (let i = grenades.length - 1; i >= 0; i--) {
+            updateGrenade(grenades[i], enemies, player);
+            if (!grenades[i].alive)
+                grenades.splice(i, 1);
+        }
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vx *= 0.92;
+            p.vy *= 0.92;
+            p.life--;
+            if (p.life <= 0)
+                particles.splice(i, 1);
+        }
+        for (let i = popups.length - 1; i >= 0; i--)
+            if (--popups[i].life <= 0)
+                popups.splice(i, 1);
+        if (coopRunning())
+            coopStep(); // downing, reviving, sharing the world (co-op.js)
+        else if (player.health <= 0) {
+            endRun();
+            return;
+        }
+        // Waves are run by the host (or a solo hunter) only.
+        if (!isAuthority() || (coop && coop.breakOpen))
+            return;
+        if (spawnCountdown > 0) {
+            spawnCountdown--;
+            if (spawnCountdown === 0) {
+                enemies = spawnEnemies(player.wave);
+                player.spawnImmunity = 180;
+                coopEmit({ k: 'spawn' });
+            }
+        }
+        else if (enemies.every(e => !e.alive)) {
+            if (waveClearTimer === 0)
+                waveClearTimer = 60;
+            else {
+                waveClearTimer--;
+                if (waveClearTimer === 0) {
+                    player.wave++;
+                    player.score += 500;
+                    if (coopRunning())
+                        coopOpenBreak(); // everyone heals, rises and chooses a boon
+                    else {
+                        player.health = Math.min(player.maxHealth, player.health + Math.round(player.maxHealth * player.waveHeal));
+                        showingPowerup = true;
+                        powerupOptions = [...POWERUPS].sort(() => Math.random() - 0.5).slice(0, 3);
+                        powerupHovered = -1;
+                    }
+                }
+            }
+        }
+        else
+            waveClearTimer = 0;
+    }
 }
 requestAnimationFrame(loop);
 </script>

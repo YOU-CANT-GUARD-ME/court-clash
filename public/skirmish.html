@@ -106,6 +106,7 @@
 <div id="overlay" role="dialog" aria-live="polite"></div>
 
 <script src="config.js"></script>
+<script src="gameclock.js"></script>
 <script src="i18n.js"></script>
 <script src="mercenary.js"></script>
 <script src="maps.js"></script>
@@ -440,6 +441,9 @@ function openSocket() {
             showConnectionProblem(tr('duel.failed'), tr('duel.failedText'));
     });
 }
+// Leaving the page closes our connection, so the others aren't left waiting
+// (the back/forward cache can otherwise keep it open). Mid-match, that forfeits.
+window.addEventListener('pagehide', () => { if (socket) socket.close(); });
 function findSkirmish() {
     wantMatch = true;
     matchState = 'queued';
@@ -1156,15 +1160,55 @@ function loop(ts) {
     let camY = clampCam(MAP_H * TILE, H, focus.y);
     const live = matchState === 'playing' || matchState === 'roundover';
     canvas.style.cursor = matchState === 'playing' && player.health > 0 ? 'none' : 'default';
+    const steps = stepsDue(ts);
+    for (let s = 0; s < steps; s++)
+        simulate(camX, camY, live);
     if (matchState === 'playing' && player.health > 0) {
-        updatePlayer(player, keys, mouseX, mouseY, camX, camY);
-        if (mouseDown)
-            playerShoot(player);
         // Send our state a few times a second, not every frame.
         if (ts - lastStateSend > 50) {
             lastStateSend = ts;
             sendMsg({ type: 'skState', x: player.x / TILE, y: player.y / TILE, angle: player.angle, moving: player.moving });
         }
+    }
+    if (live) {
+        const now = spectating() || player;
+        camX = clampCam(MAP_W * TILE, W, now.x);
+        camY = clampCam(MAP_H * TILE, H, now.y);
+    }
+    ctx.drawImage(mapCanvas, -camX, -camY);
+    const vignette = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.75);
+    vignette.addColorStop(0, 'rgba(0,0,0,0)');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.35)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, W, H);
+    for (const p of particles) {
+        const alpha = p.life / p.maxLife;
+        ctx.globalAlpha = alpha * 0.85;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x - camX, p.y - camY, Math.max(0.5, p.size * alpha), 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if (live && fighters.length) {
+        const pal = i => (i === me ? ME_COLOR : isFoe(i) ? OPP_COLOR : ALLY_COLOR);
+        // The fallen underneath, then the standing, then us on top.
+        const order = fighters.map((_, i) => i).filter(i => !fighters[i].left)
+            .sort((a, b) => (fighters[a].health > 0) - (fighters[b].health > 0) || (a === me) - (b === me));
+        for (const i of order)
+            drawFighter(fighters[i], camX, camY, pal(i), nameOf(i));
+        fighters.forEach((f, i) => drawBolts(f, camX, camY, pal(i)));
+        const lit = spectating() || player;
+        drawTorchlight(lit.x - camX, lit.y - camY);
+        drawHUD(camX, camY);
+    }
+}
+// One 60th of a second of play (see gameclock.js).
+function simulate(camX, camY, live) {
+    if (matchState === 'playing' && player.health > 0) {
+        updatePlayer(player, keys, mouseX, mouseY, camX, camY);
+        if (mouseDown)
+            playerShoot(player);
     }
     if (live) {
         fighters.forEach((f, i) => {
@@ -1202,36 +1246,6 @@ function loop(ts) {
             if (p.life <= 0)
                 particles.splice(i, 1);
         }
-        const now = spectating() || player;
-        camX = clampCam(MAP_W * TILE, W, now.x);
-        camY = clampCam(MAP_H * TILE, H, now.y);
-    }
-    ctx.drawImage(mapCanvas, -camX, -camY);
-    const vignette = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.75);
-    vignette.addColorStop(0, 'rgba(0,0,0,0)');
-    vignette.addColorStop(1, 'rgba(0,0,0,0.35)');
-    ctx.fillStyle = vignette;
-    ctx.fillRect(0, 0, W, H);
-    for (const p of particles) {
-        const alpha = p.life / p.maxLife;
-        ctx.globalAlpha = alpha * 0.85;
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x - camX, p.y - camY, Math.max(0.5, p.size * alpha), 0, Math.PI * 2);
-        ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-    if (live && fighters.length) {
-        const pal = i => (i === me ? ME_COLOR : isFoe(i) ? OPP_COLOR : ALLY_COLOR);
-        // The fallen underneath, then the standing, then us on top.
-        const order = fighters.map((_, i) => i).filter(i => !fighters[i].left)
-            .sort((a, b) => (fighters[a].health > 0) - (fighters[b].health > 0) || (a === me) - (b === me));
-        for (const i of order)
-            drawFighter(fighters[i], camX, camY, pal(i), nameOf(i));
-        fighters.forEach((f, i) => drawBolts(f, camX, camY, pal(i)));
-        const lit = spectating() || player;
-        drawTorchlight(lit.x - camX, lit.y - camY);
-        drawHUD(camX, camY);
     }
 }
 // Arriving from the lobby's TO BATTLE with a warband: start searching straight away.

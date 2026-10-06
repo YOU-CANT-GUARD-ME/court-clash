@@ -10,6 +10,7 @@ const db = require('./db');
 const api = require('./api');
 const lobby = require('./lobby');
 const skirmish = require('./skirmish');
+const coop = require('./coop');
 const maps = require('./maps');
 
 const PORT = process.env.PORT || 8080;
@@ -280,6 +281,7 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     skirmish.handleClose(ws); // before the lobby update, which can trigger matchmaking
+    coop.handleClose(ws);
     lobby.handleClose(ws);
     dequeue(ws);
     const room = rooms.get(ws.roomId);
@@ -300,6 +302,7 @@ wss.on('connection', (ws) => {
 async function onMessage(ws, msg) {
   if (await lobby.handleMessage(ws, msg)) return;
   if (skirmish.handleMessage(ws, msg)) return;
+  if (coop.handleMessage(ws, msg)) return;
 
   if (msg.type === 'findMatch') return findMatch(ws);
   if (msg.type === 'cancelMatch') return dequeue(ws);
